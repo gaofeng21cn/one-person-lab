@@ -9,9 +9,8 @@
 tmp/
 docs/site/latest/
 dist/
-build/
+/build/
 out/
-/src/entrypoints/cli/command-surface-manifest.ts
 # Package contract projections are tracked so source archives run without lifecycle scripts.
 node_modules/
 target/

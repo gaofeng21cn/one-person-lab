@@ -1,200 +1,142 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseJsonText } from '../../src/kernel/json-file.ts';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const cliEntrypoint = path.join(repoRoot, 'dist', 'entrypoints', 'cli.js');
+const rootBin = path.join(repoRoot, 'bin', 'opl');
+const distBin = path.join(repoRoot, 'packages', 'daemon', 'dist', 'cli', 'bin-opl.js');
+const distDaemonBin = path.join(repoRoot, 'packages', 'daemon', 'dist', 'cli', 'bin-opld.js');
 
-function runBuiltCli(args, envOverrides = {}) {
-  const result = spawnSync(process.execPath, [cliEntrypoint, ...args], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-    env: {
-      ...process.env,
-      NODE_NO_WARNINGS: '1',
-      ...envOverrides,
-    },
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  return result;
-}
-
-function parseJsonOutput(result) {
-  return parseJsonText(result.stdout.trim());
-}
-
-function createFakeCodexFixture(handlerBody) {
-  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-built-codex-fixture-'));
-  const codexPath = path.join(fixtureRoot, 'codex');
-  fs.writeFileSync(
-    codexPath,
-    `#!/usr/bin/env bash
-set -euo pipefail
-${handlerBody}
-`,
-    { mode: 0o755 },
-  );
-  return {
-    fixtureRoot,
-    codexPath,
-  };
-}
-
-function localNpmInstallCacheReady() {
-  if (process.env.CI === 'true') return true;
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-  const dependencies = Object.entries(manifest.dependencies ?? {})
-    .filter(([, version]) => typeof version === 'string' && !version.startsWith('file:'));
-  return dependencies.every(([name]) => {
-    const result = spawnSync(npm, ['cache', 'ls', name], { encoding: 'utf8' });
-    return result.status === 0 && result.stdout.trim().length > 0;
-  });
-}
-
-test('built CLI entrypoint loads the emitted main module', () => {
-  assert.equal(fs.existsSync(cliEntrypoint), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'dist', 'entrypoints', 'cli', 'main.js')), true);
-
-  const result = runBuiltCli(['contract', 'validate']);
-  const output = parseJsonOutput(result);
-  const taskTopology = parseJsonText(
-    fs.readFileSync(path.join(repoRoot, 'contracts', 'opl-framework', 'task-topology.json'), 'utf8'),
-  );
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.validation.status, 'valid');
-  assert.equal(
-    output.validation.validated_contracts.find((entry) => entry.contract_id === 'task_topology')?.schema_version,
-    taskTopology.version,
-  );
-});
-
-test('built CLI help exposes current Codex-default command surfaces', () => {
-  const output = parseJsonOutput(runBuiltCli(['help']));
-  const commands = output.help.commands.map((entry) => entry.command);
-
-  assert.equal(output.version, 'g2');
-  assert.equal(output.help.usage, 'opl [command ...|request...] [args]');
-  assert.ok(commands.includes('install'));
-  assert.ok(commands.includes('exec'));
-  assert.ok(commands.includes('resume'));
-  assert.ok(commands.includes('connect sync-skills'));
-  assert.ok(commands.includes('foundry status'));
-  assert.equal(commands.includes('skill sync'), false);
-  assert.equal(commands.includes('ask'), false);
-  assert.equal(commands.includes('web'), false);
-  assert.equal(commands.some((command) => command.startsWith('service ')), false);
-});
-
-test('built CLI exec remains a raw Codex passthrough', () => {
-  const capturePath = path.join(os.tmpdir(), `opl-built-codex-exec-args-${process.pid}.txt`);
-  const { fixtureRoot, codexPath } = createFakeCodexFixture(`
-printf '%s\\n' "$@" > ${JSON.stringify(capturePath)}
-if [ "$1" = "exec" ]; then
-  cat <<'EOF'
-{"type":"thread.started","thread_id":"codex-built-exec-session"}
-{"type":"turn.started"}
-{"item":{"type":"agent_message","text":"CODEX EXEC BUILT SMOKE"}}
-EOF
-  exit 0
-fi
-echo "unexpected fake-codex args: $*" >&2
-exit 1
-`);
-
+function runBuiltCli(command, args, envOverrides = {}) {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-built-cli-state-'));
   try {
-    const result = runBuiltCli(
-      ['exec', '--cd', '/tmp/opl-built-exec-smoke', '--model', 'gpt-5.4', 'Plan a medical grant proposal revision loop.'],
-      { OPL_CODEX_BIN: codexPath },
-    );
-
-    assert.match(result.stdout, /"thread_id":"codex-built-exec-session"/);
-    assert.match(result.stdout, /CODEX EXEC BUILT SMOKE/);
-    assert.equal(result.stderr, '');
-    assert.deepEqual(fs.readFileSync(capturePath, 'utf8').trim().split('\n'), [
-      'exec',
-      '--cd',
-      '/tmp/opl-built-exec-smoke',
-      '--model',
-      'gpt-5.4',
-      'Plan a medical grant proposal revision loop.',
-    ]);
+    return spawnSync(command, args, {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        HOME: tmpDir,
+        OPL_STATE_DIR: path.join(tmpDir, 'state'),
+        NODE_NO_WARNINGS: '1',
+        OPL_USE_DIST: '1',
+        ...envOverrides,
+      },
+    });
   } finally {
-    fs.rmSync(fixtureRoot, { recursive: true, force: true });
-    fs.rmSync(capturePath, { force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+test('built v2 daemon CLI entrypoints exist and load via OPL_USE_DIST=1', () => {
+  assert.equal(fs.existsSync(rootBin), true);
+  assert.equal(fs.existsSync(distBin), true);
+  assert.equal(fs.existsSync(distDaemonBin), true);
+
+  const versionDirect = runBuiltCli(process.execPath, [distBin, '--version']);
+  assert.equal(versionDirect.status, 0, versionDirect.stderr);
+  assert.match(versionDirect.stdout.trim(), /^\d+\.\d+\.\d+$/);
+
+  const versionRoot = runBuiltCli(rootBin, ['--version']);
+  assert.equal(versionRoot.status, 0, versionRoot.stderr);
+  assert.equal(versionRoot.stdout.trim(), versionDirect.stdout.trim());
+
+  const versionNodeRoot = runBuiltCli(process.execPath, [rootBin, '--version']);
+  assert.equal(versionNodeRoot.status, 0, versionNodeRoot.stderr);
+  assert.equal(versionNodeRoot.stdout.trim(), versionDirect.stdout.trim());
+});
+
+test('built v2 CLI --help exposes only the 6 core namespaces and rejects retired v1 commands with exit 2', () => {
+  const helpRes = runBuiltCli(rootBin, ['--help']);
+  assert.equal(helpRes.status, 0, helpRes.stderr);
+  assert.match(helpRes.stdout, /OPL Framework CLI v/);
+  for (const ns of ['daemon', 'workspace', 'pack', 'connect', 'runway', 'ledger']) {
+    assert.match(helpRes.stdout, new RegExp(`\\b${ns}:`));
+  }
+
+  for (const retired of [['app', 'state'], ['agents', 'modules'], ['cordis', 'status'], ['contract', 'validate']]) {
+    const res = runBuiltCli(rootBin, retired);
+    assert.equal(res.status, 2, `Expected exit 2 for retired command: ${retired.join(' ')}`);
   }
 });
 
-test('npm tarball installs its workspace runtime dependencies without a checkout repair', {
-  timeout: 240_000,
-  skip: localNpmInstallCacheReady() ? false : 'local npm cache does not contain the full dependency closure',
-}, () => {
-  const testRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-npm-installed-cli-'));
-  const prefix = path.join(testRoot, 'prefix');
-  const testHome = path.join(testRoot, 'home');
-  fs.mkdirSync(testHome);
-  const npmCache = process.env.NPM_CONFIG_CACHE
-    ?? process.env.npm_config_cache
-    ?? path.join(os.homedir(), '.npm');
-  const env = {
-    ...process.env,
-    HOME: testHome,
-    USERPROFILE: testHome,
-    OPL_STATE_DIR: path.join(testRoot, 'state'),
-    NODE_NO_WARNINGS: '1',
-    NODE_PATH: '',
-    NODE_OPTIONS: '',
-    npm_config_cache: npmCache,
-  };
-  const run = (command, args, cwd = testRoot) => {
-    const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', timeout: 180_000, maxBuffer: 8 * 1024 * 1024 });
-    assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.error?.message ?? ''}\n${result.stderr}`);
-    return result;
-  };
+test('built v2 CLI pack inspect validates contracts/opl-package.v2.schema.json and package manifests', () => {
+  const schemaPath = path.join(repoRoot, 'contracts', 'opl-package.v2.schema.json');
+  assert.equal(fs.existsSync(schemaPath), true);
+  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  assert.equal(typeof schema, 'object');
+
+  const foundryRes = runBuiltCli(rootBin, [
+    'pack',
+    'inspect',
+    path.join(repoRoot, 'extensions', 'foundry'),
+    '--json',
+  ]);
+  assert.equal(foundryRes.status, 0, foundryRes.stderr);
+  const parsed = JSON.parse(foundryRes.stdout.trim());
+  assert.equal(parsed.manifest?.identity?.id, 'opl-foundry');
+});
+
+test('built v2 CLI flushes >128KB piped --json stdout without truncation (OPL_USE_DIST=1)', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-built-pipe-'));
   try {
-    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    const packResult = JSON.parse(run(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', testRoot], repoRoot).stdout);
-    const packed = Array.isArray(packResult)
-      ? packResult[0]
-      : packResult?.filename
-        ? packResult
-        : Object.values(packResult ?? {})[0];
-    assert.equal(typeof packed?.filename, 'string');
-    run(npm, ['install', '--global', '--prefix', prefix, path.join(testRoot, packed.filename),
-      '--prefer-offline', '--no-audit', '--no-fund']);
-    const installedRoot = path.join(prefix, 'lib', 'node_modules', 'opl-framework');
-    assert.equal(fs.existsSync(path.join(installedRoot, 'src', 'entrypoints', 'cli.ts')), false);
-    const resolvedPackages = JSON.parse(run(process.execPath, ['--eval',
-      'const resolve = require("node:module").createRequire(process.argv[1]).resolve; process.stdout.write(JSON.stringify(["opl-framework/package-host-integration"].map(id => resolve(id))));',
-      path.join(installedRoot, 'package.json')]).stdout);
-    for (const packagePath of resolvedPackages) {
-      const resolved = fs.realpathSync(packagePath);
-      assert.ok(resolved.startsWith(`${fs.realpathSync(installedRoot)}${path.sep}`), resolved);
-      assert.equal(resolved.startsWith(`${fs.realpathSync(repoRoot)}${path.sep}`), false);
+    const pkgDir = path.join(tmpDir, 'large-pkg');
+    fs.mkdirSync(path.join(pkgDir, 'files'), { recursive: true });
+    fs.writeFileSync(
+      path.join(pkgDir, 'opl-package.json'),
+      JSON.stringify({
+        schema_version: 'opl.package.v2',
+        identity: {
+          id: 'large-pipe-pkg',
+          version: '1.0.0',
+          intent: 'extension',
+          name: { 'zh-CN': '大输出测试包', 'en-US': 'Large Pipe Package' },
+          summary: { 'zh-CN': '管道缓冲测试', 'en-US': 'Pipe buffer test' },
+          publisher: 'one-person-lab',
+        },
+      }),
+    );
+    for (let i = 0; i < 3500; i += 1) {
+      fs.writeFileSync(
+        path.join(pkgDir, 'files', `item-${String(i).padStart(4, '0')}-payload-padding-entry.txt`),
+        `${i}\n`,
+        'utf8',
+      );
     }
-    const fixture = path.join(testRoot, 'agent');
-    fs.mkdirSync(path.join(fixture, 'contracts'), { recursive: true });
-    fs.writeFileSync(path.join(fixture, 'contracts', 'durable_knowledge_catalog.json'), JSON.stringify({
-      surface_kind: 'opl_durable_knowledge_catalog', version: 'durable-knowledge-catalog.v2',
-      owner: 'one-person-lab', domain_id: 'fixture', items: [],
-    }));
-    const installedCli = path.join(prefix, 'bin', 'opl');
-    const knowledge = JSON.parse(run(installedCli, ['knowledge', 'list', '--repo', fixture, '--json']).stdout);
-    assert.equal(knowledge.durable_knowledge.version, 'durable-knowledge-catalog.v2');
-    const packages = JSON.parse(run(installedCli, ['packages', 'list', '--json']).stdout);
-    assert.equal(packages.version, 'g2');
-    assert.equal(packages.opl_agent_packages.surface_kind, 'opl_agent_package_readback');
-    assert.equal(packages.opl_agent_packages.status, 'available');
+
+    const res = await new Promise((resolve, reject) => {
+      const child = spawn(rootBin, ['pack', 'build', pkgDir, '--no-write-lock', '--json'], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          HOME: tmpDir,
+          OPL_STATE_DIR: path.join(tmpDir, 'state'),
+          NODE_NO_WARNINGS: '1',
+          OPL_USE_DIST: '1',
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      child.stdout.pause();
+      const chunks = [];
+      let stderr = '';
+      child.stdout.on('data', (c) => chunks.push(c));
+      child.stderr.on('data', (c) => { stderr += c.toString('utf8'); });
+      setTimeout(() => child.stdout.resume(), 50);
+      child.on('error', reject);
+      child.on('close', (code) => {
+        resolve({ code, stdout: Buffer.concat(chunks).toString('utf8'), stderr });
+      });
+    });
+
+    assert.equal(res.code, 0, res.stderr);
+    assert.ok(Buffer.byteLength(res.stdout, 'utf8') > 128 * 1024, `Expected >128KB JSON, got ${res.stdout.length}`);
+    const parsed = JSON.parse(res.stdout);
+    assert.ok(parsed.lock.file_count >= 3500);
   } finally {
-    fs.rmSync(testRoot, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });

@@ -1,8 +1,0 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
-export const cliPath = path.join(repoRoot, 'src', 'entrypoints', 'cli.ts');
-export const contractsDir = path.join(repoRoot, 'contracts', 'opl-framework');
-export const familyManifestFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'family-manifests');

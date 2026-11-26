@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import wait_for_checks
+from package_release.owner import _ordered_content_digest, wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -160,6 +160,67 @@ class ProductReleaseTests(unittest.TestCase):
     def test_divergent_published_source_is_refused(self):
         with self.assertRaises(ReleaseError):
             product.plan(self.root, self.config, {**self.channel, 'source_commit': '1' * 40})
+
+    def test_ordered_content_digest_matches_opl_pack_and_detects_tamper(self):
+        with tempfile.TemporaryDirectory() as pkg_tmp:
+            pkg_root = Path(pkg_tmp)
+            fixture_files = {
+                'opl-package.json': b'{"schema_version":"opl.package.v2","identity":{"id":"fixture"}}\n',
+                'skills/alpha/SKILL.md': b'# Alpha Skill\n\nValid utf-8 text.\n',
+                'skills/beta/nested/helper.py': b'def run():\n    return 42\n',
+                'assets/中文-file.bin': bytes(range(256)) + b'\x00\xff\xfe\x80',
+                'assets/\U0001f680-icon.bin': b'\x89PNG\r\n\x1a\n',
+                'assets/\ue000-pua.bin': b'\x01\x02\x03',
+            }
+            for rel, content in fixture_files.items():
+                target = pkg_root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+
+            node_script = (
+                "import fs from 'node:fs'; "
+                "import path from 'node:path'; "
+                "import { collectPackageReleasePaths, computePackageContentDigest } "
+                "from './packages/pack/src/build/content-lock.ts'; "
+                "const pkgRoot = process.argv[1]; "
+                "const paths = collectPackageReleasePaths(pkgRoot); "
+                "const digest = computePackageContentDigest(paths, (rel) => fs.readFileSync(path.join(pkgRoot, rel))); "
+                "console.log(JSON.stringify({ paths, digest }));"
+            )
+            res = subprocess.run(
+                ['node', '--conditions=opl-source', '--experimental-strip-types', '-e', node_script, str(pkg_root)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            pack_result = json.loads(res.stdout)
+            reverse_paths = list(reversed(pack_result['paths']))
+            py_digest = _ordered_content_digest(reverse_paths, lambda rel: (pkg_root / rel).read_bytes())
+            self.assertEqual(py_digest, pack_result['digest'])
+
+            # 1-byte tamper sensitivity and parity after tamper
+            tampered_path = pkg_root / 'skills/beta/nested/helper.py'
+            tampered_bytes = bytearray(tampered_path.read_bytes())
+            tampered_bytes[-2] ^= 0x01
+            tampered_path.write_bytes(bytes(tampered_bytes))
+
+            res_tampered = subprocess.run(
+                ['node', '--conditions=opl-source', '--experimental-strip-types', '-e', node_script, str(pkg_root)],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+            pack_tampered = json.loads(res_tampered.stdout)
+            py_tampered = _ordered_content_digest(pack_tampered['paths'], lambda rel: (pkg_root / rel).read_bytes())
+            self.assertNotEqual(py_tampered, py_digest)
+            self.assertEqual(py_tampered, pack_tampered['digest'])
+
+            with self.assertRaises(ValueError):
+                _ordered_content_digest(['a/b.txt', 'a/b.txt'], lambda _: b'x')
+            with self.assertRaises(ValueError):
+                _ordered_content_digest(['a/b.txt', './a/b.txt'], lambda _: b'x')
 
 
 if __name__ == '__main__':

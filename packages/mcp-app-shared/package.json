@@ -1,0 +1,66 @@
+{
+  "name": "@opl/mcp-app-shared",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "opl-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "opl-source": "./src/types.ts",
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./presentation": {
+      "opl-source": "./src/presentation.ts",
+      "types": "./dist/presentation.d.ts",
+      "default": "./dist/presentation.js"
+    },
+    "./forms": {
+      "opl-source": "./src/forms.ts",
+      "types": "./dist/forms.d.ts",
+      "default": "./dist/forms.js"
+    },
+    "./handoff": {
+      "opl-source": "./src/handoff.ts",
+      "types": "./dist/handoff.d.ts",
+      "default": "./dist/handoff.js"
+    },
+    "./trajectory-renderer": {
+      "opl-source": "./src/trajectory-renderer.ts",
+      "types": "./dist/trajectory-renderer.d.ts",
+      "default": "./dist/trajectory-renderer.js"
+    },
+    "./task-workbench": {
+      "opl-source": "./src/task-workbench.ts",
+      "types": "./dist/task-workbench.d.ts",
+      "default": "./dist/task-workbench.js"
+    },
+    "./view": {
+      "opl-source": "./src/view.ts",
+      "types": "./dist/view.d.ts",
+      "default": "./dist/view.js"
+    },
+    "./bridge": {
+      "opl-source": "./src/opld-bridge.ts",
+      "types": "./dist/opld-bridge.d.ts",
+      "default": "./dist/opld-bridge.js"
+    },
+    "./node-transport": {
+      "opl-source": "./src/node-rpc-transport.ts",
+      "types": "./dist/node-rpc-transport.d.ts",
+      "default": "./dist/node-rpc-transport.js"
+    }
+  },
+  "files": [
+    "assets",
+    "dist"
+  ],
+  "dependencies": {
+    "@opl/core": "2.0.0"
+  }
+}

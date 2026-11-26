@@ -1,132 +1,67 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env node
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
-SOURCE_PATH="${BASH_SOURCE[0]}"
-while [[ -L "$SOURCE_PATH" ]]; do
-  SOURCE_DIR="$(cd "$(dirname "$SOURCE_PATH")" && pwd)"
-  LINK_TARGET="$(readlink "$SOURCE_PATH")"
-  if [[ "$LINK_TARGET" == /* ]]; then
-    SOURCE_PATH="$LINK_TARGET"
-  else
-    SOURCE_PATH="$SOURCE_DIR/$LINK_TARGET"
-  fi
-done
-ROOT_DIR="$(cd "$(dirname "$SOURCE_PATH")/.." && pwd)"
-LAUNCHER_PATH="$(cd "$(dirname "$SOURCE_PATH")" && pwd)/$(basename "$SOURCE_PATH")"
+const entryPath = fs.realpathSync(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(path.dirname(entryPath), '..');
+const srcBin = path.join(rootDir, 'packages', 'daemon', 'src', 'cli', 'bin-opl.ts');
+const distBin = path.join(rootDir, 'packages', 'daemon', 'dist', 'cli', 'bin-opl.js');
 
-run_opl() {
-  if [[ -f "$ROOT_DIR/src/entrypoints/cli.ts" ]]; then
-    exec -a "$LAUNCHER_PATH" node --conditions=opl-source --experimental-strip-types "$ROOT_DIR/src/entrypoints/cli.ts" "$@"
-  fi
+const useDist = process.env.OPL_USE_DIST === '1';
 
-  exec -a "$LAUNCHER_PATH" node "$ROOT_DIR/dist/entrypoints/cli.js" "$@"
-}
+if (!useDist && fs.existsSync(srcBin)) {
+  if (process.execArgv.includes('--conditions=opl-source')) {
+    await import(pathToFileURL(srcBin).href);
+  } else {
+    const child = spawn(
+      process.execPath,
+      ['--conditions=opl-source', '--experimental-strip-types', srcBin, ...process.argv.slice(2)],
+      { stdio: 'inherit' },
+    );
 
-run_opl_mcp_stdio() {
-  if [[ -f "$ROOT_DIR/src/entrypoints/mcp-stdio.ts" ]]; then
-    exec node --conditions=opl-source --experimental-strip-types "$ROOT_DIR/src/entrypoints/mcp-stdio.ts"
-  fi
+    const forwardSignal = (signal) => {
+      if (child.exitCode === null && child.signalCode === null) {
+        try {
+          child.kill(signal);
+        } catch (error) {
+          if (error?.code !== 'ESRCH') {
+            throw error;
+          }
+        }
+      }
+    };
 
-  exec node "$ROOT_DIR/dist/entrypoints/mcp-stdio.js"
-}
+    process.on('SIGINT', forwardSignal);
+    process.on('SIGTERM', forwardSignal);
 
-run_opl_mcp_app_stdio() {
-  if [[ -f "$ROOT_DIR/src/entrypoints/mcp-app-stdio.ts" ]]; then
-    exec node --conditions=opl-source --experimental-strip-types "$ROOT_DIR/src/entrypoints/mcp-app-stdio.ts"
-  fi
+    child.on('error', (error) => {
+      process.off('SIGINT', forwardSignal);
+      process.off('SIGTERM', forwardSignal);
+      process.stderr.write(`Failed to launch OPL v2 CLI: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.exitCode = 1;
+    });
 
-  exec node "$ROOT_DIR/dist/entrypoints/mcp-app-stdio.js"
-}
-
-print_framework_version() {
-  node -e '
-const fs = require("node:fs");
-const packageJson = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-const version = typeof packageJson.version === "string" ? packageJson.version.trim() : "";
-if (!version) {
-  process.stderr.write("OPL Framework package.json is missing version.\n");
+    child.on('close', (code, signal) => {
+      process.off('SIGINT', forwardSignal);
+      process.off('SIGTERM', forwardSignal);
+      if (signal) {
+        try {
+          process.kill(process.pid, signal);
+        } catch {
+          process.exit(1);
+        }
+        return;
+      }
+      process.exit(code ?? 1);
+    });
+  }
+} else if (fs.existsSync(distBin)) {
+  await import(pathToFileURL(distBin).href);
+} else {
+  process.stderr.write(
+    `OPL v2 CLI entrypoint not found (checked ${srcBin} and ${distBin}). Run "npm run build" first.\n`,
+  );
   process.exit(1);
 }
-process.stdout.write(`${version}\n`);
-' "$ROOT_DIR/package.json"
-}
-
-run_codex() {
-  if [[ -n "${OPL_CODEX_BIN:-}" ]]; then
-    exec "$OPL_CODEX_BIN" "$@"
-  fi
-
-  exec codex "$@"
-}
-
-if [[ "$#" -eq 0 ]]; then
-  run_codex
-fi
-
-case "$1" in
-  --version|-V)
-    print_framework_version
-    ;;
-  --help|-h)
-    run_opl --help --text
-    ;;
-  exec)
-    shift
-    if [[ -n "${OPL_EXECUTOR_KIND:-}" ]]; then
-      run_opl exec "$@"
-    fi
-    for arg in "$@"; do
-      if [[ "$arg" == "--executor" ]]; then
-        run_opl exec "$@"
-      fi
-    done
-    run_codex exec "$@"
-    ;;
-  resume)
-    run_codex "$@"
-    ;;
-  ask)
-    shift
-    run_opl ask "$@"
-    ;;
-  chat)
-    shift
-    run_opl chat "$@"
-    ;;
-  shell)
-    shift
-    run_opl shell "$@"
-    ;;
-  connect)
-    if [[ "${2:-}" == "mcp-stdio" ]]; then
-      shift 2
-      if [[ "$#" -gt 0 ]]; then
-        run_opl connect mcp-stdio "$@"
-      fi
-      run_opl_mcp_stdio
-    fi
-    if [[ "${2:-}" == "mcp-app-stdio" ]]; then
-      shift 2
-      if [[ "$#" -gt 0 ]]; then
-        run_opl connect mcp-app-stdio "$@"
-      fi
-      run_opl_mcp_app_stdio
-    fi
-    run_opl "$@"
-    ;;
-  session)
-    run_opl "$@"
-    ;;
-  okf|knowledge|sources)
-    run_opl "$@"
-    ;;
-  help|doctor|install|start|web|mcp-stdio|app|status|update|workspace|domain|actions|agents|agent-lab|foundry-lab|feedback|work-order|domain-memory|stages|stage|stage-artifact|index|packages|contract|system|modules|module|engine|service|runtime|env|family-runtime|executor|skill|quality|framework|substrate|brand-modules|capability-pack|scholar-skills|charter|atlas|pack|stagecraft|runway|ledger|vault|console|foundry|profiles|release|cordis)
-    run_opl "$@"
-    ;;
-  *)
-    if [[ "$1" == @* ]]; then
-      run_opl "$@"
-    fi
-    run_codex "$@"
-    ;;
-esac

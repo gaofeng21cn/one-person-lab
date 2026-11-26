@@ -20,22 +20,11 @@ updates:
       time: "03:00"
       timezone: Asia/Shanghai
     groups:
-      # Keep version cohorts together; security updates remain independent.
-      temporal-cohort:
-        applies-to: version-updates
-        patterns:
-          - "@temporalio/*"
-      cordis-runtime:
-        applies-to: version-updates
-        patterns:
-          - "@deepseek-ai/cordis"
       npm-minor-patch:
         applies-to: version-updates
         patterns:
           - "*"
         exclude-patterns:
-          - "@temporalio/*"
-          - "@deepseek-ai/cordis"
           - "typescript"
           - "@types/node"
         update-types:

@@ -2,29 +2,19 @@
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": [
     "bin/opl",
-    "src/entrypoints/cli.ts",
-    "src/authority/evolution/protocol.ts",
-    "src/authority/evolution/control.ts",
-    "src/adapters/integration/capability-registry-resolver.ts",
-    "src/read-models/operator/family-action-catalog.ts",
-    "src/read-models/catalog/family-domain-agent-descriptor.ts",
-    "src/authority/packages/domain-pack-compiler.ts",
-    "src/adapters/execution/family-runtime-lifecycle-index.ts",
-    "src/adapters/execution/generic-substrate-projection.ts",
-    "src/authority/stages/quality-gate-runtime.ts",
-    "src/read-models/catalog/family-domain-catalog.ts",
-    "src/read-models/catalog/family-entry-contracts.ts",
-    "src/adapters/execution/family-orchestration.ts",
-    "src/adapters/execution/managed-runtime-contract.ts",
-    "src/read-models/operator/product-entry-companions.ts",
+    "packages/core/src/index.ts",
+    "packages/ledger/src/index.ts",
+    "packages/workspace/src/index.ts",
+    "packages/mcp-app-shared/src/index.ts",
+    "packages/connect/src/index.ts",
+    "packages/pack/src/index.ts",
+    "packages/runway/src/index.ts",
+    "packages/daemon/src/index.ts",
+    "packages/daemon/src/cli/bin-opl.ts",
+    "packages/daemon/src/cli/bin-opld.ts",
+    "extensions/foundry/src/cli.mjs",
     "scripts/*.mjs",
-    "src/entrypoints/cli/main.ts",
-    "src/adapters/execution/native-helper-doctor.ts",
-    "src/adapters/execution/opl-session-runtime.ts",
-    "src/read-models/operator/product-entry.ts",
-    "src/read-models/operator/management/progress.ts",
-    ".github/actions/quality-details/emit-quality-details.mjs",
-    "src/read-models/operator/index.ts"
+    ".github/actions/quality-details/emit-quality-details.mjs"
   ],
   "ignoreDependencies": [
     "node:sqlite"
@@ -38,8 +28,5 @@
     "ignore": [
       "tests/**"
     ]
-  },
-  "dynamicallyLoaded": [
-    "src/adapters/execution/family-runtime-temporal-residency-proof.ts"
-  ]
+  }
 }

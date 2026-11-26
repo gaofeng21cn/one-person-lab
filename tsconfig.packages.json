@@ -1,0 +1,29 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/ledger"
+    },
+    {
+      "path": "./packages/workspace"
+    },
+    {
+      "path": "./packages/mcp-app-shared"
+    },
+    {
+      "path": "./packages/connect"
+    },
+    {
+      "path": "./packages/pack"
+    },
+    {
+      "path": "./packages/runway"
+    },
+    {
+      "path": "./packages/daemon"
+    }
+  ]
+}

@@ -1,8 +1,0 @@
-// Public cross-module surface generated from existing module consumers.
-export { buildEvidenceGroundedCharterProfileBoundaryReadback } from './evidence-grounded-decision-agent-profile.ts';
-export { buildBrandModuleL5Status } from './brand-module-l5-evidence.ts';
-export { listBrandModuleL5EvidenceReceipts } from './brand-module-l5-evidence-ledger.ts';
-export { buildOplFrameworkLocator, listOplFrameworkRoots } from './opl-framework-locator.ts';
-export { findDomainOrThrow, findWorkstreamOrThrow, FrameworkContractError, loadFrameworkContracts, validateCliCommandRegistryEntry } from './contracts.ts';
-export { listStandardDomainAgentIds, normalizeStandardDomainAgentId, resolveStandardAgent, resolveStandardAgentByCanonicalPluginName, resolveStandardAgentByDomainId, STANDARD_AGENT_REGISTRY, STANDARD_AGENT_REGISTRY_REF, STANDARD_AGENT_SERIES_MEMBERSHIP, standardAgentDomainAliasEntries } from '../../kernel/standard-agent-registry.ts';
-export type { StandardAgentRegistryEntry, StandardAgentSeriesMembership } from '../../kernel/standard-agent-registry.ts';

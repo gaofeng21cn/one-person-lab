@@ -1,0 +1,10 @@
+export { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError, type JsonRpcErrorPayload } from './errors.ts';
+export { AppStateCache, toProjectedPackageSummary, type AppStateSnapshot, type ProjectedPackageSummary } from './state/app-state-cache.ts';
+export { DaemonRuntime, type DaemonRuntimeOptions, type DiscoveredCliExtension } from './state/runtime.ts';
+export { ContributionDispatcher } from './contributions/dispatcher.ts';
+export { OpldSocketServer, type DaemonSessionFilePayload, type RpcHandler, type SocketConnectionState } from './server/socket-server.ts';
+export { createDaemonRpcRouter } from './rpc/router.ts';
+export { startDaemonServer, runDaemonForeground, type StartedDaemonServer } from './daemon.ts';
+export { callDaemonRpc, getDaemonStatus, probeSocket, spawnDetachedDaemon, stopDaemonGracefully } from './cli/client.ts';
+export { discoverCliExtensions, invokeCliExtension, type CliExtensionDescriptor } from './cli/extensions.ts';
+export { runCli } from './cli/main.ts';

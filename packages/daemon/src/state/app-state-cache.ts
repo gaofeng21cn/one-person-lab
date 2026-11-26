@@ -1,0 +1,191 @@
+import type { SqliteDb } from '@opl/core';
+import type { ConnectService } from '@opl/connect';
+import type { InstalledPackageRecord, PackService } from '@opl/pack';
+
+export interface ProjectedPackageSummary {
+  readonly package_id: string;
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly intent: InstalledPackageRecord['intent'];
+  readonly origin: InstalledPackageRecord['origin'];
+  readonly carrier: 'codex' | null;
+  readonly install_mode: InstalledPackageRecord['install_mode'];
+  readonly install_path: string;
+  readonly content_digest: string;
+  readonly enabled: boolean;
+  readonly carrier_synced: boolean;
+  readonly codex_synced: boolean;
+  readonly identity: InstalledPackageRecord['manifest']['identity'];
+  readonly ui: InstalledPackageRecord['manifest']['ui'];
+  readonly provides: InstalledPackageRecord['manifest']['provides'];
+  readonly installed_at: string;
+  readonly updated_at: string;
+}
+
+export function toProjectedPackageSummary(pkg: InstalledPackageRecord): ProjectedPackageSummary {
+  const pluginName = pkg.manifest.host_hints?.codex?.plugin_name;
+  const displayName = pluginName || pkg.manifest.identity.name['en-US'] || pkg.package_id;
+  const carrier: 'codex' | null =
+    pkg.origin === 'external' || pkg.carrier_synced ? 'codex' : null;
+  return {
+    package_id: pkg.package_id,
+    id: pkg.package_id,
+    name: displayName,
+    version: pkg.version,
+    intent: pkg.intent,
+    origin: pkg.origin,
+    carrier,
+    install_mode: pkg.install_mode,
+    install_path: pkg.install_path,
+    content_digest: pkg.content_digest,
+    enabled: pkg.enabled,
+    carrier_synced: pkg.carrier_synced,
+    codex_synced: pkg.carrier_synced,
+    identity: pkg.manifest.identity,
+    ui: pkg.manifest.ui,
+    provides: pkg.manifest.provides,
+    installed_at: pkg.installed_at,
+    updated_at: pkg.updated_at,
+  };
+}
+
+export interface AppStateSnapshot {
+  readonly profile: 'fast' | 'full';
+  readonly revision: number;
+  readonly generated_at: string;
+  readonly daemon: {
+    readonly pid: number;
+    readonly version: string;
+    readonly api_version: string;
+  };
+  readonly packages: readonly ProjectedPackageSummary[];
+  readonly installed_packages: readonly ProjectedPackageSummary[];
+  readonly workspaces: readonly Record<string, unknown>[];
+  readonly knowledge_sources: readonly Record<string, unknown>[];
+  readonly connections: ReturnType<ConnectService['list']>;
+  readonly grants?: ReturnType<ConnectService['listProjection']>['grants'];
+  readonly invocations?: ReturnType<ConnectService['listProjection']>['invocations'];
+  readonly tasks: readonly Record<string, unknown>[];
+  readonly schedules: readonly Record<string, unknown>[];
+  readonly recent_operations?: ReturnType<PackService['operationStatus']>;
+  readonly app_state: {
+    readonly packages: readonly ProjectedPackageSummary[];
+    readonly installed_packages: readonly ProjectedPackageSummary[];
+    readonly workspaces: readonly Record<string, unknown>[];
+    readonly connections: ReturnType<ConnectService['list']>;
+    readonly tasks: readonly Record<string, unknown>[];
+    readonly schedules: readonly Record<string, unknown>[];
+  };
+}
+
+export class AppStateCache {
+  readonly #db: SqliteDb;
+  readonly #packService: PackService;
+  readonly #connectService: ConnectService;
+  readonly #version: string;
+  #revision = 1;
+  #fastSnapshot: AppStateSnapshot | null = null;
+  #fullSnapshot: AppStateSnapshot | null = null;
+
+  constructor(options: {
+    readonly db: SqliteDb;
+    readonly packService: PackService;
+    readonly connectService: ConnectService;
+    readonly version: string;
+  }) {
+    this.#db = options.db;
+    this.#packService = options.packService;
+    this.#connectService = options.connectService;
+    this.#version = options.version;
+  }
+
+  get revision(): number {
+    return this.#revision;
+  }
+
+  invalidate(): void {
+    this.#revision += 1;
+    this.#fastSnapshot = null;
+    this.#fullSnapshot = null;
+  }
+
+  getState(profile: 'fast' | 'full' = 'fast'): AppStateSnapshot {
+    if (profile === 'fast' && this.#fastSnapshot) {
+      return this.#fastSnapshot;
+    }
+    if (profile === 'full' && this.#fullSnapshot) {
+      return this.#fullSnapshot;
+    }
+
+    const packages = this.#packService.list().map(toProjectedPackageSummary);
+    const workspaces = this.#db
+      .prepare(
+        'SELECT workspace_id, name, root_path, domain_id, revision, metadata_json, created_at, updated_at FROM workspaces ORDER BY created_at ASC, rowid ASC',
+      )
+      .all() as Record<string, unknown>[];
+
+    const knowledgeSources = this.#db
+      .prepare(
+        'SELECT source_id, scope, adapter_kind, root_path, accepted_revision, status, updated_at FROM knowledge_sources ORDER BY updated_at DESC, rowid DESC',
+      )
+      .all() as Record<string, unknown>[];
+
+    const tasks = this.#db
+      .prepare(
+        'SELECT task_id, workspace_id, agent_id, title, status, revision, created_at, updated_at FROM tasks ORDER BY created_at DESC, rowid DESC LIMIT 100',
+      )
+      .all() as Record<string, unknown>[];
+
+    const schedules = this.#db
+      .prepare(
+        'SELECT schedule_id, workspace_id, agent_id, cron_expr, overlap_policy, enabled, next_run_at, last_run_at, last_task_id, updated_at FROM schedules ORDER BY updated_at DESC, rowid DESC',
+      )
+      .all() as Record<string, unknown>[];
+
+    const connections = this.#connectService.list();
+    const generatedAt = new Date().toISOString();
+
+    const base: AppStateSnapshot = {
+      profile,
+      revision: this.#revision,
+      generated_at: generatedAt,
+      daemon: {
+        pid: process.pid,
+        version: this.#version,
+        api_version: '2.0',
+      },
+      packages,
+      installed_packages: packages,
+      workspaces,
+      knowledge_sources: knowledgeSources,
+      connections,
+      tasks,
+      schedules,
+      app_state: {
+        packages,
+        installed_packages: packages,
+        workspaces,
+        connections,
+        tasks,
+        schedules,
+      },
+    };
+
+    if (profile === 'fast') {
+      this.#fastSnapshot = base;
+      return base;
+    }
+
+    const projection = this.#connectService.listProjection();
+    const recentOps = this.#packService.operationStatus();
+    const full: AppStateSnapshot = {
+      ...base,
+      grants: projection.grants,
+      invocations: projection.invocations,
+      recent_operations: recentOps,
+    };
+    this.#fullSnapshot = full;
+    return full;
+  }
+}

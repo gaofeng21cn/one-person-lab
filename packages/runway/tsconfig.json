@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "tsconfig.tsbuildinfo"
+  },
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../ledger"
+    },
+    {
+      "path": "../workspace"
+    },
+    {
+      "path": "../connect"
+    },
+    {
+      "path": "../pack"
+    }
+  ],
+  "include": [
+    "src/**/*.ts"
+  ]
+}

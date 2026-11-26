@@ -31,6 +31,7 @@ tracked="$(
     tmp \
     ':(glob)**/dist/**' \
     ':(glob)**/build/**' \
+    ':(exclude)packages/*/src/**' \
     ':(glob)**/out/**' \
     ':(glob)**/__pycache__/**' \
     ':(glob)**/*.egg-info/**' \
@@ -53,6 +54,7 @@ unignored_generated="$(
     tmp \
     ':(glob)**/dist/**' \
     ':(glob)**/build/**' \
+    ':(exclude)packages/*/src/**' \
     ':(glob)**/out/**' \
     ':(glob)**/target/**' \
     ':(glob)**/.venv/**' \
