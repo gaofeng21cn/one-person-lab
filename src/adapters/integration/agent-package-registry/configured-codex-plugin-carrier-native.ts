@@ -17,6 +17,10 @@ import type {
   CodexPluginMarketplaceListEntry,
   ConfiguredCodexPluginCarrierObservedSource,
 } from './configured-codex-plugin-carrier-types.ts';
+import {
+  captureCodexCarrierTmpSnapshot,
+  cleanupCodexCarrierTmpAfterRun,
+} from './carrier-temp-hygiene.ts';
 
 const TRANSIENT_CURL_EXIT_STATUSES = new Set([5, 6, 7, 16, 18, 28, 35, 52, 55, 56, 92]);
 export const CODEX_PLUGIN_LIST_TIMEOUT_MS = 10_000;
@@ -71,19 +75,33 @@ export function defaultRunner(input: {
   args: string[];
   env: NodeJS.ProcessEnv;
 }): CodexPluginCommandResult {
-  const result = spawnSync(input.binary, input.args, {
-    encoding: 'utf8',
-    env: input.env,
-    timeout: input.args[0] === 'plugin' && input.args[1] === 'list'
-      ? CODEX_PLUGIN_LIST_TIMEOUT_MS : 120_000,
-    killSignal: 'SIGKILL',
-  });
-  return {
-    status: result.status,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-    error: result.error ?? null,
-  };
+  const codexHome = configuredCodexHome(input.env);
+  const internalHome = internalPackageCodexHome(input.env);
+  const snapshot = captureCodexCarrierTmpSnapshot(codexHome);
+  let failedOrTimedOut = false;
+  try {
+    const result = spawnSync(input.binary, input.args, {
+      encoding: 'utf8',
+      env: input.env,
+      timeout: input.args[0] === 'plugin' && input.args[1] === 'list'
+        ? CODEX_PLUGIN_LIST_TIMEOUT_MS : 120_000,
+      killSignal: 'SIGKILL',
+    });
+    failedOrTimedOut = result.status !== 0 || Boolean(result.error);
+    return {
+      status: result.status,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
+      error: result.error ?? null,
+    };
+  } catch (error) {
+    failedOrTimedOut = true;
+    throw error;
+  } finally {
+    cleanupCodexCarrierTmpAfterRun(codexHome, snapshot, {
+      aggressiveStagingCleanup: codexHome === internalHome || failedOrTimedOut,
+    });
+  }
 }
 
 export function createMemoizedCodexPluginListRunner(

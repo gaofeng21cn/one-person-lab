@@ -24,6 +24,7 @@ import { buildDomainModuleSpecs } from './module-specs.ts';
 import { applyOplSeedManifest } from './seed-manifest.ts';
 import { resolveProjectRoot } from './shared.ts';
 import { reconcileInternalPackageCarriers } from '../agent-package-registry/internal-package-carrier-migration.ts';
+import { pruneOplPackageStateArtifacts } from '../agent-package-registry/carrier-temp-hygiene.ts';
 
 type ModuleStatus = ReturnType<typeof buildOplModules>['modules']['modules'][number];
 type OplSystemEnvironment = Awaited<ReturnType<typeof buildOplEnvironment>>['system_environment'];
@@ -585,6 +586,7 @@ async function runStartupMaintenance(
   ];
   const engineTargets = [await maybeRunEngineStartupMaintenance(contracts, initialEnvironment, stageOnly)];
   const internalPackageMigration = stageOnly ? null : reconcileInternalPackageCarriers();
+  const packageStateHygiene = stageOnly ? null : pruneOplPackageStateArtifacts(process.env);
   const initialModules = scope === 'runtime_substrate'
     ? []
     : buildOplModules().modules.modules.filter((module) => module.default_install);
@@ -639,6 +641,7 @@ async function runStartupMaintenance(
         pending_runtime_activation: pendingRuntimeActivation,
         pending_framework_activation: pendingFrameworkActivation,
         internal_package_carrier_migration: internalPackageMigration,
+        package_state_hygiene: packageStateHygiene,
         process_instance_id: process.env.OPL_APP_PROCESS_INSTANCE_ID?.trim() ?? null,
         framework_summary: frameworkSummary,
         engine_summary: engineSummary,

@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { packageSourceArchiveDigest } from './package-source-archive.ts';
 import { checkPackageOperationCancellation, packageDownloadCache, packageOperationCancelled, reportPackageOperation } from './package-operation-state.ts';
+import { prunePackageDownloadCache } from './carrier-temp-hygiene.ts';
 
 export type PackageDownload = { url: string; token: string; digest: string; size: number; packageId: string };
 const transient = new Set([5, 6, 7, 16, 18, 28, 35, 52, 55, 56, 92]);
@@ -239,7 +240,14 @@ export async function downloadPackageArchive(input: PackageDownload, env: NodeJS
     checkPackageOperationCancellation(env);
     fs.chmodSync(partial, 0o600); fs.renameSync(partial, complete);
     return complete;
-  } finally { fs.rmSync(lock, { force: true }); }
+  } finally {
+    fs.rmSync(lock, { force: true });
+    try {
+      prunePackageDownloadCache(env, { preserveDigests: [input.digest] });
+    } catch {
+      // Cache quota pruning is best-effort and must not fail a verified download.
+    }
+  }
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
