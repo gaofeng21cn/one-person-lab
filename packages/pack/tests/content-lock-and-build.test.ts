@@ -259,7 +259,9 @@ test('buildPackage excludes Python cache dirs and *.pyc files at any depth while
     fs.mkdirSync(path.join(noisyDir, '.pytest_cache', 'v', 'cache'), { recursive: true });
     fs.writeFileSync(path.join(noisyDir, '.pytest_cache', 'v', 'cache', 'lastfailed'), '{}');
     fs.mkdirSync(path.join(noisyDir, '.ruff_cache', '0.1'), { recursive: true });
-    fs.writeFileSync(path.join(noisyDir, '.ruff_cache', '0.1', 'cache'), 'ruff');
+    fs.writeFileSync(path.join(noisyDir, '.ruff_cache', '0.1', 'state'), '1');
+    fs.mkdirSync(path.join(noisyDir, '.venv', 'bin'), { recursive: true });
+    fs.symlinkSync(outsideFile, path.join(noisyDir, '.venv', 'bin', 'python'));
     fs.writeFileSync(path.join(noisyDir, 'runtime', 'stray.pyc'), 'pyc');
 
     const cleanBuild = buildPackage(cleanDir, { builtAt: '2026-11-26T00:00:00.000Z' });
@@ -272,6 +274,7 @@ test('buildPackage excludes Python cache dirs and *.pyc files at any depth while
           p.includes('__pycache__') ||
           p.includes('.pytest_cache') ||
           p.includes('.ruff_cache') ||
+          p.includes('.venv') ||
           p.endsWith('.pyc'),
       ),
       false,
@@ -288,6 +291,14 @@ test('buildPackage excludes Python cache dirs and *.pyc files at any depth while
 
     const pycLink = path.join(cleanDir, 'runtime', 'evil.pyc');
     fs.symlinkSync(outsideFile, pycLink);
+    assert.throws(
+      () => buildPackage(cleanDir),
+      (err: unknown) => err instanceof PackError && err.code === 'PACK_SYMLINK_ESCAPE',
+    );
+    fs.rmSync(pycLink);
+
+    const venvLink = path.join(cleanDir, '.venv');
+    fs.symlinkSync(outsideFile, venvLink);
     assert.throws(
       () => buildPackage(cleanDir),
       (err: unknown) => err instanceof PackError && err.code === 'PACK_SYMLINK_ESCAPE',

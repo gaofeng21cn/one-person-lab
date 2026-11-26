@@ -361,6 +361,8 @@ describe('OPL Foundry extension (zero external deps, pure Node ESM)', () => {
     fs.writeFileSync(path.join(noisyPkg, '.pytest_cache', 'v', 'lastfailed'), '{}', 'utf8');
     fs.mkdirSync(path.join(noisyPkg, '.ruff_cache', '0.1'), { recursive: true });
     fs.writeFileSync(path.join(noisyPkg, '.ruff_cache', '0.1', 'state'), '1', 'utf8');
+    fs.mkdirSync(path.join(noisyPkg, '.venv', 'bin'), { recursive: true });
+    fs.symlinkSync(outsideFile, path.join(noisyPkg, '.venv', 'bin', 'python'));
     fs.writeFileSync(path.join(noisyPkg, 'runtime', 'stray.pyc'), 'pyc', 'utf8');
 
     const cleanBuild = buildPackage(cleanPkg, { writeLock: true });

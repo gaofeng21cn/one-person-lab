@@ -190,7 +190,8 @@ function copyDirectoryPhysical(srcDir: string, destDir: string): void {
         if (
           entry.name === '__pycache__' ||
           entry.name === '.pytest_cache' ||
-          entry.name === '.ruff_cache'
+          entry.name === '.ruff_cache' ||
+          entry.name === '.venv'
         ) {
           continue;
         }

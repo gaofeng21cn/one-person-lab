@@ -757,7 +757,7 @@ export function validatePackage(targetDir) {
         continue;
       }
       if (lst.isDirectory()) {
-        if (name === '__pycache__' || name === '.pytest_cache' || name === '.ruff_cache') {
+        if (name === '__pycache__' || name === '.pytest_cache' || name === '.ruff_cache' || name === '.venv') {
           continue;
         }
         scanTreeForSymlinks(abs, rel, false);

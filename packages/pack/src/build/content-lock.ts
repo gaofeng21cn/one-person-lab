@@ -12,7 +12,7 @@ import {
 export const CANONICALIZATION_ALGORITHM = 'ordered_path_length_file_length_bytes' as const;
 
 const DEFAULT_EXCLUDED_TOP_DIRS = new Set(['.git', 'node_modules']);
-const DEFAULT_EXCLUDED_DIRS = new Set(['__pycache__', '.pytest_cache', '.ruff_cache']);
+const DEFAULT_EXCLUDED_DIRS = new Set(['__pycache__', '.pytest_cache', '.ruff_cache', '.venv']);
 const DEFAULT_EXCLUDED_NAMES = new Set(['.DS_Store', 'opl-release.lock.json']);
 const DEFAULT_EXCLUDED_FILE_SUFFIXES = ['.pyc'] as const;
 
