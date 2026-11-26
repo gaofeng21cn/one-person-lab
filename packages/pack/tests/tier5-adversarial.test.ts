@@ -135,7 +135,7 @@ test('T5-PACK-02 (G2-09 / Bug 8): PackService.install cleans up orphaned destDir
     fs.writeFileSync(path.join(tarSrc, 'real.txt'), 'hi\n', 'utf8');
     fs.symlinkSync('real.txt', path.join(tarSrc, 'sym.txt'));
     const symArchive = path.join(tmpDir, 'sym.tgz');
-    await tarCreate({ file: symArchive, cwd: tarSrc, gzip: true }, ['real.txt', 'sym.txt']);
+    tarCreate({ file: symArchive, cwd: tarSrc, gzip: true, sync: true }, ['real.txt', 'sym.txt']);
     assert.throws(
       () => extractPackageSourceArchive(symArchive, path.join(tmpDir, 'extract-sym')),
       (err: unknown) => err instanceof PackError && err.code === 'PACK_ARCHIVE_INVALID',
@@ -146,7 +146,7 @@ test('T5-PACK-02 (G2-09 / Bug 8): PackService.install cleans up orphaned destDir
     fs.writeFileSync(path.join(linkSrc, 'orig.txt'), 'hi\n', 'utf8');
     fs.linkSync(path.join(linkSrc, 'orig.txt'), path.join(linkSrc, 'hard.txt'));
     const linkArchive = path.join(tmpDir, 'hard.tgz');
-    await tarCreate({ file: linkArchive, cwd: linkSrc, gzip: true }, ['orig.txt', 'hard.txt']);
+    tarCreate({ file: linkArchive, cwd: linkSrc, gzip: true, sync: true }, ['orig.txt', 'hard.txt']);
     assert.throws(
       () => extractPackageSourceArchive(linkArchive, path.join(tmpDir, 'extract-hard')),
       (err: unknown) => err instanceof PackError && err.code === 'PACK_ARCHIVE_INVALID',

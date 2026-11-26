@@ -22,8 +22,12 @@ class AdversarialUnixServer:
         self.session_path = tmpdir / "opld.session.json"
         self.token = "b" * 64
         self.srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.srv.bind(str(self.sock_path))
-        self.srv.listen(4)
+        try:
+            self.srv.bind(str(self.sock_path))
+            self.srv.listen(4)
+        except Exception:
+            self.srv.close()
+            raise
         self.session_path.write_text(
             json.dumps({"socket_path": str(self.sock_path), "token": self.token}),
             encoding="utf-8",
@@ -100,8 +104,14 @@ class AdversarialUnixServer:
 
 class Tier5AdversarialTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory(prefix="opl-py-t5-")
-        self.srv = AdversarialUnixServer(Path(self.tmp.name))
+        probe = str(Path(tempfile.gettempdir()) / "opl-py-t5-xxxxxxxx/run/opld.sock")
+        tmp_base = "/tmp" if os.name != "nt" and len(probe.encode("utf-8")) >= 96 and Path("/tmp").is_dir() else None
+        self.tmp = tempfile.TemporaryDirectory(prefix="opl-py-t5-", dir=tmp_base)
+        try:
+            self.srv = AdversarialUnixServer(Path(self.tmp.name))
+        except Exception:
+            self.tmp.cleanup()
+            raise
 
     def tearDown(self) -> None:
         self.srv.close()

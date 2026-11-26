@@ -84,8 +84,12 @@ class MockDaemonServer:
         self.session_path = tmpdir / "opld.session.json"
         self.token = "a" * 64
         self.server_sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self.server_sock.bind(str(self.sock_path))
-        self.server_sock.listen(4)
+        try:
+            self.server_sock.bind(str(self.sock_path))
+            self.server_sock.listen(4)
+        except Exception:
+            self.server_sock.close()
+            raise
         self.session_path.write_text(
             json.dumps({"socket_path": str(self.sock_path), "token": self.token}),
             encoding="utf-8",
@@ -196,9 +200,15 @@ class MockDaemonServer:
 
 class ClientLifecycleAndIpcTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory(prefix="opl-py-unit-")
+        probe = str(Path(tempfile.gettempdir()) / "opl-py-unit-xxxxxxxx/run/opld.sock")
+        tmp_base = "/tmp" if os.name != "nt" and len(probe.encode("utf-8")) >= 96 and Path("/tmp").is_dir() else None
+        self.tmp = tempfile.TemporaryDirectory(prefix="opl-py-unit-", dir=tmp_base)
         self.tmpdir = Path(self.tmp.name)
-        self.srv = MockDaemonServer(self.tmpdir)
+        try:
+            self.srv = MockDaemonServer(self.tmpdir)
+        except Exception:
+            self.tmp.cleanup()
+            raise
 
     def tearDown(self) -> None:
         self.srv.close()
