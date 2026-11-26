@@ -9,8 +9,9 @@ import type { InstalledPackageDescriptor } from '../../src/adapters/integration/
 import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 import { configureOplSoftwareSource } from '../../src/adapters/integration/software-sources.ts';
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
 
-const source = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-flow.json', import.meta.url), 'utf8'));
+const source = JSON.parse(fs.readFileSync(catalogFixtureManifestPath('opl-flow'), 'utf8'));
 
 function descriptor(packageId: string, installed: boolean): InstalledPackageDescriptor {
   const manifest = normalizePackageManifest({

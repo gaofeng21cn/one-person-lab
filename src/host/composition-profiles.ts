@@ -452,9 +452,10 @@ export async function createCordisAppFullComposition(options: {
         )
       : [];
     if (options.channelProvider) {
-      const installedProviders = await loadInstalledChannelProviders(
-        base.services.descriptorDiscovery.discover().values(),
-      );
+      const excludedProviderIds = new Set(options.channelProvider.excludedProviderIds ?? []);
+      const installedDescriptors = [...base.services.descriptorDiscovery.discover().values()]
+        .filter((descriptor) => !excludedProviderIds.has(descriptor.manifest.package_id));
+      const installedProviders = await loadInstalledChannelProviders(installedDescriptors);
       channelProviderFiber = await base.ctx.plugin(
         cordisChannelProviderHostPlugin,
         {
@@ -559,6 +560,7 @@ export async function startCordisRemoteCompanionConnectorHost(
 
 export async function startCordisChannelProviderHost(options: {
   callback: CordisChannelProviderHostPluginConfig['callback'];
+  excludedProviderIds?: readonly string[];
 }): Promise<CordisChannelProviderHostBootstrap> {
   const composition = await createCordisAppFullComposition({
     runtimeSnapshotProvider: async (contracts, snapshotOptions) => {
@@ -567,7 +569,10 @@ export async function startCordisChannelProviderHost(options: {
       );
       return buildRuntimeTraySnapshot(contracts, snapshotOptions);
     },
-    channelProvider: { callback: options.callback },
+    channelProvider: {
+      callback: options.callback,
+      ...(options.excludedProviderIds ? { excludedProviderIds: options.excludedProviderIds } : {}),
+    },
   });
   const host = composition.services.channelProviderHost!;
   return Object.freeze({
@@ -670,4 +675,5 @@ export async function createCordisFoundryDevComposition(options: {
   }
 }
 
+export { CHANNEL_PROVIDER_EXCLUSION_ABI } from './plugins/cordis-channel-provider-host.ts';
 export { startCordisWorkbenchServicesHost } from './plugins/workbench-services/index.ts';

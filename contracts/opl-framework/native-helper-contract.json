@@ -27,7 +27,7 @@
     "helper_owner": "one-person-lab",
     "runtime_kernel_owner": "provider_backed_family_runtime",
     "domain_truth_owner_registry": {
-      "source_ref": "contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection",
+      "source_ref": "catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection",
       "series_membership": "standard_domain_agent",
       "projection_field": "project"
     }

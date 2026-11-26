@@ -1,18 +1,30 @@
-import { readSoftwareSource, readSoftwareSources, softwareSourceFailure, writeSoftwareSource } from './software-sources-store.ts';
+import {
+  addCatalogSoftwareSource,
+  readSoftwareSource,
+  readSoftwareSources,
+  removeCatalogSoftwareSource,
+  softwareSourceFailure,
+  writeSoftwareSource,
+} from './software-sources-store.ts';
 import { assertCredentialHandleOnlyPayload } from './connection-registry.ts';
 import { normalizeSoftwareSourceCredential } from './software-sources-store.ts';
 import { verifySoftwareSourceCredential } from './software-sources-verification.ts';
 import { readInstalledSoftwareProducts } from './software-sources-framework-installation.ts';
-import { readFrameworkSoftwareRelease, refreshFrameworkSoftwareRelease } from './software-sources-framework-release.ts';
+import { refreshFrameworkSoftwareRelease } from './software-sources-framework-release.ts';
+import {
+  readCatalogSourceCacheStatus,
+  refreshCatalogSource,
+  removeCatalogSourceCache,
+} from './software-catalog-source.ts';
 import { executeHomebrewSourceAction, HOMEBREW_ACTION_IDS, homebrewActionCatalog, readHomebrewSourceProjection, refreshHomebrewSource, type HomebrewActionId } from './homebrew-source.ts';
 import type {
   SoftwareSource, SoftwareSourceConfigureInput, SoftwareSourceDependencies,
   SoftwareSourceProviderId,
 } from './software-sources-types.ts';
 
-export type SoftwareSourceActionId = 'source_list' | 'source_check' | 'source_configure' | 'source_disconnect' | HomebrewActionId;
+export type SoftwareSourceActionId = 'source_list' | 'source_check' | 'source_configure' | 'source_disconnect' | 'source_add' | 'source_remove' | HomebrewActionId;
 export const SOFTWARE_SOURCE_ACTION_IDS: readonly SoftwareSourceActionId[] = [
-  'source_list', 'source_check', 'source_configure', 'source_disconnect',
+  'source_list', 'source_check', 'source_configure', 'source_disconnect', 'source_add', 'source_remove',
   ...HOMEBREW_ACTION_IDS,
 ];
 
@@ -38,6 +50,16 @@ const SOURCE_ACTIONS = [
     payload_fields: ['source_id'], mutates: 'opl_software_source_credential_reference', dry_run_supported: false, confirmation_required: true,
     danger_level: 'medium', impact: 'Clear the source credential reference while preserving local Package installations.', follow_up_action_ids: ['source_list'], verify_action_id: 'source_list',
   },
+  {
+    action_id: 'source_add', label: 'Add catalog software source', delegated_surface: 'opl sources add --source-id <source_id> --url <catalog_index_url>',
+    payload_fields: ['source_id', 'url', 'display_name'], mutates: 'opl_software_source_registration_and_catalog_cache', dry_run_supported: false, confirmation_required: true,
+    danger_level: 'low', impact: 'Register an external opl-catalog software source index without writing credentials.', follow_up_action_ids: ['source_refresh', 'source_list'], verify_action_id: 'source_list',
+  },
+  {
+    action_id: 'source_remove', label: 'Remove catalog software source', delegated_surface: 'opl sources remove --source-id <source_id>',
+    payload_fields: ['source_id'], mutates: 'opl_software_source_registration_and_catalog_cache', dry_run_supported: false, confirmation_required: true,
+    danger_level: 'medium', impact: 'Remove a registered external catalog source and delete its cached index.', follow_up_action_ids: ['source_list'], verify_action_id: 'source_list',
+  },
 ] as const;
 
 function sourceActionProjection() {
@@ -46,24 +68,47 @@ function sourceActionProjection() {
 function credentialPresent(source: SoftwareSource) {
   return Boolean(source.credential_handle);
 }
+function isCatalogProvider(source: SoftwareSource) {
+  return source.provider_id === 'public_registry' || source.provider_id === 'catalog';
+}
 function publicSource(source: SoftwareSource, env: NodeJS.ProcessEnv = process.env) {
   const { credential_handle: _credential, ...safe } = source;
   const inventory = source.provider_id === 'homebrew' ? readHomebrewSourceProjection(env) : null;
-  // Public providers are fixed OPL sources. GitHub may also contain a user's
-  // separately configured namespace; that source does not become OPL-owned.
-  const catalogOrigin = source.provider_id !== 'github_packages' || source.source_id === 'github-packages:gaofeng21cn'
-    ? 'opl' as const : 'external' as const;
-  const sourceActions = ['source_list', 'source_check', ...(source.visibility === 'authorized_only' ? ['source_configure', 'source_disconnect'] : []),
-    ...(inventory?.inventory_status === 'available' ? ['source_refresh'] : inventory?.inventory_reason === 'homebrew_tap_not_connected' ? ['source_setup'] : [])];
+  const catalogCache = isCatalogProvider(source) ? readCatalogSourceCacheStatus(source.source_id, env) : null;
+  // Public built-in providers and gaofeng21cn are OPL sources. Custom catalogs and
+  // third-party GitHub namespaces stay external.
+  const catalogOrigin = source.provider_id === 'catalog'
+    ? 'external' as const
+    : source.provider_id !== 'github_packages' || source.source_id === 'github-packages:gaofeng21cn'
+      ? 'opl' as const : 'external' as const;
+  const sourceActions = [
+    'source_list',
+    'source_check',
+    ...(source.visibility === 'authorized_only' ? ['source_configure', 'source_disconnect'] : []),
+    ...(isCatalogProvider(source) ? ['source_refresh'] : []),
+    ...(source.provider_id === 'catalog' ? ['source_remove'] : []),
+    ...(inventory?.inventory_status === 'available' ? ['source_refresh'] : inventory?.inventory_reason === 'homebrew_tap_not_connected' ? ['source_setup'] : []),
+  ];
+  const availableActions = sourceActionProjection()
+    .filter(action => sourceActions.includes(action.action_id))
+    .map(action => action.action_id === 'source_refresh' && isCatalogProvider(source) ? {
+      ...action,
+      label: 'Refresh software catalog',
+      mutates: 'opl_software_catalog_cache',
+      confirmation_required: false,
+      danger_level: 'none' as const,
+      impact: 'Refresh the source index without upgrading installed software.',
+    } : action);
   return {
     ...safe,
     catalog_origin: catalogOrigin,
     origin_basis: 'owner_projection' as const,
     catalog_source: { manager: 'opl_packages', marketplace_id: source.source_id, delivery: 'marketplace' as const },
     ...(inventory ?? {}),
+    ...(catalogCache ? { catalog_cache: catalogCache } : {}),
     credential_handle_present: credentialPresent(source),
-    catalog_refresh_required: source.provider_id === 'public_registry' && readFrameworkSoftwareRelease(env).refresh_required,
-    available_actions: sourceActionProjection().filter(action => sourceActions.includes(action.action_id)),
+    catalog_refresh_required: isCatalogProvider(source) && (catalogCache?.stale ?? true),
+    available_actions: availableActions,
   };
 }
 function normalizeOwner(value: string) {
@@ -81,24 +126,110 @@ function sourceOwner(sourceRepo?: string | null, publicationRef?: string | null)
   return short ? normalizeOwner(short[1]) : null;
 }
 function nowIso(deps: SoftwareSourceDependencies) { return (deps.now ?? (() => new Date()))().toISOString(); }
-export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSourceDependencies = {}) {
-  const source = readSoftwareSource(sourceId);
+export async function refreshOplCatalogSource(sourceId: string, deps: SoftwareSourceDependencies = {}) {
+  const env = deps.env ?? process.env;
+  const source = readSoftwareSource(sourceId, env);
   if (source.provider_id === 'homebrew') {
-    const inventory = await refreshHomebrewSource({ env: deps.env, now: deps.now, run: deps.homebrewRun });
-    return writeSoftwareSource({ ...source, status: inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: nowIso(deps), verification_reason: inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision);
+    const inventory = await refreshHomebrewSource({ env, now: deps.now, run: deps.homebrewRun });
+    const verified = writeSoftwareSource({
+      ...source,
+      status: inventory.inventory_status === 'available' ? 'public' : 'unknown',
+      verified_at: inventory.inventory_checked_at ?? nowIso(deps),
+      verification_reason: inventory.inventory_reason ?? 'homebrew_native_inventory_verified',
+    }, source.revision, env);
+    return { software_source: publicSource(verified, env), native_inventory: inventory };
+  }
+  if (!isCatalogProvider(source)) {
+    softwareSourceFailure('software_source_refresh_unsupported', `Software source ${source.source_id} does not support refresh.`);
+  }
+  const synced = await refreshCatalogSource(source, env, { now: deps.now, catalogFetch: deps.catalogFetch });
+  const stored = writeSoftwareSource({
+    ...source,
+    status: 'public',
+    verified_at: synced.meta.fetched_at,
+    verification_reason: synced.not_modified ? 'catalog_index_not_modified' : 'catalog_index_synced',
+  }, source.revision, env);
+  if (source.provider_id === 'public_registry' && !deps.verify && !deps.catalogFetch) {
+    refreshFrameworkSoftwareRelease(env);
+  }
+  return { software_source: publicSource(stored, env), catalog_sync: synced };
+}
+export async function addOplSoftwareSource(
+  input: { source_id: string; url: string; display_name?: string },
+  deps: SoftwareSourceDependencies = {},
+) {
+  const env = deps.env ?? process.env;
+  const created = addCatalogSoftwareSource(input, env);
+  try {
+    const synced = await refreshCatalogSource(created, env, { now: deps.now, catalogFetch: deps.catalogFetch });
+    const stored = writeSoftwareSource({
+      ...created,
+      status: 'public',
+      verified_at: synced.meta.fetched_at,
+      verification_reason: 'catalog_index_synced',
+    }, created.revision, env);
+    return { software_source: publicSource(stored, env), catalog_sync: synced };
+  } catch (error) {
+    try {
+      removeCatalogSoftwareSource(created.source_id, env);
+      removeCatalogSourceCache(created.source_id, env);
+    } catch {
+      // Best-effort rollback if initial catalog fetch or digest verification fails.
+    }
+    throw error;
+  }
+}
+export function removeOplSoftwareSource(sourceId: string, env: NodeJS.ProcessEnv = process.env) {
+  const removed = removeCatalogSoftwareSource(sourceId, env);
+  removeCatalogSourceCache(removed.source_id, env);
+  return {
+    removed_source_id: removed.source_id,
+    cache_removed: true,
+    local_installations_preserved: true,
+  };
+}
+export async function checkOplSoftwareSource(sourceId: string, deps: SoftwareSourceDependencies = {}) {
+  const env = deps.env ?? process.env;
+  const source = readSoftwareSource(sourceId, env);
+  if (source.provider_id === 'homebrew') {
+    const inventory = await refreshHomebrewSource({ env, now: deps.now, run: deps.homebrewRun });
+    return writeSoftwareSource({ ...source, status: inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: nowIso(deps), verification_reason: inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision, env);
+  }
+  if (isCatalogProvider(source) && !deps.verify) {
+    try {
+      const synced = await refreshCatalogSource(source, env, { now: deps.now, catalogFetch: deps.catalogFetch });
+      const stored = writeSoftwareSource({
+        ...source,
+        status: 'public',
+        verified_at: synced.meta.fetched_at,
+        verification_reason: synced.not_modified ? 'catalog_index_not_modified' : 'catalog_index_synced',
+      }, source.revision, env);
+      if (source.provider_id === 'public_registry' && !deps.catalogFetch) refreshFrameworkSoftwareRelease(env);
+      return stored;
+    } catch {
+      const unavailable = {
+        ...source,
+        status: 'unknown' as const,
+        verified_at: nowIso(deps),
+        verification_reason: 'software_source_verification_unavailable',
+      };
+      const stored = writeSoftwareSource(unavailable, source.revision, env);
+      if (source.provider_id === 'public_registry' && !deps.catalogFetch) refreshFrameworkSoftwareRelease(env);
+      return stored;
+    }
   }
   const credentialReader = deps.verify ? undefined : (deps.credentialReader
     ?? (await import('./agent-package-registry/package-registry-access-provider.ts')).credentialForGithubPackages);
-  const result = deps.verify ? await deps.verify(source) : await verifySoftwareSourceCredential(source, deps.env ?? process.env, {
+  const result = deps.verify ? await deps.verify(source) : await verifySoftwareSourceCredential(source, env, {
     credentialReader,
   });
   const verified = { ...source, status: result.status, verified_at: nowIso(deps), verification_reason: result.verification_reason };
-  const stored = writeSoftwareSource(verified, source.revision);
-  if (source.provider_id === 'public_registry' && !deps.verify) refreshFrameworkSoftwareRelease(deps.env);
+  const stored = writeSoftwareSource(verified, source.revision, env);
+  if (source.provider_id === 'public_registry' && !deps.verify) refreshFrameworkSoftwareRelease(env);
   if (stored.visibility === 'authorized_only' && stored.status === 'authorized') {
     const refresh = deps.refreshPackageAccess
       ?? (await import('./agent-package-registry/package-access.ts')).refreshGithubPackageSourceAccess;
-    await refresh(stored.source_id, deps.env ?? process.env);
+    await refresh(stored.source_id, env);
   }
   return stored;
 }
@@ -128,13 +259,21 @@ export function listOplSoftwareSources(input: {
     // authorization snapshot or expose hidden Package metadata.
     const recentFailure = source.status !== 'authorized' && source.verified_at !== null
       && Date.now() - Date.parse(source.verified_at) < 60_000;
+    const catalogCacheCount = isCatalogProvider(source)
+      ? readCatalogSourceCacheStatus(source.source_id, env).package_count
+      : null;
     return {
       ...publicSource(source, env),
       access_refresh_required: source.visibility === 'authorized_only' && source.enabled
         && credentialPresent(source) && !recentFailure
         && (input.refreshRequiredSourceIds?.includes(source.source_id) ?? false),
-      entry_count: source.provider_id === 'homebrew' ? readHomebrewSourceProjection(env).entry_count
-        : input.packageEntries === undefined ? null : entryCount(source),
+      entry_count: source.provider_id === 'homebrew'
+        ? readHomebrewSourceProjection(env).entry_count
+        : input.packageEntries === undefined
+          ? catalogCacheCount
+          : source.provider_id === 'catalog' && catalogCacheCount !== null
+            ? catalogCacheCount
+            : entryCount(source),
     };
   });
   return {
@@ -169,27 +308,58 @@ export function resolvePackageSourceCredentialProvider(sourceRepo?: string | nul
 }
 export function executeOplSoftwareSourceAction(actionId: SoftwareSourceActionId, payload: Record<string, unknown>, deps: SoftwareSourceDependencies = {}) {
   assertCredentialHandleOnlyPayload(payload);
-  const allowed = actionId === 'source_list' ? [] : actionId === 'source_configure' ? ['source_id', 'provider_id', 'credential_handle', 'enabled'] : ['source_install', 'source_update', 'source_uninstall'].includes(actionId) ? ['source_id', 'item_id', 'expected_revision'] : ['source_id'];
+  const allowed = actionId === 'source_list'
+    ? []
+    : actionId === 'source_configure'
+      ? ['source_id', 'provider_id', 'credential_handle', 'enabled']
+      : actionId === 'source_add'
+        ? ['source_id', 'url', 'display_name']
+        : ['source_install', 'source_update', 'source_uninstall'].includes(actionId)
+          ? ['source_id', 'item_id', 'expected_revision']
+          : ['source_id'];
   if (Object.keys(payload).some(field => !allowed.includes(field))) softwareSourceFailure('software_source_payload_invalid', 'Software source action contains unsupported fields.');
   if (payload.enabled !== undefined && typeof payload.enabled !== 'boolean') softwareSourceFailure('software_source_payload_invalid', 'enabled must be a boolean.');
   if (actionId === 'source_list') {
     if (Object.keys(payload).length) softwareSourceFailure('software_source_payload_invalid', 'source_list accepts an empty payload.');
-    return { software_sources: listOplSoftwareSources() };
+    return { software_sources: listOplSoftwareSources({}, deps.env) };
   }
   const sourceId = payload.source_id;
   if (typeof sourceId !== 'string' || !sourceId.trim()) softwareSourceFailure('software_source_id_required', 'source_id is required.');
-  if (HOMEBREW_ACTION_IDS.includes(actionId as HomebrewActionId)) return executeHomebrewSourceAction(actionId as HomebrewActionId, { ...payload, source_id: sourceId.trim() }, { env: deps.env, now: deps.now, run: deps.homebrewRun }).then(result => {
-    const source = readSoftwareSource(sourceId.trim());
-    const verified = writeSoftwareSource({ ...source, status: result.native_inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: result.native_inventory.inventory_checked_at, verification_reason: result.native_inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision);
-    return { ...result, software_source: publicSource(verified) };
-  });
-  if (actionId === 'source_check') return checkOplSoftwareSource(sourceId.trim(), deps).then(source => ({ software_source: publicSource(source) }));
-  if (actionId === 'source_configure') {
-    const result = configureOplSoftwareSource({ source_id: sourceId.trim(), provider_id: payload.provider_id as SoftwareSourceProviderId | undefined, credential_handle: payload.credential_handle as string | null | undefined, enabled: payload.enabled === undefined ? undefined : payload.enabled === true });
-    if (!result.software_source.credential_handle_present || !result.software_source.enabled) return result;
-    return checkOplSoftwareSource(sourceId.trim(), deps).then(source => ({ software_source: publicSource(source), next_action: 'source_list' }));
+  const trimmedSourceId = sourceId.trim();
+  if (actionId === 'source_add') {
+    if (typeof payload.url !== 'string' || !payload.url.trim()) {
+      softwareSourceFailure('software_source_url_invalid', 'url is required.');
+    }
+    if (payload.display_name !== undefined && typeof payload.display_name !== 'string') {
+      softwareSourceFailure('software_source_payload_invalid', 'display_name must be a string.');
+    }
+    return addOplSoftwareSource({
+      source_id: trimmedSourceId,
+      url: payload.url.trim(),
+      display_name: payload.display_name,
+    }, deps);
   }
-  if (actionId === 'source_disconnect') return disconnectOplSoftwareSource(sourceId.trim());
+  if (actionId === 'source_remove') {
+    return removeOplSoftwareSource(trimmedSourceId, deps.env);
+  }
+  if (actionId === 'source_refresh') {
+    const targetSource = readSoftwareSource(trimmedSourceId, deps.env);
+    if (isCatalogProvider(targetSource)) {
+      return refreshOplCatalogSource(trimmedSourceId, deps);
+    }
+  }
+  if (HOMEBREW_ACTION_IDS.includes(actionId as HomebrewActionId)) return executeHomebrewSourceAction(actionId as HomebrewActionId, { ...payload, source_id: trimmedSourceId }, { env: deps.env, now: deps.now, run: deps.homebrewRun }).then(result => {
+    const source = readSoftwareSource(trimmedSourceId, deps.env);
+    const verified = writeSoftwareSource({ ...source, status: result.native_inventory.inventory_status === 'available' ? 'public' : 'unknown', verified_at: result.native_inventory.inventory_checked_at, verification_reason: result.native_inventory.inventory_reason ?? 'homebrew_native_inventory_verified' }, source.revision, deps.env);
+    return { ...result, software_source: publicSource(verified, deps.env) };
+  });
+  if (actionId === 'source_check') return checkOplSoftwareSource(trimmedSourceId, deps).then(source => ({ software_source: publicSource(source, deps.env) }));
+  if (actionId === 'source_configure') {
+    const result = configureOplSoftwareSource({ source_id: trimmedSourceId, provider_id: payload.provider_id as SoftwareSourceProviderId | undefined, credential_handle: payload.credential_handle as string | null | undefined, enabled: payload.enabled === undefined ? undefined : payload.enabled === true });
+    if (!result.software_source.credential_handle_present || !result.software_source.enabled) return result;
+    return checkOplSoftwareSource(trimmedSourceId, deps).then(source => ({ software_source: publicSource(source, deps.env), next_action: 'source_list' }));
+  }
+  if (actionId === 'source_disconnect') return disconnectOplSoftwareSource(trimmedSourceId);
   softwareSourceFailure('software_source_action_unknown', `Unknown software source action: ${actionId}.`);
 }
 export function softwareSourceActionCatalog() { return sourceActionProjection(); }

@@ -338,10 +338,10 @@ def merge_release_changes(root, repo, base, package_id, version, *, delivery_kin
         raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
     return git(root, 'rev-parse', 'HEAD')
 
-def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
+def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None):
     base = git(root, 'rev-parse', 'HEAD')
-    payload = read(framework / 'contracts/opl-framework/packages' /
-                   projection['codex_surface']['plugin_payload_manifest_url'])
+    payload = read(payload_path or (framework / 'contracts/opl-framework/packages' /
+                                    projection['codex_surface']['plugin_payload_manifest_url']))
     settings = owner_settings(root)
     if settings.get('strategy') == 'manual':
         return {'status': 'owner_manual', 'owner_source_commit': base}

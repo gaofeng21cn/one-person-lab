@@ -1,0 +1,194 @@
+{
+  "surface_kind": "opl_capability_package_manifest.v2",
+  "package_id": "opl-channel-weixin",
+  "display_name": "OPL Channel Weixin",
+  "publisher": "one-person-lab",
+  "version": "0.2.0",
+  "source": "first_party_owner_projection",
+  "visibility": "public",
+  "source_repo": "https://github.com/gaofeng21cn/one-person-lab-app.git",
+  "package_role": "capability_package",
+  "integration_kind": "capability_provider",
+  "capability_abi": {
+    "id": "opl-channel-weixin.provider",
+    "version": "1.0.0",
+    "compatibility_policy": "same_major"
+  },
+  "exports": {
+    "core_skill_ids": [],
+    "core_module_ids": [
+      "opl.channel.weixin.provider.v1"
+    ],
+    "optional_skill_policy_ref": "opl-package.json#/exports",
+    "optional_skills_installed_by_default": true,
+    "default_materialization_policy": "all_exported_skills"
+  },
+  "entrypoints": [
+    {
+      "entrypoint_id": "weixin-channel-provider",
+      "kind": "channel_provider",
+      "module_ref": "dist/src/index.js",
+      "export_name": "createInstalledWeixinChannelProvider"
+    }
+  ],
+  "app_contributions": {
+    "schema_version": "opl-app-contributions.v1",
+    "navigation": [],
+    "views": [
+      {
+        "view_id": "weixin-channel-access",
+        "view_type": "channel_access",
+        "title_i18n": {
+          "en": "Weixin",
+          "zh-CN": "微信"
+        },
+        "data_ref": "weixin.channel-access#state",
+        "command_ids": [
+          "weixin-connect",
+          "weixin-connect-other",
+          "weixin-submit-pin",
+          "weixin-disconnect"
+        ],
+        "badge_ids": [],
+        "empty_state_i18n": {
+          "en": "Weixin is unavailable",
+          "zh-CN": "微信当前不可用"
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command_id": "weixin-connect",
+        "label_i18n": {
+          "en": "Connect own Weixin",
+          "zh-CN": "连接本人微信"
+        },
+        "action_ref": "weixin.channel-access#connect",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "weixin-connect-other",
+        "label_i18n": {
+          "en": "Connect another person’s Weixin",
+          "zh-CN": "连接他人微信"
+        },
+        "action_ref": "weixin.channel-access#connect-other",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "weixin-submit-pin",
+        "label_i18n": {
+          "en": "Verify and continue",
+          "zh-CN": "验证并继续"
+        },
+        "action_ref": "weixin.channel-access#submit-pin",
+        "confirmation_required": false
+      },
+      {
+        "command_id": "weixin-disconnect",
+        "label_i18n": {
+          "en": "Disconnect",
+          "zh-CN": "退出微信"
+        },
+        "action_ref": "weixin.channel-access#disconnect",
+        "confirmation_required": true
+      }
+    ],
+    "badges": [],
+    "ui": [
+      {
+        "contribution_id": "weixin-channel-access",
+        "slot": "settings.section",
+        "contribution_kind": "view",
+        "trust_tier": "declarative",
+        "scope": "root",
+        "sort_order": 30,
+        "view_id": "weixin-channel-access"
+      }
+    ]
+  },
+  "content_lock": {
+    "algorithm": "sha256",
+    "canonicalization": "ordered_path_length_file_length_bytes",
+    "paths": [
+      ".codex-plugin/plugin.json",
+      "LICENSE",
+      "NOTICE",
+      "dist/src/backoff.d.ts",
+      "dist/src/backoff.js",
+      "dist/src/ilink.d.ts",
+      "dist/src/ilink.js",
+      "dist/src/index.d.ts",
+      "dist/src/index.js",
+      "dist/src/provider.d.ts",
+      "dist/src/provider.js",
+      "dist/src/types.d.ts",
+      "dist/src/types.js",
+      "package.json"
+    ],
+    "digest": "sha256:14f6ea85585268046b6d5c04569cbf9d4a4dc8c0722b35ce268e82bff32a2b5f"
+  },
+  "codex_surface": {
+    "plugin_id": "opl-channel-weixin",
+    "plugin_source_path": "packages/opl-channel-weixin",
+    "codex_default_exposure": false,
+    "interaction_mode": "headless_internal",
+    "configured_codex_plugin_carrier": {
+      "kind": "codex_plugin_manager",
+      "plugin_selector": "opl-channel-weixin@one-person-lab-app",
+      "executor_route": "codex_cli",
+      "marketplace_source": "gaofeng21cn/one-person-lab-app",
+      "publication_ref": null
+    },
+    "optional_install_policy": "all_exported_skills",
+    "required_skill_ids": [],
+    "public_payload_delivery": "pinned_files",
+    "plugin_payload_manifest_url": "payloads/opl-channel-weixin-0.2.0.json",
+    "carrier_source_commit": "a93e027957d5c0654deff2e2aaaf61ce78cedfb4"
+  },
+  "authority_boundary": {
+    "package_transport_owner": "opl-channel-weixin",
+    "activation_route_by_renderer": {
+      "aionui": "aioncore_builtin_weixin_only_package_provider_activation_forbidden",
+      "opl_studio": "installed_provider_through_one_person_lab_framework_generic_channel_host"
+    },
+    "single_active_provider_path_per_renderer_required": true,
+    "second_channel_provider_path_allowed": false,
+    "credential_injection": "provider_owned_explicit_qr_login_in_memory_only",
+    "canonical_thread_and_turn_owner": "codex_app_server",
+    "package_route_composition_host_owner": "one-person-lab-framework",
+    "binding_source": "callback_returned_canonical_thread_host_and_canonical_thread_id_only",
+    "persistent_secret_store_allowed": false,
+    "persistent_conversation_store_allowed": false,
+    "persistent_thread_or_turn_store_allowed": false,
+    "workspace_or_thread_inference_allowed": false,
+    "second_app_server_allowed": false,
+    "unrestricted_json_rpc_allowed": false
+  },
+  "schema_ref": "one-person-lab/contracts/opl-framework/capability-package-manifest.schema.json",
+  "publication_projection_order": 100,
+  "publication_source": {
+    "module_id": "opl-channel-weixin",
+    "owner_package_manifest_ref": "packages/opl-channel-weixin/opl-package.json",
+    "owner_plugin_manifest_ref": "packages/opl-channel-weixin/.codex-plugin/plugin.json"
+  },
+  "owner_package_manifest_ref": "packages/opl-channel-weixin/opl-package.json",
+  "owner_package_descriptor_ref": "opl-package.json",
+  "presentation": {
+    "display_name_i18n": {
+      "zh-CN": "微信远程",
+      "en-US": "OPL Channel Weixin"
+    },
+    "description_i18n": {
+      "zh-CN": "为 OPL 提供微信 iLink 消息传输能力。",
+      "en-US": "Weixin iLink transport capability for OPL."
+    },
+    "session_routing_summary_i18n": {
+      "zh-CN": "为 OPL 提供微信 iLink 消息传输能力。",
+      "en-US": "Weixin iLink transport capability for OPL."
+    },
+    "home_shortcuts": [],
+    "software_type": "capability"
+  },
+  "management_scope": "local_component"
+}

@@ -46,14 +46,15 @@ export function normalizePresentation(
       failure_code: 'agent_package_presentation_invalid',
     });
   }
-  const softwareType = value.software_type;
-  if (softwareType !== undefined && (typeof softwareType !== 'string'
-    || !['agent', 'application', 'capability'].includes(softwareType))) {
-    throw new FrameworkContractError('contract_shape_invalid', 'Package software type must be agent, application, or capability.', {
+  const rawSoftwareType = value.software_type;
+  if (rawSoftwareType !== undefined && (typeof rawSoftwareType !== 'string'
+    || !['agent', 'application', 'extension', 'channel', 'dependency', 'capability'].includes(rawSoftwareType))) {
+    throw new FrameworkContractError('contract_shape_invalid', 'Package software type must be agent, application, extension, channel, or dependency.', {
       manifest_url: manifestUrl,
       failure_code: 'agent_package_presentation_invalid',
     });
   }
+  const softwareType = rawSoftwareType === 'capability' ? 'extension' : rawSoftwareType;
   const iconRef = value.icon_ref;
   if (iconRef !== undefined && (typeof iconRef !== 'string' || !PACKAGE_ICON_REF_PATTERN.test(iconRef))) {
     throw new FrameworkContractError('contract_shape_invalid', 'Package presentation icon_ref must be a relative SVG, PNG, or WebP asset path.', {
@@ -196,7 +197,7 @@ export function normalizePresentation(
     };
   }
   return {
-    ...(softwareType ? { software_type: softwareType as 'agent' | 'application' | 'capability' } : {}),
+    ...(softwareType ? { software_type: softwareType as AgentPackagePresentation['software_type'] } : {}),
     ...(iconRef !== undefined ? { icon_ref: iconRef as string } : {}),
     display_name_i18n: normalizeLocalizedText(value.display_name_i18n, 'presentation.display_name_i18n', manifestUrl),
     description_i18n: normalizeLocalizedText(value.description_i18n, 'presentation.description_i18n', manifestUrl),

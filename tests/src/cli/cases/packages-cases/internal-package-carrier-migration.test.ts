@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { catalogFixtureManifestPath } from '../../../helpers/catalog-fixture.ts';
 
 import { reconcileInternalPackageCarriers } from '../../../../../src/adapters/integration/agent-package-registry/internal-package-carrier-migration.ts';
 import type { CodexPluginCommandRunner } from '../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-types.ts';
@@ -14,7 +15,7 @@ function fixture(failInternalInstall = false) {
   const source = path.join(root, 'legacy-source');
   const internalHome = path.join(stateDir, 'internal-package-carrier');
   const selector = 'opl-fleet-agent@opl-fleet-agent';
-  const owner = JSON.parse(fs.readFileSync('contracts/opl-framework/packages/opl-fleet-agent.json', 'utf8'));
+  const owner = JSON.parse(fs.readFileSync(catalogFixtureManifestPath('opl-fleet-agent'), 'utf8'));
   fs.mkdirSync(path.join(source, '.codex-plugin'), { recursive: true });
   fs.mkdirSync(path.join(source, 'skills', 'opl-fleet-agent'), { recursive: true });
   fs.writeFileSync(path.join(source, '.codex-plugin/plugin.json'), JSON.stringify({ name: 'opl-fleet-agent', version: owner.version, skills: './skills/' }));

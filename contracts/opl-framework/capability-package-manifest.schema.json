@@ -51,6 +51,9 @@
           "enum": [
             "agent",
             "application",
+            "extension",
+            "channel",
+            "dependency",
             "capability"
           ]
         },

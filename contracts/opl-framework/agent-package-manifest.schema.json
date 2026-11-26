@@ -150,7 +150,7 @@
         "home_shortcuts"
       ],
       "properties": {
-        "software_type": { "enum": ["agent", "application", "capability"] },
+        "software_type": { "enum": ["agent", "application", "extension", "channel", "dependency", "capability"] },
         "icon_ref": {
           "description": "Relative asset path inside the immutable Package payload. External URLs are not permitted.",
           "type": "string",

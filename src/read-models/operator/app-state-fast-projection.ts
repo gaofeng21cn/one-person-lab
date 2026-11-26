@@ -326,7 +326,7 @@ export function compactFastAgentPackageDirectory(value: unknown) {
       'session_routing_summary_i18n', 'home_shortcuts',
       'app_contributions', 'role_state', 'trust_tier', 'source_explanation', 'manifest_url',
       'installed', 'installed_version', 'selected_version', 'stable_version', 'release_channel',
-      'catalog_scope', 'software_type', 'distribution_channel', 'local_installations',
+      'catalog_scope', 'software_type', 'distribution_channel', 'local_installations', 'source_id',
       'management_scope', 'deployment_target',
       'installations', 'active_installation_id', 'active_installation_status', 'installation_management_reason', 'installation_actions',
       'catalog_origin', 'origin_basis',

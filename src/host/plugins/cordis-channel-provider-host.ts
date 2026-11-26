@@ -34,6 +34,11 @@ export const CORDIS_CHANNEL_PROVIDER_HOST_SOURCE_REF =
   'src/host/plugins/cordis-channel-provider-host.ts';
 export const CORDIS_CHANNEL_PROVIDER_HOST_SOURCE_COMMIT =
   '2df54a39ab8f5022cb492b9d7213bc52d6d724c9';
+/**
+ * Host/Application handoff ABI.  A newer native host can claim a Package
+ * provider identity before Framework loads its legacy provider module.
+ */
+export const CHANNEL_PROVIDER_EXCLUSION_ABI = 1 as const;
 
 export type CordisChannelProviderHostService = Readonly<{
   callback_api_version: typeof CHANNEL_THREAD_CALLBACK_API_VERSION;
@@ -53,6 +58,7 @@ export type CordisChannelProviderHostPluginConfig = Readonly<{
   callback: ChannelThreadHostCallback;
   providers?: readonly ChannelProvider[];
   installedProviders?: readonly InstalledChannelProviderAttachment[];
+  excludedProviderIds?: readonly string[];
 }>;
 
 export type CordisChannelProviderContributionRequest = Readonly<{
@@ -373,6 +379,9 @@ export const cordisChannelProviderHostPlugin = {
   provide: CORDIS_CHANNEL_PROVIDER_HOST_SERVICE,
   async apply(ctx: Context, config: CordisChannelProviderHostPluginConfig) {
     assertChannelThreadCallback(config.callback);
+    const excludedProviderIds = new Set(
+      (config.excludedProviderIds ?? []).map((providerId) => requiredString(providerId, 'excludedProviderId')),
+    );
     const activeProviders = new Map<string, ActiveProvider>();
     let transportBindingsProjection = await readTransportBindingsProjection(config.callback);
     const refreshTransportBindingsProjection = async () => {
@@ -384,6 +393,9 @@ export const cordisChannelProviderHostPlugin = {
       attachment?: InstalledChannelProviderAttachment,
     ): Promise<ChannelDisposable> => {
       assertChannelProvider(provider);
+      if (excludedProviderIds.has(provider.provider_id)) {
+        throw new Error(`Channel provider is excluded by the active native host: ${provider.provider_id}`);
+      }
       if (activeProviders.has(provider.provider_id)) {
         throw new Error(`Channel provider is already attached: ${provider.provider_id}`);
       }
@@ -530,9 +542,14 @@ export const cordisChannelProviderHostPlugin = {
     };
     ctx.provide(CORDIS_CHANNEL_PROVIDER_HOST_SERVICE, service);
     for (const attachment of config.installedProviders ?? []) {
-      await attachProvider(attachment.provider, attachment);
+      if (!excludedProviderIds.has(attachment.provider.provider_id)
+        && !excludedProviderIds.has(attachment.descriptor.manifest.package_id)) {
+        await attachProvider(attachment.provider, attachment);
+      }
     }
-    for (const provider of config.providers ?? []) await service.attach(provider);
+    for (const provider of config.providers ?? []) {
+      if (!excludedProviderIds.has(provider.provider_id)) await service.attach(provider);
+    }
   },
 };
 

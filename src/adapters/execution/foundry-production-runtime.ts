@@ -49,7 +49,7 @@ type ProductionFoundryRuntimeOptions = {
 export function resolveDefaultFoundrySemanticProviderAgentId(): string {
   const envConfigured = process.env.OPL_FOUNDRY_SEMANTIC_PROVIDER_AGENT_ID?.trim();
   if (envConfigured) return envConfigured;
-  const projections = listCurrentPackageProjections();
+  const projections = listCurrentPackageProjections(undefined, { officialOnly: true });
   const declaredProviders = projections.filter(({ payload }) => (
     typeof payload.provider_manifest_ref === 'string' && payload.provider_manifest_ref.trim().length > 0
   ));

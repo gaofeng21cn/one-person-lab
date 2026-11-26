@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare changed owner Packages and refresh their existing Framework projections."""
+"""Prepare changed owner Packages and refresh their existing Catalog projections."""
 from __future__ import annotations
 import argparse
 import base64
@@ -12,12 +12,15 @@ from pathlib import Path
 from package_release.common import ReleaseError, gh, git, read, run, slug, write
 from package_release.github_app_token import configure_token_refresh_from_env
 from package_release.owner import prepare_owner, merge_release_changes
+from package_release.projection import CATALOG_REPOSITORY, PackageProjection, catalog_root_from
 
 
-def package_specs(framework):
+def package_specs(framework, packages=None):
     command = '''import {getPublicationAdmittedOplPackageSpecs} from './src/adapters/integration/package-distribution.ts';
-console.log(JSON.stringify(getPublicationAdmittedOplPackageSpecs()));'''
-    return json.loads(run(['node', '--experimental-strip-types', '--input-type=module', '-e', command], cwd=framework).stdout)
+console.log(JSON.stringify(getPublicationAdmittedOplPackageSpecs(process.argv[1])));'''
+    arguments = ['node', '--experimental-strip-types', '--input-type=module', '-e', command,
+                 packages if packages is not None else PackageProjection(framework).packages]
+    return json.loads(run(arguments, cwd=framework).stdout)
 
 
 def changed_owner_files(repo, previous, current):
@@ -40,22 +43,26 @@ def changed_owner_files(repo, previous, current):
     return [row['filename'] for row in difference.get('files', [])]
 
 
-def refresh_framework_base(framework, current_commit):
-    git(framework, 'fetch', 'origin', 'main', '--quiet')
-    remote_main = git(framework, 'rev-parse', 'origin/main')
+def refresh_framework_base(checkout, current_commit):
+    git(checkout, 'fetch', 'origin', 'main', '--quiet')
+    remote_main = git(checkout, 'rev-parse', 'origin/main')
     if remote_main != current_commit and run(
         ['git', 'merge-base', '--is-ancestor', remote_main, current_commit],
-        cwd=framework,
+        cwd=checkout,
         check=False,
     ).returncode != 0:
-        git(framework, 'reset', '--hard', remote_main)
+        git(checkout, 'reset', '--hard', remote_main)
         return remote_main
     return current_commit
 
 
 def prepare(args):
     framework = args.framework_root.resolve()
+    catalog = catalog_root_from(args)
+    paths = PackageProjection(framework, catalog)
+    projection_repo = CATALOG_REPOSITORY if catalog else 'gaofeng21cn/one-person-lab'
     framework_commit = git(framework, 'rev-parse', 'HEAD')
+    projection_commit = git(catalog, 'rev-parse', 'HEAD') if catalog else framework_commit
     os.environ['OPL_FRAMEWORK_ROOT'] = str(framework)
     if args.apply:
         if git(framework, 'status', '--porcelain'):
@@ -63,14 +70,23 @@ def prepare(args):
         git(framework, 'fetch', 'origin', 'main', '--quiet')
         if git(framework, 'rev-parse', 'origin/main') != framework_commit:
             raise ReleaseError('Framework must select fresh canonical main')
-    specs = package_specs(framework)
+        if catalog:
+            if git(catalog, 'status', '--porcelain'):
+                raise ReleaseError('Catalog checkout must be clean')
+            origin = git(catalog, 'remote', 'get-url', 'origin').removesuffix('.git')
+            if origin.lower() not in (f'https://github.com/{CATALOG_REPOSITORY}', f'git@github.com:{CATALOG_REPOSITORY}'):
+                raise ReleaseError('Catalog origin must select the official Catalog')
+            git(catalog, 'fetch', 'origin', 'main', '--quiet')
+            if git(catalog, 'rev-parse', 'origin/main') != projection_commit:
+                raise ReleaseError('Catalog must select fresh canonical main')
+    specs = package_specs(framework, paths.packages) if catalog else package_specs(framework)
     unknown = set(args.package_id or []) - {s['package_id'] for s in specs}
     if unknown:
         raise ReleaseError('Unregistered Package selection: ' + ', '.join(sorted(unknown)))
     if args.apply:
         configure_token_refresh_from_env()
-        git(framework, 'config', 'user.name', 'OPL Package Publisher')
-        git(framework, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
+        git(paths.root, 'config', 'user.name', 'OPL Package Publisher')
+        git(paths.root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     results = []
     with tempfile.TemporaryDirectory(prefix='opl-daily-owner-') as temporary:
         for spec in specs:
@@ -78,14 +94,13 @@ def prepare(args):
             if args.package_id and pid not in args.package_id:
                 continue
             if args.apply:
-                framework_commit = refresh_framework_base(framework, framework_commit)
-            projection_path = framework / 'contracts/opl-framework/packages' / f'{pid}.json'
+                projection_commit = refresh_framework_base(paths.root, projection_commit)
+            projection_path = paths.manifest(pid)
             projection = read(projection_path)
-            allowlist = read(framework / 'contracts/opl-framework/package-payload-allowlists' / f'{pid}.json')
+            allowlist = read(paths.allowlist(pid))
             repo = slug(projection['source_repo'])
             result = {'package_id': pid, 'owner_repository': repo}
-            snapshot_paths = [projection_path, framework / 'contracts/opl-framework/package-payload-allowlists' / f'{pid}.json',
-                              *projection_path.parent.glob(f'payloads/{pid}-*.json')]
+            snapshot_paths = paths.changed_files(pid)
             before = {p: p.read_bytes() for p in snapshot_paths}
             print(f'Checking {pid}', file=sys.stderr, flush=True)
             expected_projection_blobs = None
@@ -94,7 +109,8 @@ def prepare(args):
                 if repository['private'] and projection.get('visibility', 'public') != 'authorized_only':
                     raise ReleaseError('Private source cannot enter a public source archive channel')
                 main = gh(f'repos/{repo}/commits/main')['sha']
-                payload = read(projection_path.parent / projection['codex_surface']['plugin_payload_manifest_url'])
+                payload_path = paths.payload(projection)
+                payload = read(payload_path)
                 if main == payload['source_commit']:
                     result.update(status='unchanged', owner_source_commit=main)
                 else:
@@ -116,73 +132,77 @@ def prepare(args):
                         # Single-branch clones omit unrelated retained history;
                         # fetch the exact predecessor for the owner's byte check.
                         git(root, 'fetch', 'origin', payload['source_commit'], '--quiet')
-                    result.update(prepare_owner(root, projection, allowlist, framework, repo, apply=args.apply))
+                    result.update(prepare_owner(root, projection, allowlist, framework, repo,
+                                                apply=args.apply, payload_path=payload_path))
                     if result['status'] == 'prepared':
                         if args.apply:
-                            framework_commit = refresh_framework_base(framework, framework_commit)
-                            snapshot_paths = [
-                                projection_path,
-                                framework / 'contracts/opl-framework/package-payload-allowlists' / f'{pid}.json',
-                                *projection_path.parent.glob(f'payloads/{pid}-*.json'),
-                            ]
+                            previously_read = ({p: p.read_bytes() for p in
+                                                (projection_path, paths.allowlist(pid), payload_path)} if catalog else {})
+                            projection_commit = refresh_framework_base(paths.root, projection_commit)
+                            snapshot_paths = paths.changed_files(pid)
                             before = {p: p.read_bytes() for p in snapshot_paths}
+                            if any(before.get(p) != body for p, body in previously_read.items()):
+                                raise ReleaseError('Catalog changed the selected Package during owner preparation')
                         script = args.flow_root / 'skills/opl-flow/scripts/package_release.py'
+                        catalog_args = ['--catalog-root', catalog] if catalog else []
                         prepared = run(['python3', script, 'prepare', '--package-id', pid,
-                                        '--owner-root', root, '--framework-root', framework])
+                                        '--owner-root', root, '--framework-root', framework, *catalog_args])
                         result['projection'] = json.loads(prepared.stdout)
                         run(['node', '--experimental-strip-types', 'scripts/package-source-projection-gate.mjs',
-                             '--package-id', pid, '--owner-root', root, '--release-gate', 'tag'], cwd=framework)
+                             '--package-id', pid, '--owner-root', root, '--release-gate', 'tag', *catalog_args], cwd=framework)
                         if args.apply:
-                            # Isolate each package's Framework projection PR so one failure never blocks healthy packages.
-                            stage_paths = [
-                                f'contracts/opl-framework/packages/{pid}.json',
-                                f'contracts/opl-framework/package-payload-allowlists/{pid}.json',
-                                *[str(p.relative_to(framework)) for p in projection_path.parent.glob(f'payloads/{pid}-*.json')],
-                            ]
-                            git(framework, 'add', '--', *stage_paths)
-                            if run(['git', 'diff', '--cached', '--quiet'], cwd=framework, check=False).returncode != 0:
-                                git(framework, 'commit', '-m', f'chore: refresh daily Package {pid} {result["version"]} projection')
+                            # Isolate each Package projection PR so one failure leaves healthy packages eligible.
+                            stage_paths = [str(p.relative_to(paths.root)) for p in paths.changed_files(pid)]
+                            git(paths.root, 'add', '--', *stage_paths)
+                            if run(['git', 'diff', '--cached', '--quiet'], cwd=paths.root, check=False).returncode != 0:
+                                git(paths.root, 'commit', '-m', f'chore: refresh daily Package {pid} {result["version"]} projection')
                                 expected_projection_blobs = {
-                                    rel: (framework / rel).read_bytes()
+                                    rel: (paths.root / rel).read_bytes()
                                     for rel in stage_paths
-                                    if (framework / rel).is_file()
+                                    if (paths.root / rel).is_file()
                                 }
-                                framework_commit = merge_release_changes(
-                                    framework,
-                                    'gaofeng21cn/one-person-lab',
-                                    framework_commit,
-                                    f'framework-projection-{pid}',
+                                projection_commit = merge_release_changes(
+                                    paths.root,
+                                    projection_repo,
+                                    projection_commit,
+                                    f'{"catalog" if catalog else "framework"}-projection-{pid}',
                                     result['version'],
                                 )
             except Exception as exc:
                 recovered = False
                 if args.apply:
-                    run(['git', 'reset', '--hard', framework_commit], cwd=framework, check=False)
-                    for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
-                        if path not in before:
-                            path.unlink()
+                    run(['git', 'reset', '--hard', projection_commit], cwd=paths.root, check=False)
+                    for path in paths.changed_files(pid):
+                        if path not in before and not git(paths.root, 'ls-files', '--', str(path.relative_to(paths.root))):
+                            path.unlink(missing_ok=True)
                     try:
-                        framework_commit = refresh_framework_base(framework, framework_commit)
+                        projection_commit = refresh_framework_base(paths.root, projection_commit)
+                        comparable = (expected_projection_blobs or {}).items()
+                        if catalog:
+                            comparable = [(rel, body) for rel, body in comparable if rel != 'catalog-index.json']
                         if expected_projection_blobs and all(
-                            (framework / rel).is_file() and (framework / rel).read_bytes() == body
-                            for rel, body in expected_projection_blobs.items()
+                            (paths.root / rel).is_file() and (paths.root / rel).read_bytes() == body for rel, body in comparable
                         ):
                             result['merge_recovered'] = True
                             recovered = True
                     except Exception:
                         pass
                 else:
-                    for path in projection_path.parent.glob(f'payloads/{pid}-*.json'):
+                    for path in paths.changed_files(pid):
                         if path not in before:
-                            path.unlink()
+                            path.unlink(missing_ok=True)
                     for path, body in before.items():
                         path.write_bytes(body)
                 if not recovered:
                     result.update(status='blocked', reason=str(exc)[-3000:])
             results.append(result)
             print(f"{pid}: {result['status']}", file=sys.stderr, flush=True)
+    if not catalog:
+        framework_commit = projection_commit
     report = {'surface_kind': 'opl_daily_package_preparation.v1',
               'framework_source_commit': framework_commit, 'applied': args.apply, 'packages': results}
+    if catalog:
+        report['catalog_source_commit'] = projection_commit
     write(args.output, report)
     if os.getenv('GITHUB_OUTPUT'):
         with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
@@ -193,6 +213,7 @@ def prepare(args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--framework-root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--catalog-root', type=Path)
     parser.add_argument('--flow-root', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--package-id', action='append')

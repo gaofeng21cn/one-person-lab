@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
 
-const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
 const packageIds = ['mag', 'mas', 'obf', 'oma', 'rca'];
 
 test('canonical standard-agent Home shortcuts provide Chinese labels', () => {
   for (const packageId of packageIds) {
     const manifest = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, 'contracts', 'opl-framework', 'packages', `${packageId}.json`), 'utf8')
+      fs.readFileSync(catalogFixtureManifestPath(packageId), 'utf8')
     ) as {
       presentation?: {
         home_shortcuts?: Array<{ label_i18n?: Record<string, unknown> }>;

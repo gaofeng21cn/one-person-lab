@@ -408,8 +408,15 @@ function validateContentLock({
   }
 }
 
+/**
+ * @param {{frameworkRoot?: string, catalogRoot?: string | null, spec: {
+ *   package_id: string, repo_url: string, package_manifest_ref: string, owner_package_manifest_ref: string,
+ *   owner_manifest_kind: string, owner_plugin_manifest_ref?: string
+ * }, ownerRepoPath: string, releaseGate?: string | null}} options
+ */
 export function validatePackageSourceProjection({
   frameworkRoot = repoRoot,
+  catalogRoot = null,
   spec,
   ownerRepoPath,
   releaseGate = null,
@@ -419,7 +426,7 @@ export function validatePackageSourceProjection({
   }
   const owner = ownerVersion(spec, ownerRepoPath);
   const ownerHead = gitValue(ownerRepoPath, ['rev-parse', 'HEAD']);
-  const manifestPath = path.join(frameworkRoot, spec.package_manifest_ref);
+  const manifestPath = path.resolve(frameworkRoot, spec.package_manifest_ref);
   const projectedManifest = readJsonFile(manifestPath);
   if (projectedManifest.package_id !== spec.package_id
     || projectedManifest.version !== owner.version) {
@@ -452,7 +459,8 @@ export function validatePackageSourceProjection({
       payload_ref: payloadRef,
     });
   }
-  const payload = readJsonFile(path.join(path.dirname(manifestPath), payloadRef));
+  const packagesRoot = catalogRoot ? path.join(catalogRoot, 'packages') : path.dirname(manifestPath);
+  const payload = readJsonFile(path.join(packagesRoot, payloadRef));
   if (payload.surface_kind !== 'opl_package_payload_manifest.v2'
     || payload.schema_ref !== canonicalPayloadSchemaRef) {
     fail('payload_surface_invalid', spec.package_id, 'payload must use the canonical v2 Package payload manifest');
@@ -475,11 +483,12 @@ export function validatePackageSourceProjection({
     fail('payload_files_invalid', spec.package_id, 'payload must declare at least one source file');
   }
   const sourceRoot = safeRelativePath(payload.source_root, 'source_root', spec.package_id, true);
-  const allowlistPath = path.join(
-    path.dirname(path.dirname(manifestPath)),
-    'package-payload-allowlists',
-    `${spec.package_id}.json`,
-  );
+  const allowlistsRoot = catalogRoot ? path.join(catalogRoot, 'allowlists')
+    : path.join(path.dirname(packagesRoot), 'package-payload-allowlists');
+  const allowlistPath = path.join(allowlistsRoot, `${spec.package_id}.json`);
+  if (catalogRoot && !fs.existsSync(allowlistPath)) {
+    fail('payload_allowlist_missing', spec.package_id, 'Catalog Package carrier allowlist is missing');
+  }
   const allowlist = fs.existsSync(allowlistPath) ? readJsonFile(allowlistPath) : null;
   const projected = allowlist && packageCarrierSourcePaths({
     allowlist,
@@ -585,29 +594,36 @@ export function validatePackageSourceProjection({
 }
 
 function parseOptions(argv) {
-  const options = { frameworkRoot: repoRoot, packageId: null, ownerRoot: null, releaseGate: null };
+  const options = {
+    frameworkRoot: repoRoot,
+    catalogRoot: process.env.OPL_CATALOG_ROOT ? path.resolve(process.env.OPL_CATALOG_ROOT) : null,
+    packageId: null, ownerRoot: null, releaseGate: null,
+  };
   for (let index = 0; index < argv.length; index += 2) {
     const flag = argv[index];
     const value = argv[index + 1];
     if (!value) throw new Error(`Missing value for ${flag}`);
     if (flag === '--framework-root') options.frameworkRoot = path.resolve(value);
+    else if (flag === '--catalog-root') options.catalogRoot = path.resolve(value);
     else if (flag === '--package-id') options.packageId = value;
     else if (flag === '--owner-root') options.ownerRoot = path.resolve(value);
     else if (flag === '--release-gate') options.releaseGate = value;
     else throw new Error(`Unknown option: ${flag}`);
   }
   if (!options.packageId || !options.ownerRoot) {
-    throw new Error('Usage: package-source-projection-gate.mjs --package-id <id> --owner-root <path> [--framework-root <path>]');
+    throw new Error('Usage: package-source-projection-gate.mjs --package-id <id> --owner-root <path> [--catalog-root <path>]');
   }
   return options;
 }
 
 function main() {
   const options = parseOptions(process.argv.slice(2));
-  const spec = getPublicationAdmittedOplPackageSpecs()
+  const projectDirectory = options.catalogRoot ? path.join(options.catalogRoot, 'packages')
+    : path.join(options.frameworkRoot, 'contracts/opl-framework/packages');
+  const spec = getPublicationAdmittedOplPackageSpecs(projectDirectory)
     .find((entry) => entry.package_id === options.packageId);
   if (!spec) {
-    const discovered = getOplPackageSpecs().some((entry) => entry.package_id === options.packageId);
+    const discovered = getOplPackageSpecs(projectDirectory).some((entry) => entry.package_id === options.packageId);
     if (discovered) {
       throw new Error(`Package is not admitted to the publication channel: ${options.packageId}`);
     }
@@ -615,6 +631,7 @@ function main() {
   }
   const result = validatePackageSourceProjection({
     frameworkRoot: options.frameworkRoot,
+    catalogRoot: options.catalogRoot,
     spec,
     ownerRepoPath: options.ownerRoot,
     releaseGate: options.releaseGate,

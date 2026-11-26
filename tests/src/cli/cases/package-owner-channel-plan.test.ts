@@ -38,9 +38,12 @@ function runPlan(candidate: unknown, current: unknown) {
 test('daily public candidates delegate private owners without reading their payloads or channels', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-daily-public-candidates-'));
   try {
-    const manifests = path.join(root, 'contracts/opl-framework/packages');
+    const packages = path.join(root, 'packages');
+    const manifests = path.join(packages, 'agents');
+    const payloads = path.join(packages, 'payloads');
     const output = path.join(root, 'dist/opl-daily-packages');
     fs.mkdirSync(manifests, { recursive: true });
+    fs.mkdirSync(payloads, { recursive: true });
     fs.mkdirSync(output, { recursive: true });
     const candidate = fingerprint('1.2.3', 'a', 'b');
     const publicPayload = {
@@ -50,9 +53,9 @@ test('daily public candidates delegate private owners without reading their payl
     };
     fs.writeFileSync(path.join(manifests, 'public-fixture.json'), JSON.stringify({
       version: '1.2.3', visibility: 'public',
-      codex_surface: { plugin_payload_manifest_url: 'public-payload.json' },
+      codex_surface: { plugin_payload_manifest_url: 'payloads/public-payload.json' },
     }));
-    fs.writeFileSync(path.join(manifests, 'public-payload.json'), JSON.stringify(publicPayload));
+    fs.writeFileSync(path.join(payloads, 'public-payload.json'), JSON.stringify(publicPayload));
     fs.writeFileSync(path.join(manifests, 'private-fixture.json'), JSON.stringify({
       visibility: 'authorized_only', source_repo: 'https://github.com/example/private-owner.git',
       codex_surface: { plugin_payload_manifest_url: 'does-not-exist.json' },
@@ -60,7 +63,7 @@ test('daily public candidates delegate private owners without reading their payl
     const summary = buildDailyPackageCandidates([
       { package_id: 'public-fixture', visibility: 'public', package_manifest_ref: path.join(manifests, 'public-fixture.json') },
       { package_id: 'private-fixture', visibility: 'authorized_only', package_manifest_ref: path.join(manifests, 'private-fixture.json') },
-    ]);
+    ], packages);
     assert.deepEqual(summary.candidate_fingerprint, { 'public-fixture': candidate });
     assert.deepEqual(summary.owner_managed_packages, {
       'private-fixture': {
@@ -74,10 +77,10 @@ test('daily public candidates delegate private owners without reading their payl
     assert.equal(plan.status, 'skipped');
     assert.deepEqual(plan.unchanged_packages, ['public-fixture']);
 
-    fs.writeFileSync(path.join(manifests, 'public-payload.json'), JSON.stringify({ ...publicPayload, package_id: 'wrong-id' }));
+    fs.writeFileSync(path.join(payloads, 'public-payload.json'), JSON.stringify({ ...publicPayload, package_id: 'wrong-id' }));
     assert.throws(() => buildDailyPackageCandidates([
       { package_id: 'public-fixture', visibility: 'public', package_manifest_ref: path.join(manifests, 'public-fixture.json') },
-    ]), /Invalid Package candidate/);
+    ], packages), /Invalid Package candidate/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 

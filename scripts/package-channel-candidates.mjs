@@ -4,7 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getPublicationAdmittedOplPackageSpecs } from '../src/adapters/integration/package-distribution.ts';
 
-export function buildDailyPackageCandidates(specs) {
+/** @param {Pick<import('../src/adapters/integration/package-distribution.ts').PackageSpec, 'package_id' | 'visibility' | 'package_manifest_ref'>[]} specs
+ * @param {string | null} [packagesRoot] */
+export function buildDailyPackageCandidates(specs, packagesRoot = null) {
   const candidate_fingerprint = {};
   const owner_managed_packages = {};
   for (const spec of specs) {
@@ -21,7 +23,8 @@ export function buildDailyPackageCandidates(specs) {
       continue;
     }
     if (spec.visibility !== 'public') throw new Error(`Invalid Package visibility: ${spec.package_id}`);
-    const payloadPath = path.resolve(path.dirname(spec.package_manifest_ref), manifest.codex_surface.plugin_payload_manifest_url);
+    const payloadPath = path.resolve(packagesRoot ?? path.dirname(spec.package_manifest_ref),
+      manifest.codex_surface.plugin_payload_manifest_url);
     const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
     if (payload.package_id !== spec.package_id || payload.package_version !== manifest.version
       || !/^sha256:[a-f0-9]{64}$/.test(payload.content_lock?.digest ?? '')

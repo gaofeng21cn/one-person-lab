@@ -7,7 +7,6 @@ import {
   path,
   parseJsonText,
   removeFixtureTree,
-  repoRoot,
   registryPayload,
   runCli,
   runCliAsync,
@@ -48,6 +47,7 @@ import {
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
 import { ensureMarketplaceAvailable } from '../../../../../../src/adapters/integration/agent-package-registry/configured-codex-plugin-carrier-marketplace.ts';
+import { catalogFixtureManifestPath } from '../../../../helpers/catalog-fixture.ts';
 
 test('configured Codex carrier exposes exact identity and fails closed on duplicate source precedence', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-configured-carrier-identity-'));
@@ -199,7 +199,7 @@ test('required OPL Package status accepts installed local carriers consistently'
   const installedPackages = requiredPackages.map(({ packageId, pluginId }) => {
     const sourcePath = path.join(root, 'plugins', packageId);
     const manifest = fs.readFileSync(
-      path.join(repoRoot, 'contracts', 'opl-framework', 'packages', `${packageId}.json`),
+      catalogFixtureManifestPath(packageId),
       'utf8',
     );
     fs.mkdirSync(sourcePath, { recursive: true });
@@ -293,7 +293,7 @@ test('standard Agent Package status rejects an unregistered same-name local carr
   const binary = path.join(root, 'fake-codex.mjs');
   fs.mkdirSync(sourcePath, { recursive: true });
   fs.copyFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'mag.json'),
+    catalogFixtureManifestPath('mag'),
     path.join(sourcePath, 'opl-package.json'),
   );
   fs.writeFileSync(binary, `#!/usr/bin/env node

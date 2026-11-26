@@ -84,6 +84,8 @@ function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attes
   const repository = input.subject.split('@')[0];
   const provenance = attestations.provenances.map((statement) => statement.predicate).find((predicate) =>
     receipt?.package?.framework_source_commit === predicate.buildDefinition.externalParameters.framework_source_commit
+    && (receipt?.package?.catalog_source_commit ?? null)
+      === (predicate.buildDefinition.externalParameters.catalog_source_commit ?? null)
     && receipt?.publication_request_id === predicate.buildDefinition.internalParameters?.publication_request_id
     && predicate.runDetails?.metadata?.invocationId === `${receipt?.workflow?.run_id}-${receipt?.workflow?.run_attempt}`
     && typeof predicate.runDetails?.builder?.id === 'string'

@@ -14,11 +14,24 @@ import { materializeStandardAgentFrameworkLink } from '../../src/adapters/integr
 import type { AgentPackageAccessDecision } from '../../src/adapters/integration/agent-package-registry/package-access.ts';
 import { packageInstallSourceAvailable } from '../../src/adapters/integration/agent-package-registry/package-install-source.ts';
 
+import { legacyCatalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
+const legacyWeixinManifestPath = legacyCatalogFixtureManifestPath('opl-channel-weixin');
+
+function useLegacyWeixinProjection(t: { after: (cleanup: () => void) => void }) {
+  const previous = process.env.OPL_PACKAGE_PROJECTION_DIR;
+  process.env.OPL_PACKAGE_PROJECTION_DIR = path.dirname(legacyWeixinManifestPath);
+  t.after(() => {
+    if (previous === undefined) delete process.env.OPL_PACKAGE_PROJECTION_DIR;
+    else process.env.OPL_PACKAGE_PROJECTION_DIR = previous;
+  });
+}
+
 const hash = (bytes: Buffer) => `sha256:${crypto.createHash('sha256').update(bytes).digest('hex')}`;
 const json = (value: unknown) => Buffer.from(`${JSON.stringify(value)}\n`);
 
 test('capability packages without OCI publication retain pinned payload transport while malformed publications fail closed', () => {
-  const owner = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+  const owner = JSON.parse(fs.readFileSync(legacyWeixinManifestPath, 'utf8'));
   for (const publication of [null, undefined, '', 'ghcr.io/owner/foreign:latest-stable']) {
     const selected = structuredClone(owner);
     selected.codex_surface.configured_codex_plugin_carrier.publication_ref = publication;
@@ -311,11 +324,12 @@ test('parent Full seed admits a local component and never falls back to online p
   }
 });
 
-test('public pinned-file component like opl-channel-weixin is independently installable on Standard without a Full seed', () => {
+test('legacy public pinned-file component is independently installable on Standard without a Full seed', (t) => {
+  useLegacyWeixinProjection(t);
   const previousRuntime = process.env.OPL_FULL_RUNTIME_HOME;
   delete process.env.OPL_FULL_RUNTIME_HOME;
   try {
-    const weixin = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+    const weixin = JSON.parse(fs.readFileSync(legacyWeixinManifestPath, 'utf8'));
     const descriptor = {
       manifest: { ...weixin, carrier_source_commit: weixin.codex_surface.carrier_source_commit },
       pluginId: 'opl-channel-weixin@one-person-lab-app',
@@ -328,7 +342,8 @@ test('public pinned-file component like opl-channel-weixin is independently inst
   }
 });
 
-test('background update eligibility is origin-neutral while still protecting local checkouts and disabled packages', () => {
+test('background update eligibility is origin-neutral while still protecting local checkouts and disabled packages', (t) => {
+  useLegacyWeixinProjection(t);
   const access: AgentPackageAccessDecision = {
     visibility: 'public',
     status: 'public',
@@ -382,7 +397,7 @@ test('background update eligibility is origin-neutral while still protecting loc
     reason: 'local_or_user_managed_source',
   });
 
-  const weixin = JSON.parse(fs.readFileSync(new URL('../../contracts/opl-framework/packages/opl-channel-weixin.json', import.meta.url), 'utf8'));
+  const weixin = JSON.parse(fs.readFileSync(legacyWeixinManifestPath, 'utf8'));
   const weixinDescriptor = {
     pluginId: 'opl-channel-weixin@one-person-lab-app',
     marketplaceSource: '/tmp/local-seed/weixin',

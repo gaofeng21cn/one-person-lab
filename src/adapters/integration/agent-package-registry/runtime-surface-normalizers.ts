@@ -344,7 +344,12 @@ export function resolveManifestRelativeSource(value: string, manifestUrl: string
     return new URL(value, manifestUrl).toString();
   }
   const manifestPath = manifestUrl.startsWith('file:') ? fileURLToPath(manifestUrl) : manifestUrl;
-  return path.resolve(path.dirname(manifestPath), value);
+  const baseDir = value.startsWith('payloads/')
+    ? (['agents', 'applications', 'extensions', 'channels', 'dependencies'].includes(path.basename(path.dirname(manifestPath)))
+      ? path.dirname(path.dirname(manifestPath))
+      : path.dirname(manifestPath))
+    : path.dirname(manifestPath);
+  return path.resolve(baseDir, value);
 }
 
 function normalizePackageVersion(value: unknown) {

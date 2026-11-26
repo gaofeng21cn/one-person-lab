@@ -69,10 +69,12 @@ jobs:
         run: |
           set -euo pipefail
           gh repo clone gaofeng21cn/opl-flow "$RUNNER_TEMP/opl-flow" -- --depth=1 --quiet
+          gh repo clone gaofeng21cn/opl-catalog "$RUNNER_TEMP/opl-catalog" -- --depth=1 --quiet
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-daily-release.py \
             --flow-root "$RUNNER_TEMP/opl-flow" \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output "$RUNNER_TEMP/opl-package-preparation.json" \
             --apply "${args[@]}"
       - name: Refresh scoped publication identity for downstream steps
@@ -93,7 +95,7 @@ jobs:
         run: |
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 scripts/sync-private-package-publishers.py "${args[@]}"
+          python3 scripts/sync-private-package-publishers.py --catalog-root "$RUNNER_TEMP/opl-catalog" "${args[@]}"
       - name: Compare independent Package fingerprints
         env:
           GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token || github.token }}
@@ -103,6 +105,7 @@ jobs:
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-channel-detection.py \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output-root dist/opl-daily-packages \
             --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
           cp "$RUNNER_TEMP/opl-package-preparation.json" dist/opl-daily-packages/owner-preparation.json

@@ -1,6 +1,6 @@
 export const SOFTWARE_SOURCE_STATUSES = ['public', 'authorized', 'signed_out', 'forbidden', 'expired', 'revoked', 'unknown'] as const;
 export type SoftwareSourceStatus = typeof SOFTWARE_SOURCE_STATUSES[number];
-export type SoftwareSourceProviderId = 'github_packages' | 'homebrew' | 'public_registry';
+export type SoftwareSourceProviderId = 'github_packages' | 'homebrew' | 'public_registry' | 'catalog';
 export type SoftwareSource = {
   source_id: string;
   display_name: string;
@@ -24,6 +24,7 @@ export type SoftwareSourceDependencies = {
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   verify?: (source: SoftwareSource) => Promise<SoftwareSourceCheckResult>;
+  catalogFetch?: import('./software-catalog-source.ts').CatalogFetchRunner;
   refreshPackageAccess?: (sourceId: string) => Promise<unknown>;
   credentialReader?: (env: NodeJS.ProcessEnv, credentialHandle?: string | null) => {
     provider_id: 'github_packages'; credential_handle: string; username: string; token: string;

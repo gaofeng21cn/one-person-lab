@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./cordis-profiles": {
+      "types": "./dist/host/composition-profiles.d.ts",
+      "default": "./dist/host/composition-profiles.js"
+    },
     "./connection-authorization": {
       "types": "./dist/adapters/integration/connection-authorization.d.ts",
       "default": "./dist/adapters/integration/connection-authorization.js"

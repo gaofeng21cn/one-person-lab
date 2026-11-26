@@ -540,16 +540,20 @@ log "Preparing the local background-service runtime"
 node scripts/install-temporal-cli.mjs
 export PATH="$HOME/.local/bin:$PATH"
 
-log "Running complete One Person Lab setup"
+OPL_INSTALL_CLI=./bin/opl
 if command -v opl >/dev/null 2>&1; then
-  opl install "$@"
-  log "Inspecting OPL system state"
-  opl system initialize
-else
-  ./bin/opl install "$@"
-  log "Inspecting OPL system state"
-  ./bin/opl system initialize
+  OPL_INSTALL_CLI=opl
 fi
+
+log "Refreshing the official software catalog"
+if ! "$OPL_INSTALL_CLI" sources refresh --source-id public-registry:opl >/dev/null; then
+  log "Software catalog refresh unavailable. Continuing with the local catalog, if present."
+fi
+
+log "Running complete One Person Lab setup"
+"$OPL_INSTALL_CLI" install "$@"
+log "Inspecting OPL system state"
+"$OPL_INSTALL_CLI" system initialize
 
 log "One Person Lab is ready"
 printf '\nNext steps:\n'

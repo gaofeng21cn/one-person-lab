@@ -2,9 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { FrameworkContractError, isRecord } from '../../../kernel/contract-validation.ts';
-import { PACKAGE_PROJECTION_ROOT } from '../../../kernel/standard-agent-registry.ts';
 import type { PackageRegistryCredential } from './package-registry-access-provider.ts';
+
+const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 
 /** Verify a private artifact against a Host-pinned key before admitting its bytes. */
 export function verifyPrivatePackagePublication(input: {
@@ -33,16 +35,17 @@ export function verifyPrivatePackagePublication(input: {
   // The first-party trust root is shipped with Framework, never obtained from
   // the artifact or an overridden Package projection directory.
   const configuredPublicKey = input.env.OPL_PACKAGE_SIGNING_PUBLIC_KEY;
-  const packagePublicKey = path.resolve(PACKAGE_PROJECTION_ROOT, `../keys/private-packages/${input.packageId}.pub`);
+  const keysRoot = path.join(frameworkRoot, 'contracts/opl-framework/keys');
+  const packagePublicKey = path.join(keysRoot, `private-packages/${input.packageId}.pub`);
   const publicKey = configuredPublicKey !== undefined
     ? configuredPublicKey.trim()
     : (subject[1].startsWith('gaofeng21cn/one-person-lab-private-packages/')
-      ? (fs.existsSync(packagePublicKey) ? packagePublicKey : path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub'))
+      ? (fs.existsSync(packagePublicKey) ? packagePublicKey : path.join(keysRoot, 'private-package-signing.pub'))
       : null);
   if (!publicKey || !path.isAbsolute(publicKey)) return fail('trusted_signing_key_required');
   try { if (!fs.statSync(publicKey).isFile()) return fail('trusted_signing_key_unavailable'); }
   catch { return fail('trusted_signing_key_unavailable'); }
-  const verifier = path.resolve(PACKAGE_PROJECTION_ROOT, '../../../scripts/oci-publication-receipt-readback.mjs');
+  const verifier = path.join(frameworkRoot, 'scripts/oci-publication-receipt-readback.mjs');
   if (!fs.existsSync(verifier) && !input.run) return fail('publication_verifier_unavailable');
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-private-publication-'));
   fs.chmodSync(temporary, 0o700);

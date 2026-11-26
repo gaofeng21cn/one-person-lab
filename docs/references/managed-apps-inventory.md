@@ -9,7 +9,7 @@ opl packages list --json
 opl app state --profile fast --json
 ```
 
-第一条读取 Package 管理面，第二条读取 App 使用的 `app_state.agent_packages.directory.entries`。目录动态合并 [owner projections](../../contracts/opl-framework/packages/) 与 native carrier 可发现的 descriptor；读取时保留 `package_id`、`package_role`、`installed`、`installed_version`、`selected_version`、`installability`、`readiness` 和 `available_actions`。公开文档不保存个人安装版本、私有仓库清单、身份或凭证。
+第一条读取 Package 管理面，第二条读取 App 使用的 `app_state.agent_packages.directory.entries`。目录动态合并 [官方目录](https://github.com/gaofeng21cn/opl-catalog) 与 native carrier 可发现的 descriptor；读取时保留 `package_id`、`package_role`、`installed`、`installed_version`、`selected_version`、`installability`、`readiness` 和 `available_actions`。公开文档不保存个人安装版本、私有仓库清单、身份或凭证。
 
 ## 纳入与分类准则
 

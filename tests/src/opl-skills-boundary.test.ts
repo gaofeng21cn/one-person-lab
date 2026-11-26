@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
 import { readFamilySkillPacks } from '../../src/adapters/integration/opl-skills.ts';
 import {
   listFamilySkillPackSpecs,
@@ -109,9 +111,8 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
   const previousModuleSourceMode = process.env.OPL_MODULE_SOURCE_MODE;
   const previousStateDir = process.env.OPL_STATE_DIR;
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-scholarskills-catalog-'));
-  const repoRoot = process.cwd();
   const packageProjection = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'mas-scholar-skills.json'),
+    catalogFixtureManifestPath('mas-scholar-skills'),
     'utf8',
   ));
   const scholarRoot = path.join(fixtureRoot, 'mas-scholar-skills');
@@ -249,7 +250,7 @@ test('OPL system skill sync catalog excludes MDS stage skills while exposing Sch
     assert.equal(pack.foundry_agent_series.series_membership, 'standard_domain_agent');
     assert.equal(
       pack.foundry_agent_series.standard_agent_registry_ref,
-      'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
+      'catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection',
     );
     assert.equal(
       pack.foundry_agent_series.default_foundry_command_surface,

@@ -671,7 +671,7 @@
           ],
           "scope": "composition",
           "trust": "first_party_restricted",
-          "authority_role": "Attach only an explicitly injected Shell callback and optional Package channel provider; expose four bounded thread/turn operations and terminal observation. It never owns secrets, thread truth, persistent conversation state, or unrestricted App Server RPC.",
+          "authority_role": "Attach an explicitly injected Shell callback and optional Package channel provider. The public startCordisChannelProviderHost bootstrap exports CHANNEL_PROVIDER_EXCLUSION_ABI = 1 so the Application Host can exclude exact provider identities before importing their Package entrypoints. Excluded providers contribute no callbacks, transport bindings, settings, or actions to this Host. The service exposes four bounded thread/turn operations and terminal observation. Secrets, thread truth, and persistent conversation state remain with their respective owners.",
           "forbidden_authorities": [
             "package_installed_truth",
             "package_currentness",

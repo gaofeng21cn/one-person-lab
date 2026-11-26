@@ -12,6 +12,7 @@ import {
   type ChannelProvider,
 } from '../../src/authority/packages/index.ts';
 import {
+  CHANNEL_PROVIDER_EXCLUSION_ABI,
   createCordisAppFullComposition,
   startCordisChannelProviderHost,
 } from '../../src/host/composition-profiles.ts';
@@ -31,6 +32,7 @@ import { parseJsonText } from '../../src/kernel/json-file.ts';
 import { assertJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+const relayFixture = path.join(repoRoot, 'tests/fixtures/catalog/packages/applications/opl-relay.json');
 
 function emptyDescriptorDiscovery() {
   return { discover: () => new Map() };
@@ -365,7 +367,7 @@ test('app-full loads a callable channel provider from an installed descriptor en
     '}',
   ].join('\n'));
   const ownerManifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/opl-relay.json'),
+    relayFixture,
     'utf8',
   )) as Record<string, any>;
   const manifestPath = path.join(packageRoot, 'opl-package.json');
@@ -549,16 +551,45 @@ test('app-full loads a callable channel provider from an installed descriptor en
     () => loadInstalledChannelProviders([descriptorForExport('mismatchedRefsFactory')]),
     /refs must exactly match/,
   );
+  const excludedId = 'native-channel-test';
+  const excludedDescriptor: InstalledPackageDescriptor = {
+    ...descriptor,
+    manifest: { ...descriptor.manifest, package_id: excludedId },
+    sourcePath: path.join(packageRoot, 'legacy-carrier-does-not-exist'),
+  };
+  const nativeBinding: ChannelThreadBinding = {
+    provider_id: excludedId,
+    account_id: 'native-account',
+    channel_session_id: 'native-session',
+    canonical_thread_host: 'studio',
+    canonical_thread_id: 'native-thread',
+  };
+  const unexpectedProvider: ChannelProvider = {
+    provider_id: excludedId,
+    start() { throw new Error('Excluded provider started.'); },
+  };
   const composition = await createCordisAppFullComposition({
     runtimeSnapshotProvider: async () => ({ runtime_tray_snapshot: {} }),
-    channelProvider: { callback: callbackFixture([], async () => []) },
-    connect: { discover: () => new Map([[manifest.package_id, descriptor]]) },
+    channelProvider: {
+      callback: callbackFixture([], async () => [nativeBinding]),
+      excludedProviderIds: [excludedId],
+      providers: [unexpectedProvider],
+    },
+    connect: { discover: () => new Map([[manifest.package_id, descriptor], [excludedId, excludedDescriptor]]) },
   });
   try {
     const loaded = await import(pathToFileURL(modulePath).href);
     assert.equal(loaded.factoryCount, 3);
     assert.equal(loaded.startCount, 1);
     assert.ok(composition.services.channelProviderHost);
+    await assert.rejects(
+      () => composition.services.channelProviderHost!.attach(unexpectedProvider),
+      /excluded by the active native host/,
+    );
+    await assert.rejects(
+      () => composition.services.channelProviderHost!.readChannelAccess({ package_id: excludedId, ref: 'channel.state' }),
+      /channel_access is unavailable/,
+    );
     const patch = composition.services.channelProviderHost!.appStatePatch() as any;
     assert.equal(patch.transport_bindings.status, 'available');
     assert.deepEqual(patch.transport_bindings.bindings, []);
@@ -642,13 +673,17 @@ test('app-full loads a callable channel provider from an installed descriptor en
 });
 
 test('public channel-provider bootstrap owns the app-full Host lifecycle', async () => {
+  assert.equal(CHANNEL_PROVIDER_EXCLUSION_ABI, 1);
   const previousBinary = process.env.OPL_CODEX_PLUGIN_BIN;
   process.env.OPL_CODEX_PLUGIN_BIN = path.join(
     os.tmpdir(),
     `missing-codex-plugin-manager-${process.pid}`,
   );
   try {
-    const host = await startCordisChannelProviderHost({ callback: callbackFixture() });
+    const host = await startCordisChannelProviderHost({
+      callback: callbackFixture(),
+      excludedProviderIds: ['opl-channel-weixin'],
+    });
     assert.equal(typeof host.dispose, 'function');
     assert.equal(typeof host.readChannelAccess, 'function');
     assert.equal(typeof host.executeChannelAccessAction, 'function');
@@ -672,7 +707,7 @@ test('capability Package channel-provider context requires the optional app-full
   });
   try {
     const manifest = parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/opl-relay.json'),
+      relayFixture,
       'utf8',
     )) as { surface_kind: 'opl_capability_package_manifest.v2'; package_id: string };
     const integration = readCapabilityPackageHostContract();

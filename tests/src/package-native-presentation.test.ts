@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { pathToFileURL } from 'node:url';
 
 import {
   readInstalledPackageDescriptor,
@@ -16,18 +17,22 @@ import { directoryFrom } from '../../src/adapters/integration/agent-package-regi
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 import { packageArtworkUrl } from '../../src/adapters/integration/agent-package-registry/package-artwork.ts';
 import { isFirstPartyPackage } from '../../src/adapters/integration/agent-package-first-party.ts';
+import { catalogFixtureManifestPath, catalogFixturePackageRoot } from './helpers/catalog-fixture.ts';
 
 const ownerManifest = JSON.parse(fs.readFileSync(
-  new URL('../../contracts/opl-framework/packages/photo-steward.json', import.meta.url), 'utf8',
+  catalogFixtureManifestPath('photo-steward'), 'utf8',
 ));
 
 test('catalog release manifests remain consumable without dropping their presentation', () => {
-  const catalog = new URL('../../contracts/opl-framework/packages/', import.meta.url);
-  for (const file of fs.readdirSync(catalog).filter((entry) => entry.endsWith('.json'))) {
-    const manifestUrl = new URL(file, catalog);
-    const payload = JSON.parse(fs.readFileSync(manifestUrl, 'utf8'));
-    const manifest = normalizePackageManifest(payload, manifestUrl.href);
-    if (payload.presentation) {
+  const categories = fs.readdirSync(catalogFixturePackageRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'payloads');
+  assert.ok(categories.length > 0);
+  for (const category of categories) {
+    const categoryPath = path.join(catalogFixturePackageRoot, category.name);
+    for (const file of fs.readdirSync(categoryPath).filter((entry) => entry.endsWith('.json'))) {
+      const manifestPath = path.join(categoryPath, file);
+      const payload = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      const manifest = normalizePackageManifest(payload, pathToFileURL(manifestPath).href);
       assert.deepEqual(manifest.presentation, payload.presentation, payload.package_id);
     }
   }

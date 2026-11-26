@@ -57,6 +57,10 @@ Relay 原有本地邮箱工具仍是直接由用户使用的领域入口，其�
 
 源码检查与合成场景可验证身份、授权、同对象/版本以及恢复语义；真实邮箱和发行安装的运行结果由对应 carrier/领域验收分别记录。
 
+## 已安装的通道 provider 与原生接管
+
+Application Host 从 Framework `./cordis-profiles` 导入 `startCordisChannelProviderHost({ callback, excludedProviderIds })`。当 `CHANNEL_PROVIDER_EXCLUSION_ABI` 支持版本 `1`，且当前 DSH profile 已启用原生通道时，Application Host 可以传入这个通道的精确 provider ID。Framework 在导入 Package 模块前排除同一 ID，并从该 Host 的通道设置、操作和会话绑定投影中移除该 provider。其它 ID 继续通过已安装 descriptor 加载。旧 Framework 仍可沿用原有 Package 通道；当前活跃的 provider 由 Application Host 的 profile 与可用 ABI 共同决定。
+
 ## Cloud 跨宿主连接
 
 `opl-cloud` provider 将外部 Agent Host 接到 Cloud 原有 MCP 只读工具。CloudIdentity 签发固定 tenant、`opl-cloud-mcp` audience 和只读 action 范围的短期凭证，最长一小时且不超过父登录会话。用户从已登录的 Cloud 界面取得连接文件，由 Cloud 自有 `opl-cloud-connect` helper 导入和保管；Framework 只登记 helper 返回的 `cloud:<UUID>` 引用与 binding revision。

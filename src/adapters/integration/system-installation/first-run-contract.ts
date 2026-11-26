@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { DEFAULT_OPL_MODULE_IDS } from './modules.ts';
+import { listDefaultOplDomainModuleSpecs } from './modules.ts';
 import type { OplModuleId } from './shared.ts';
 
 const FIRST_RUN_EVENT_SCHEMA_VERSION = 'opl_first_run_event.v1';
@@ -107,7 +107,7 @@ export function buildOplGuiFirstRunAutomationContract() {
 }
 
 export function buildOplFreshInstallTestMatrix() {
-  const requiredModules: OplModuleId[] = [...DEFAULT_OPL_MODULE_IDS];
+  const requiredModules: OplModuleId[] = listDefaultOplDomainModuleSpecs().map((entry) => entry.module_id);
 
   return {
     surface_id: 'opl_fresh_install_test_matrix',

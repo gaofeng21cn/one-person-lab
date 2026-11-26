@@ -7,6 +7,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { catalogFixtureManifestPath, catalogFixturePackageRoot } from './helpers/catalog-fixture.ts';
+
 import { canonicalJsonBytes } from '../../src/kernel/canonical-json.ts';
 import { assertRepoJsonSchemaPayload } from '../../src/kernel/repo-json-schema.ts';
 import {
@@ -347,12 +349,12 @@ test('OMA deterministic fixtures retain input provenance and lock current-contra
   ]);
 
   const omaManifest = readJson<{ codex_surface?: { plugin_payload_manifest_url?: string } }>(
-    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
+    catalogFixtureManifestPath('oma'),
   );
   const activePayloadRel = omaManifest.codex_surface?.plugin_payload_manifest_url;
   assert.ok(activePayloadRel, 'oma.json must declare active plugin_payload_manifest_url');
   const payload = readJson<{ package_id: string; package_version: string; source_commit: string }>(
-    path.join(repoRoot, 'contracts/opl-framework/packages', activePayloadRel),
+    path.join(catalogFixturePackageRoot, activePayloadRel),
   );
   assert.equal(payload.package_id, 'oma');
   assert.match(payload.source_commit, /^[0-9a-f]{40}$/);

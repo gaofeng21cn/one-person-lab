@@ -98,10 +98,12 @@
     }
   },
   "directory": {
-    "uninstalled_without_discovery_access": "exclude_from_entries_and_counts",
+    "uninstalled_without_discovery_access": "exclude_unless_authenticated_official_catalog_has_owner_bound_public_summary",
     "installed_without_download_access": "retain_with_access_attention",
     "installed_version_and_local_readiness": "Read from the native carrier independently of download access.",
-    "private_identity_in_public_unauthorized_catalog": "not_exposed"
+    "private_identity_in_public_unauthorized_catalog": "only_explicit_owner_bound_public_summary",
+    "public_summary_grants_discovery_or_download_access": false,
+    "public_summary_notes": "A locked card exposes Package identity, approved localized display metadata, product category and access status. Full descriptor and lifecycle actions require their normal access checks."
   },
   "lifecycle": {
     "fresh_download_access_required": [

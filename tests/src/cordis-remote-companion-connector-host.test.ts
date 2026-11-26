@@ -5,6 +5,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
 import {
   assertRemoteCompanionActivationContext,
   assertRemoteCompanionConnector,
@@ -326,7 +328,7 @@ test('remote companion manifest and loader require a locked synchronous factory 
   ].join('\n'));
   try {
     const ownerManifest = parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/opl-relay.json'),
+      catalogFixtureManifestPath('opl-relay'),
       'utf8',
     )) as Record<string, any>;
     const manifestPayload = {

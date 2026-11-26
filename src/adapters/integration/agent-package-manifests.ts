@@ -1,5 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
-import { listCurrentPackageProjections } from '../../kernel/standard-agent-registry.ts';
+import {
+  listCurrentPackageProjections,
+  PACKAGE_PROJECTION_ROOT,
+  resolveProjectedManifestPath,
+} from '../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from './agent-package-identity.ts';
 import { normalizePackageManifest } from './agent-package-registry/manifest-normalizers.ts';
 import type { AgentPackageCapabilityDependency, AgentPackagePresentation } from './agent-package-registry/types.ts';
@@ -151,7 +158,18 @@ function projectCapabilityDependency(value: unknown, normalized: AgentPackageCap
   };
 }
 
-function normalizeFirstPartyManifest(payload: Record<string, unknown>) {
+function resolveFirstPartyManifestRef(packageId: string, sourceRef?: string) {
+  if (sourceRef?.trim()) return sourceRef.trim();
+  const flatRef = `contracts/opl-framework/packages/${packageId}.json`;
+  const resolved = resolveProjectedManifestPath(flatRef);
+  if (resolved.startsWith(`${PACKAGE_PROJECTION_ROOT}${path.sep}`) && fs.existsSync(resolved)) {
+    const relativePosix = path.relative(PACKAGE_PROJECTION_ROOT, resolved).split(path.sep).join('/');
+    return `contracts/opl-framework/packages/${relativePosix}`;
+  }
+  return fs.existsSync(resolved) ? resolved : flatRef;
+}
+
+function normalizeFirstPartyManifest(payload: Record<string, unknown>, manifestRef?: string) {
   if (isRecord(payload.distribution_payload)
     && !Array.isArray(payload.distribution_payload.required_skill_pack_lock_refs)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare distribution_payload.required_skill_pack_lock_refs.', {
@@ -159,7 +177,9 @@ function normalizeFirstPartyManifest(payload: Record<string, unknown>) {
       field: 'distribution_payload.required_skill_pack_lock_refs',
     });
   }
-  const manifestUrl = `framework://contracts/opl-framework/packages/${requiredString(payload.package_id, 'package_id')}.json`;
+  const packageId = requiredString(payload.package_id, 'package_id');
+  const resolved = resolveFirstPartyManifestRef(packageId, manifestRef);
+  const manifestUrl = pathToFileURL(resolveProjectedManifestPath(resolved)).toString();
   try {
     return normalizePackageManifest(payload, manifestUrl);
   } catch (error) {
@@ -188,7 +208,7 @@ function repoNameFromUrl(repoUrl: string) {
   return normalized.split(/[\\/]/).at(-1) || repoUrl;
 }
 
-export function normalizeFirstPartyAgentPackageManifest(payload: unknown): FirstPartyAgentPackageManifest {
+export function normalizeFirstPartyAgentPackageManifest(payload: unknown, manifestRef?: string): FirstPartyAgentPackageManifest {
   if (!isRecord(payload)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must be a JSON object.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -196,7 +216,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
   }
   const agentId = requireCanonicalPackageIdentity(payload.agent_id, 'agent_id');
   const packageId = requireCanonicalPackageIdentity(payload.package_id, 'package_id');
-  const normalized = normalizeFirstPartyManifest(payload);
+  const normalized = normalizeFirstPartyManifest(payload, manifestRef);
   if (!isRecord(payload.codex_surface)) {
     throw new FrameworkContractError('contract_shape_invalid', 'Agent package manifest must declare codex_surface.', {
       contract_ref: 'contracts/opl-framework/agent-package-manifest.schema.json',
@@ -258,7 +278,7 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
       : [],
     capability_dependencies: capabilityDependencies,
     presentation: normalized.presentation ?? null,
-    package_manifest_ref: `contracts/opl-framework/packages/${packageId}.json`,
+    package_manifest_ref: resolveFirstPartyManifestRef(packageId, manifestRef),
     module_id: requiredString(runtimeSourceCarrier.module_id, 'runtime_source_carrier.module_id'),
     display_name: displayName,
     description: englishPresentationValue(payload, 'description_i18n') ?? displayName,
@@ -279,9 +299,9 @@ export function normalizeFirstPartyAgentPackageManifest(payload: unknown): First
 }
 
 export function listFirstPartyAgentPackageManifests(packageDirectory?: string) {
-  return listCurrentPackageProjections(packageDirectory)
+  return listCurrentPackageProjections(packageDirectory, { officialOnly: true })
     .filter(({ payload }) => payload.surface_kind === 'opl_agent_package_manifest.v1')
-    .map(({ payload }) => normalizeFirstPartyAgentPackageManifest(payload));
+    .map(({ payload, source_ref }) => normalizeFirstPartyAgentPackageManifest(payload, source_ref));
 }
 
 export function getAgentPackageManifestByModuleId(moduleId: string, packageDirectory?: string) {

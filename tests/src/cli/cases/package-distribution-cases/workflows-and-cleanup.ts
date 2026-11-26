@@ -3,16 +3,12 @@ import { spawnSync } from 'node:child_process';
 
 import {
   assert,
-  canonicalAgentPackageId,
-  createGitModuleRemoteFixture,
   execFileSync,
   fs,
-  normalizeFirstPartyAgentPackageManifest,
   os,
   parseJsonText,
   path,
   repoRoot,
-  runCli,
   test,
 } from './helpers.ts';
 import {
@@ -20,6 +16,10 @@ import {
   getPublicationAdmittedOplPackageSpecs,
   loadOplPackageSpecs,
 } from '../../../../../src/adapters/integration/package-distribution.ts';
+import {
+  catalogFixtureManifestPath,
+  catalogFixturePackageRoot,
+} from '../../../helpers/catalog-fixture.ts';
 
 test('single-Package payload materialization binds exact physical archive provenance', () => {
   const root = fs.realpathSync(fs.mkdtempSync(
@@ -340,11 +340,14 @@ test('single-Package payload materialization binds exact physical archive proven
   }
 });
 
-test('source visibility authenticates metadata and retains public/private approval boundaries', () => {
-  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
-  const stepScript = (name: string): string => workflow.split(`      - name: ${name}\n`)[1]!
+function publicationWorkflowStep(workflow: string, name: string): string {
+  return workflow.split(`      - name: ${name}\n`)[1]!
     .split('\n      - name: ')[0]!.split('        run: |\n')[1]!
     .split('\n').map((line) => line.slice(10)).join('\n');
+}
+
+test('source visibility authenticates metadata and retains public/private approval boundaries', () => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-source-visibility-'));
   const sourceCommit = 'a'.repeat(40);
   try {
@@ -354,9 +357,9 @@ test('source visibility authenticates metadata and retains public/private approv
       source_repo: 'https://github.com/example/private-agent.git',
     }));
     const output = path.join(root, 'outputs');
-    const selector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
+    const selector = spawnSync('bash', ['-c', publicationWorkflowStep(workflow, 'Resolve exact Package owner source')], {
       cwd: root, encoding: 'utf8',
-      env: { ...process.env, PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env') },
+      env: { ...process.env, EXPECTED_CATALOG_SOURCE_COMMIT: '', PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent', GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env') },
     });
     assert.equal(selector.status, 0, selector.stderr);
     assert.match(fs.readFileSync(output, 'utf8'), /owner_source_key_secret=OWNER_SOURCE_READ_KEY_EXAMPLE_PRIVATE_AGENT\n/);
@@ -367,8 +370,8 @@ test('source visibility authenticates metadata and retains public/private approv
         access_policy_ref: `github-package:example/${namespace}/example-agent`, credential_provider: 'github_packages',
         codex_surface: { configured_codex_plugin_carrier: { publication_ref: `ghcr.io/example/${namespace}/example-agent:latest-stable` } },
       }));
-      const privateSelector = spawnSync('bash', ['-c', stepScript('Resolve exact Package owner source')], {
-        cwd: root, encoding: 'utf8', env: { ...process.env, PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent',
+      const privateSelector = spawnSync('bash', ['-c', publicationWorkflowStep(workflow, 'Resolve exact Package owner source')], {
+        cwd: root, encoding: 'utf8', env: { ...process.env, EXPECTED_CATALOG_SOURCE_COMMIT: '', PACKAGES_OWNER: 'example', PACKAGE_ID: 'example-agent',
           GITHUB_OUTPUT: output, GITHUB_ENV: path.join(root, 'env-private') },
       });
       assert.equal(privateSelector.status === 0, namespace === 'one-person-lab-private-packages', privateSelector.stderr);
@@ -403,7 +406,7 @@ exit "$TEST_EXIT"
       { status: '404', approval: '', visibility: 'invalid', allowed: false },
     ];
     for (const scenario of cases) {
-      const result = spawnSync('bash', ['-c', stepScript('Verify source archive publication visibility')], {
+      const result = spawnSync('bash', ['-c', publicationWorkflowStep(workflow, 'Verify source archive publication visibility')], {
         cwd: root, encoding: 'utf8', env: {
           ...process.env, PATH: `${root}${path.delimiter}${process.env.PATH}`,
           OWNER_REPO: 'example/private-agent', EXPECTED_OWNER_SOURCE_COMMIT: sourceCommit,
@@ -426,9 +429,57 @@ exit "$TEST_EXIT"
   }
 });
 
+test('publication selects the typed Official Catalog manifest at the requested commit', (t) => {
+  const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
+  const script = publicationWorkflowStep(workflow, 'Resolve exact Package owner source');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-publication-catalog-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const catalogRoot = path.join(root, '.opl-catalog');
+  const manifestRef = 'packages/agents/example-agent.json';
+  const manifestPath = path.join(catalogRoot, manifestRef);
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.mkdirSync(path.join(catalogRoot, 'scripts'));
+  fs.writeFileSync(manifestPath, JSON.stringify({ source_repo: 'https://github.com/example/catalog-agent.git' }));
+  fs.writeFileSync(path.join(catalogRoot, 'catalog-index.json'), JSON.stringify({
+    packages: [{ package_id: 'example-agent', manifest_path: manifestRef }],
+  }));
+  fs.writeFileSync(path.join(catalogRoot, 'scripts/validate-catalog.mjs'),
+    "import fs from 'node:fs'; fs.writeFileSync('catalog-validator-ran', '');\n");
+  const git = (...args: string[]) => execFileSync('git', ['-C', catalogRoot, ...args], { encoding: 'utf8' }).trim();
+  git('init', '-q');
+  git('add', '.');
+  git('-c', 'user.name=OPL Test', '-c', 'user.email=test@example.com', '-c', 'commit.gpgsign=false',
+    'commit', '-qm', 'Catalog fixture');
+  const commit = git('rev-parse', 'HEAD');
+  const output = path.join(root, 'output');
+  const envFile = path.join(root, 'env');
+  const run = (catalogCommit: string) => spawnSync('bash', ['-c', script], {
+    cwd: root,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      EXPECTED_CATALOG_SOURCE_COMMIT: catalogCommit,
+      GITHUB_WORKSPACE: root,
+      GITHUB_OUTPUT: output,
+      GITHUB_ENV: envFile,
+      PACKAGES_OWNER: 'example',
+      PACKAGE_ID: 'example-agent',
+    },
+  });
+  const wrongCommit = run(commit.replace(/^./, commit[0] === '0' ? '1' : '0'));
+  assert.notEqual(wrongCommit.status, 0);
+  assert.equal(fs.existsSync(path.join(root, 'catalog-validator-ran')), false);
+  const matchingCommit = run(commit);
+  assert.equal(matchingCommit.status, 0, matchingCommit.stderr);
+  assert.equal(fs.existsSync(path.join(root, 'catalog-validator-ran')), true);
+  assert.match(fs.readFileSync(output, 'utf8'), /^owner_repo=example\/catalog-agent$/m);
+  assert.ok(fs.readFileSync(envFile, 'utf8').split('\n').includes(`OPL_CATALOG_ROOT=${catalogRoot}`));
+  assert.ok(fs.readFileSync(envFile, 'utf8').split('\n').includes(`PACKAGE_MANIFEST_PATH=.opl-catalog/${manifestRef}`));
+});
+
 test('single-Package publication is protected, selector-bound, and readback-only after unknown results', () => {
   const workflow = fs.readFileSync(path.join(repoRoot, '.github/workflows/publish-package.yml'), 'utf8');
-  const packageSpecs = getPublicationAdmittedOplPackageSpecs();
+  const packageSpecs = getPublicationAdmittedOplPackageSpecs(catalogFixturePackageRoot);
   const publisherPackageIds = packageSpecs.map((spec) => spec.package_id);
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
@@ -443,9 +494,9 @@ test('single-Package publication is protected, selector-bound, and readback-only
     /^      PUBLICATION_ENVIRONMENT: \$\{\{ needs\.publication-authority\.outputs\.environment \}\}$/m,
   );
   assert.match(workflow, /^    permissions:\n      contents: read\n      id-token: write\n      packages: write$/m);
-  assert.deepEqual(packageSpecs.map((spec) => spec.package_id), publisherPackageIds);
-  assert.equal(loadOplPackageSpecs().some((spec) => spec.package_id === 'opl-channel-weixin'), true);
-  assert.equal(getOplPackageSpecs().some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
+  assert.ok(publisherPackageIds.length > 0);
+  assert.equal(loadOplPackageSpecs(catalogFixturePackageRoot).some((spec) => spec.package_id === 'opl-channel-weixin'), false);
+  assert.equal(getOplPackageSpecs(catalogFixturePackageRoot).some((spec) => spec.package_id === 'opl-link-desktop-connector'), true);
   assert.equal(publisherPackageIds.includes('opl-channel-weixin'), false);
   assert.equal(publisherPackageIds.includes('opl-link-desktop-connector'), false);
   assert.doesNotMatch(workflow, /type: choice/);
@@ -462,12 +513,13 @@ test('single-Package publication is protected, selector-bound, and readback-only
     path.join(repoRoot, 'scripts/package-source-projection-gate.mjs'),
     '--package-id', 'opl-channel-weixin',
     '--owner-root', repoRoot,
+    '--catalog-root', path.dirname(catalogFixturePackageRoot),
   ], { cwd: repoRoot, encoding: 'utf8' });
   assert.equal(componentPublicationGate.status, 1);
   assert.match(componentPublicationGate.stderr, /Unknown canonical Package id: opl-channel-weixin/);
   for (const spec of packageSpecs) {
     const manifest = parseJsonText(
-      fs.readFileSync(path.join(repoRoot, spec.package_manifest_ref), 'utf8'),
+      fs.readFileSync(catalogFixtureManifestPath(spec.package_id), 'utf8'),
     ) as Record<string, unknown>;
     assert.equal(manifest.package_id, spec.package_id);
     assert.equal(manifest.source_repo, spec.repo_url);
@@ -478,6 +530,7 @@ test('single-Package publication is protected, selector-bound, and readback-only
   assert.match(workflow, /echo "OCI_SOURCE_URL=\$\{source_repo%\.git\}"/);
   assert.match(workflow, /echo "OWNER_SOURCE_URL=\$\{source_repo%\.git\}"/);
   assert.match(workflow, /resolvedDependencies:\[\n\s*\{uri:\$owner_source_url,digest:\{gitCommit:\$owner_commit\}\}/);
+  assert.match(workflow, /\{uri:"https:\/\/github\.com\/gaofeng21cn\/opl-catalog",digest:\{gitCommit:\$catalog_commit\}\}/);
   assert.doesNotMatch(workflow, /OCI_SOURCE_URL: https:\/\/github\.com\/\$\{\{ github\.repository \}\}/);
   for (const ownerRepo of [
     'gaofeng21cn/med-autoscience',

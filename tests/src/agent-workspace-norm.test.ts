@@ -43,7 +43,7 @@ test('workspace agent identity and supported agents derive from the standard-age
 
   assert.equal('supported_agents' in rawContract, false);
   assert.deepEqual(rawContract.supported_agent_registry, {
-    source_ref: 'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
+    source_ref: 'catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection',
     series_membership: 'standard_domain_agent',
   });
   assert.equal('domain_topology_profiles' in rawContract, false);
