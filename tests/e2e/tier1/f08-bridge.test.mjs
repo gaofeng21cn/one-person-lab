@@ -10,9 +10,15 @@ import { connectRpcClient } from "../lib/rpc-client.mjs";
 import { createSandbox, measureLatencyMs } from "../lib/sandbox.mjs";
 import { getGrants, openOplDb } from "../lib/sqlite-inspector.mjs";
 
-const BRIDGE_DIR =
+const STUDIO_ROOT = path.resolve(
+  process.env.OPL_STUDIO_ROOT || "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge"
+);
+const BRIDGE_DIR = path.resolve(
   process.env.OPL_STUDIO_BRIDGE_DIR ||
-  "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge/plugins/opl-framework-bridge";
+    (fs.existsSync(path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge"))
+      ? path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge")
+      : path.join(STUDIO_ROOT, "plugins", "opl-framework-bridge"))
+);
 
 const activeSandboxes = [];
 const activeBridges = [];

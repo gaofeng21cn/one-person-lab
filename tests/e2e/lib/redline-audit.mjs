@@ -785,11 +785,11 @@ export function auditProtectedBoundaries({ studioRoot = null, appRoot = null, re
           message: `Forbidden modification to protected Studio/DSH CUA path: ${p}`,
         });
       }
-      if (!p.startsWith("plugins/opl-framework-bridge/")) {
+      if (!p.startsWith("plugins/opl-framework-bridge/") && !p.startsWith("plugins/core/opl-framework-bridge/")) {
         violations.push({
           rule: "studio-edit-outside-bridge",
           file: p,
-          message: `opl-studio edit outside plugins/opl-framework-bridge/: ${p}`,
+          message: `opl-studio edit outside plugins/opl-framework-bridge/ or plugins/core/opl-framework-bridge/: ${p}`,
         });
       }
     }
