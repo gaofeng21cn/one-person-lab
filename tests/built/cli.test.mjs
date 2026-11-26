@@ -140,3 +140,92 @@ test('built v2 CLI flushes >128KB piped --json stdout without truncation (OPL_US
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('built v2 CLI handles early stdout pipe closure (EPIPE) cleanly without unhandled error crash (OPL_USE_DIST=1)', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-built-epipe-'));
+  try {
+    const pkgDir = path.join(tmpDir, 'epipe-pkg');
+    fs.mkdirSync(path.join(pkgDir, 'files'), { recursive: true });
+    fs.writeFileSync(
+      path.join(pkgDir, 'opl-package.json'),
+      JSON.stringify({
+        schema_version: 'opl.package.v2',
+        identity: {
+          id: 'epipe-pipe-pkg',
+          version: '1.0.0',
+          intent: 'extension',
+          name: { 'zh-CN': '断管测试包', 'en-US': 'EPIPE Pipe Package' },
+          summary: { 'zh-CN': 'EPIPE 防护测试', 'en-US': 'EPIPE guard test' },
+          publisher: 'one-person-lab',
+        },
+      }),
+    );
+    for (let i = 0; i < 3500; i += 1) {
+      fs.writeFileSync(
+        path.join(pkgDir, 'files', `epipe-${String(i).padStart(4, '0')}-payload-padding-entry.txt`),
+        `${i}\n`,
+        'utf8',
+      );
+    }
+
+    const runEnv = {
+      ...process.env,
+      HOME: tmpDir,
+      OPL_STATE_DIR: path.join(tmpDir, 'state'),
+      NODE_NO_WARNINGS: '1',
+      OPL_USE_DIST: '1',
+    };
+
+    const runDestroyCase = (immediate) =>
+      new Promise((resolve, reject) => {
+        const child = spawn(rootBin, ['pack', 'build', pkgDir, '--no-write-lock', '--json'], {
+          cwd: repoRoot,
+          env: runEnv,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr.on('data', (c) => { stderr += c.toString('utf8'); });
+        if (immediate) {
+          child.stdout.destroy();
+        } else {
+          child.stdout.once('data', () => {
+            child.stdout.destroy();
+          });
+        }
+        child.on('error', reject);
+        child.on('close', (code, signal) => resolve({ code, signal, stderr }));
+      });
+
+    const immediateRes = await runDestroyCase(true);
+    assert.equal(immediateRes.signal, null);
+    assert.equal(immediateRes.code, 0, immediateRes.stderr);
+    assert.doesNotMatch(immediateRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+
+    for (let trial = 0; trial < 3; trial += 1) {
+      const postChunkRes = await runDestroyCase(false);
+      assert.equal(postChunkRes.signal, null);
+      assert.equal(postChunkRes.code, 0, `trial ${trial}: ${postChunkRes.stderr}`);
+      assert.doesNotMatch(postChunkRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+    }
+
+    const headPipeRes = await new Promise((resolve, reject) => {
+      const child = spawn(
+        '/bin/bash',
+        ['-c', '"$1" pack build "$2" --no-write-lock --json | head -c 100 >/dev/null; exit "${PIPESTATUS[0]}"', 'bash', rootBin, pkgDir],
+        {
+          cwd: repoRoot,
+          env: runEnv,
+          stdio: ['ignore', 'ignore', 'pipe'],
+        },
+      );
+      let stderr = '';
+      child.stderr.on('data', (c) => { stderr += c.toString('utf8'); });
+      child.on('error', reject);
+      child.on('close', (code) => resolve({ code, stderr }));
+    });
+    assert.equal(headPipeRes.code, 0, headPipeRes.stderr);
+    assert.doesNotMatch(headPipeRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

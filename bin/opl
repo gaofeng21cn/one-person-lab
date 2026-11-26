@@ -4,6 +4,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+const BROKEN_PIPE_GUARD_KEY = Symbol.for('opl.cli.brokenPipeGuardInstalled');
+
+function installBrokenPipeGuard(stream) {
+  if (!stream || typeof stream.on !== 'function' || stream[BROKEN_PIPE_GUARD_KEY]) return;
+  stream[BROKEN_PIPE_GUARD_KEY] = true;
+  stream.on('error', (err) => {
+    if (err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED') return;
+    throw err;
+  });
+}
+
+installBrokenPipeGuard(process.stdout);
+installBrokenPipeGuard(process.stderr);
+
 const entryPath = fs.realpathSync(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(path.dirname(entryPath), '..');
 const srcBin = path.join(rootDir, 'packages', 'daemon', 'src', 'cli', 'bin-opl.ts');

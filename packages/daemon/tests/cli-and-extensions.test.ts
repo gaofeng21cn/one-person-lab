@@ -481,4 +481,73 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     assert.ok(parsed.lock.file_count >= 3500);
     assert.ok(parsed.lock.paths.length >= 3500);
   });
+
+  it('handles early stdout pipe closure (EPIPE) cleanly without unhandled error crash under immediate, post-first-chunk, and head -c 100', async () => {
+    const sb = trackSandbox();
+    const bigPkgDir = writeMinimalV2Package(path.join(sb.root, 'epipe-json-pkg'), {
+      id: 'epipe-json-pkg',
+      intent: 'agent',
+    });
+    const filesDir = path.join(bigPkgDir, 'files');
+    fs.mkdirSync(filesDir, { recursive: true });
+    for (let i = 0; i < 3500; i += 1) {
+      fs.writeFileSync(
+        path.join(filesDir, `epipe-${String(i).padStart(4, '0')}-payload-padding-entry.txt`),
+        `${i}\n`,
+        'utf8',
+      );
+    }
+
+    const binPath = path.join(WORKTREE_ROOT, 'bin', 'opl');
+
+    const runDestroyCase = (immediate: boolean) =>
+      new Promise<{ code: number | null; signal: NodeJS.Signals | null; stderr: string }>((resolve, reject) => {
+        const child = spawn(binPath, ['pack', 'build', bigPkgDir, '--no-write-lock', '--json'], {
+          cwd: WORKTREE_ROOT,
+          env: { ...sb.env, OPL_USE_DIST: '0' },
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr.on('data', (c: Buffer) => { stderr += c.toString('utf8'); });
+        if (immediate) {
+          child.stdout.destroy();
+        } else {
+          child.stdout.once('data', () => {
+            child.stdout.destroy();
+          });
+        }
+        child.on('error', reject);
+        child.on('close', (code, signal) => resolve({ code, signal, stderr }));
+      });
+
+    const immediateRes = await runDestroyCase(true);
+    assert.equal(immediateRes.signal, null);
+    assert.equal(immediateRes.code, 0, immediateRes.stderr);
+    assert.doesNotMatch(immediateRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+
+    for (let trial = 0; trial < 3; trial += 1) {
+      const postChunkRes = await runDestroyCase(false);
+      assert.equal(postChunkRes.signal, null);
+      assert.equal(postChunkRes.code, 0, `trial ${trial}: ${postChunkRes.stderr}`);
+      assert.doesNotMatch(postChunkRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+    }
+
+    const headPipeRes = await new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
+      const child = spawn(
+        '/bin/bash',
+        ['-c', '"$1" pack build "$2" --no-write-lock --json | head -c 100 >/dev/null; exit "${PIPESTATUS[0]}"', 'bash', binPath, bigPkgDir],
+        {
+          cwd: WORKTREE_ROOT,
+          env: { ...sb.env, OPL_USE_DIST: '0' },
+          stdio: ['ignore', 'ignore', 'pipe'],
+        },
+      );
+      let stderr = '';
+      child.stderr.on('data', (c: Buffer) => { stderr += c.toString('utf8'); });
+      child.on('error', reject);
+      child.on('close', (code) => resolve({ code, stderr }));
+    });
+    assert.equal(headPipeRes.code, 0, headPipeRes.stderr);
+    assert.doesNotMatch(headPipeRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+  });
 });
