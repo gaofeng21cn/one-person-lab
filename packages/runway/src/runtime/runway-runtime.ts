@@ -52,6 +52,7 @@ import type {
 import { LeaseManager } from './lease-manager.ts';
 
 const MAX_LEDGER_SUMMARY_LENGTH = 1_800;
+const MAX_LEDGER_CODE_LENGTH = 128;
 
 function sanitizeLedgerSummary(raw: string | undefined, fallback: string, maxLen = MAX_LEDGER_SUMMARY_LENGTH): string {
   const redacted = (raw ?? '')
@@ -63,6 +64,10 @@ function sanitizeLedgerSummary(raw: string | undefined, fallback: string, maxLen
   const base = redacted.length > 0 ? redacted : fallback;
   if (base.length <= maxLen) return base;
   return `${base.slice(0, Math.max(1, maxLen - 3))}...`;
+}
+
+function sanitizeLedgerCode(raw: string | undefined, fallback: string): string {
+  return sanitizeLedgerSummary(raw, fallback, MAX_LEDGER_CODE_LENGTH);
 }
 
 export interface RunwayRuntimeOptions {
@@ -685,9 +690,14 @@ export class RunwayRuntime {
     } else if (outcome.status === 'human_gate') {
       nextStageStatus = 'human_gate';
       attemptStatus = 'succeeded';
-      humanGateJson = JSON.stringify(
-        outcome.human_gate ?? { question: 'Human decision required to proceed.' },
+      const sanitizedQuestion = sanitizeLedgerSummary(
+        outcome.human_gate?.question,
+        'Human gate requested by executor.',
       );
+      humanGateJson = JSON.stringify({
+        ...(outcome.human_gate ?? {}),
+        question: sanitizedQuestion,
+      });
       ledgerInputs.push({
         task_id: taskBundle.task_id,
         stage_run_id: latestStage.stage_run_id,
@@ -696,7 +706,7 @@ export class RunwayRuntime {
         owner_id: 'opl.runway',
         payload: {
           code: 'human_gate_requested',
-          summary: outcome.human_gate?.question ?? 'Human gate requested by executor.',
+          summary: sanitizedQuestion,
           retryable: true,
         },
         created_at: ts,
@@ -720,7 +730,10 @@ export class RunwayRuntime {
     } else {
       nextStageStatus = 'human_gate';
       attemptStatus = outcome.status === 'timed_out' ? 'timed_out' : 'failed';
-      const errCode = outcome.error?.code ?? (outcome.status === 'timed_out' ? 'TIMED_OUT' : 'EXECUTOR_FAILED');
+      const errCode = sanitizeLedgerCode(
+        outcome.error?.code,
+        outcome.status === 'timed_out' ? 'TIMED_OUT' : 'EXECUTOR_FAILED',
+      );
       const errMsg = sanitizeLedgerSummary(outcome.error?.message, 'Stage execution failed.');
       humanGateJson = JSON.stringify({
         kind: 'execution_blocker',
@@ -851,6 +864,12 @@ export class RunwayRuntime {
       }
     } else if (ctx.local_pid && isProcessAlive(ctx.local_pid)) {
       recState = 'still_running';
+    }
+
+    const preservedAfterReconcile = this.#preserveConcurrentStageSovereignty(ctx);
+    if (preservedAfterReconcile) {
+      this.#removePreSnapshot(ctx.attempt_id);
+      return preservedAfterReconcile;
     }
 
     if (recState === 'still_running') {
@@ -1031,6 +1050,12 @@ export class RunwayRuntime {
       recState = 'still_running';
     }
 
+    const preservedAfterReattachReconcile = this.#preserveConcurrentStageSovereignty(ctx);
+    if (preservedAfterReattachReconcile) {
+      this.#removePreSnapshot(ctx.attempt_id);
+      return preservedAfterReattachReconcile;
+    }
+
     if (recState === 'still_running') {
       if (ctx.local_pid && isProcessAlive(ctx.local_pid)) {
         return await this.reconcileAttemptContext(ctx, { skipReattachStream: true });
@@ -1136,12 +1161,45 @@ export class RunwayRuntime {
     return diffArtifacts;
   }
 
+  #preserveConcurrentStageSovereignty(
+    ctx: RunningAttemptContext,
+  ): 'skipped_paused' | 'skipped_preserved' | null {
+    const latestStage = this.#store.getStageRun(ctx.stage_run_id);
+    const latestTask = this.#store.getTask(ctx.task_id).task;
+    if (latestTask.status === 'paused_by_human' || latestStage.status === 'paused_by_human') {
+      this.#store.markAttemptInterrupted(ctx.attempt_id, 'paused_by_human_preserved', {
+        task_id: ctx.task_id,
+        stage_run_id: ctx.stage_run_id,
+      });
+      return 'skipped_paused';
+    }
+    if (
+      latestStage.status === 'human_gate'
+      || latestStage.status === 'cancelled'
+      || latestTask.status === 'cancelled'
+    ) {
+      this.#store.markAttemptInterrupted(ctx.attempt_id, 'stage_state_preserved', {
+        stage_status: latestStage.status,
+        task_status: latestTask.status,
+      });
+      return 'skipped_preserved';
+    }
+    return null;
+  }
+
   #commitReconciledOutcome(
     ctx: RunningAttemptContext,
     recState: 'completed' | 'failed' | 'lost',
     recOutcome: ExecutionOutcome | undefined,
     extraArtifacts: ReadonlyArray<{ readonly path: string; readonly sha256?: string }> = [],
-  ): 'harvested' | 'interrupted' {
+  ): 'harvested' | 'interrupted' | 'skipped_paused' | 'skipped_preserved' {
+    const preservedBefore = this.#preserveConcurrentStageSovereignty(ctx);
+    if (preservedBefore) {
+      this.#removePreSnapshot(ctx.attempt_id);
+      return preservedBefore;
+    }
+
+    const latestStage = this.#store.getStageRun(ctx.stage_run_id);
     const ts = nowIso();
     const ownerId = ctx.agent_id ?? 'opl.runway';
 
@@ -1183,19 +1241,30 @@ export class RunwayRuntime {
         ctx.stage_run_id,
         'completed',
       );
-      this.#store.commitStageTransitionAtomic({
-        stage_run_id: ctx.stage_run_id,
-        expected_revision: ctx.stage_revision,
-        next_stage_status: 'completed',
-        task_status: nextTaskStatus,
-        attempt_update: {
-          attempt_id: ctx.attempt_id,
-          status: 'succeeded',
-          usage_json: recOutcome?.usage ? JSON.stringify(recOutcome.usage) : undefined,
-          error_json: null,
-        },
-        ledger_entries: ledgerInputs,
-      });
+      try {
+        this.#store.commitStageTransitionAtomic({
+          stage_run_id: ctx.stage_run_id,
+          expected_revision: latestStage.revision,
+          next_stage_status: 'completed',
+          task_status: nextTaskStatus,
+          attempt_update: {
+            attempt_id: ctx.attempt_id,
+            status: 'succeeded',
+            usage_json: recOutcome?.usage ? JSON.stringify(recOutcome.usage) : undefined,
+            error_json: null,
+          },
+          ledger_entries: ledgerInputs,
+        });
+      } catch (error) {
+        if (error instanceof RunwayError && error.code === 'REVISION_CONFLICT') {
+          const preservedAfter = this.#preserveConcurrentStageSovereignty(ctx);
+          if (preservedAfter) {
+            this.#removePreSnapshot(ctx.attempt_id);
+            return preservedAfter;
+          }
+        }
+        throw error;
+      }
       this.#removePreSnapshot(ctx.attempt_id);
       this.#onRunwayChanged?.({
         kind: 'reconciled',
@@ -1208,10 +1277,10 @@ export class RunwayRuntime {
     }
 
     // 'failed' or 'lost' -> NEVER auto-replay; converge to human_gate + typed_blocker
-    const blockerCode =
-      recState === 'failed'
-        ? recOutcome?.error?.code ?? 'executor_failed_after_restart'
-        : 'executor_lost_after_restart';
+    const blockerCode = sanitizeLedgerCode(
+      recState === 'failed' ? recOutcome?.error?.code : 'executor_lost_after_restart',
+      recState === 'failed' ? 'executor_failed_after_restart' : 'executor_lost_after_restart',
+    );
     const blockerMsg = sanitizeLedgerSummary(
       recOutcome?.error?.message,
       `Attempt '${ctx.attempt_id}' was ${recState} across daemon restart; inspect workspace before retrying.`,
@@ -1223,35 +1292,46 @@ export class RunwayRuntime {
       options: ['retry_stage', 'resume_with_note', 'cancel'],
     });
 
-    this.#store.commitStageTransitionAtomic({
-      stage_run_id: ctx.stage_run_id,
-      expected_revision: ctx.stage_revision,
-      next_stage_status: 'human_gate',
-      human_gate_json: humanGateJson,
-      task_status: 'awaiting_human',
-      attempt_update: {
-        attempt_id: ctx.attempt_id,
-        status: recState === 'failed' ? 'failed' : 'interrupted',
-        usage_json: recOutcome?.usage ? JSON.stringify(recOutcome.usage) : undefined,
-        error_json: JSON.stringify({ code: blockerCode, message: blockerMsg }),
-      },
-      ledger_entries: [
-        {
-          task_id: ctx.task_id,
-          stage_run_id: ctx.stage_run_id,
+    try {
+      this.#store.commitStageTransitionAtomic({
+        stage_run_id: ctx.stage_run_id,
+        expected_revision: latestStage.revision,
+        next_stage_status: 'human_gate',
+        human_gate_json: humanGateJson,
+        task_status: 'awaiting_human',
+        attempt_update: {
           attempt_id: ctx.attempt_id,
-          entry_kind: 'typed_blocker',
-          owner_id: 'opl.runway',
-          payload: {
-            code: blockerCode,
-            summary: blockerMsg,
-            retryable: true,
-            next_safe_action: 'inspect_and_decide',
-          },
-          created_at: ts,
+          status: recState === 'failed' ? 'failed' : 'interrupted',
+          usage_json: recOutcome?.usage ? JSON.stringify(recOutcome.usage) : undefined,
+          error_json: JSON.stringify({ code: blockerCode, message: blockerMsg }),
         },
-      ],
-    });
+        ledger_entries: [
+          {
+            task_id: ctx.task_id,
+            stage_run_id: ctx.stage_run_id,
+            attempt_id: ctx.attempt_id,
+            entry_kind: 'typed_blocker',
+            owner_id: 'opl.runway',
+            payload: {
+              code: blockerCode,
+              summary: blockerMsg,
+              retryable: true,
+              next_safe_action: 'inspect_and_decide',
+            },
+            created_at: ts,
+          },
+        ],
+      });
+    } catch (error) {
+      if (error instanceof RunwayError && error.code === 'REVISION_CONFLICT') {
+        const preservedAfter = this.#preserveConcurrentStageSovereignty(ctx);
+        if (preservedAfter) {
+          this.#removePreSnapshot(ctx.attempt_id);
+          return preservedAfter;
+        }
+      }
+      throw error;
+    }
     this.#removePreSnapshot(ctx.attempt_id);
     this.#onRunwayChanged?.({
       kind: 'reconciled',

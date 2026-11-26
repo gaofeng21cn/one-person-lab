@@ -116,6 +116,6 @@ export function buildAgyEphemeralSettingsPayload(
 
   return {
     ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
-    ...(req.skill_dirs.length > 0 ? { skillDirs: [...req.skill_dirs] } : {}),
+    ...(skillDirs.length > 0 ? { skillDirs: [...skillDirs] } : {}),
   };
 }

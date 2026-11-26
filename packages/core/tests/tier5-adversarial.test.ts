@@ -167,6 +167,29 @@ test('T5-CORE-03 (G-CORE-03 & G-CORE-04): sqlite busyTimeoutMs/nested savepoints
       encoding: 'utf8',
     });
     assert.equal(probeRes.status, 0, probeRes.stderr);
+
+    const guardProbeDir = path.join(tmpDir, 'guard-probe');
+    fs.mkdirSync(path.join(guardProbeDir, 'packages', 'core', 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(guardProbeDir, 'packages', 'core', 'package.json'),
+      JSON.stringify({ name: '@opl/core', version: '2.0.0' }),
+    );
+    fs.writeFileSync(
+      path.join(guardProbeDir, 'packages', 'core', 'src', 'bad.ts'),
+      [
+        'export async function loadDyn(x: string) { return import(`@opl/${x}`); }',
+        'export const badSql = \'SELECT "bad_dqs" FROM tasks\';',
+      ].join('\n'),
+      'utf8',
+    );
+    const badProbe = spawnSync(process.execPath, [guardScript, '--root', guardProbeDir, '--json'], {
+      encoding: 'utf8',
+    });
+    assert.equal(badProbe.status, 1);
+    const parsedProbe = JSON.parse(badProbe.stdout) as { violations: Array<{ rule: string }> };
+    const rules = new Set(parsedProbe.violations.map((v) => v.rule));
+    assert.equal(rules.has('core-dynamic-import-forbidden'), true);
+    assert.equal(rules.has('dqs0-ts-sql-double-quote'), true);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

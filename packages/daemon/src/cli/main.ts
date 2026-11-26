@@ -78,6 +78,17 @@ const VALUE_FLAGS = new Set([
   '--regression-tolerance',
 ]);
 
+const EXTENSION_BOOLEAN_FLAGS = new Set([
+  '--force',
+  '--no-codex-sync',
+  '--apply',
+  '--clean',
+  '--dry-run',
+  '--detached',
+  '--foreground',
+  '--yes',
+]);
+
 function parseArgs(argv: readonly string[]): ParsedCliArgs {
   const positionals: string[] = [];
   const flags = new Map<string, string | boolean>();
@@ -220,6 +231,10 @@ function extractExtensionArgsAndOpts(
       }
       if (VALUE_FLAGS.has(tok) && i + 1 < argv.length) {
         opts[tok.slice(2)] = argv[++i]!;
+        continue;
+      }
+      if (EXTENSION_BOOLEAN_FLAGS.has(tok)) {
+        opts[tok.slice(2)] = true;
         continue;
       }
       args.push(tok);

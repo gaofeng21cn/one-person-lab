@@ -88,7 +88,7 @@ test('T5-LEDGER-01 (G-LEDGER-01 / BUG-P1-04): verifyTaskLineage handles dangling
 });
 
 test('T5-LEDGER-02 (G-LEDGER-02): enforces exact depth=6 vs 7, UTF-8 byte cap vs char length, ref length, and finite numbers', () => {
-  const depth6 = { a: { b: { c: { d: { e: 'ok' } } } } };
+  const depth6 = { a: { b: { c: { d: { e: { f: 'ok' } } } } } };
   assert.doesNotThrow(() => assertRefsOnlyPayload(depth6));
 
   const depth7 = { a: { b: { c: { d: { e: { f: { g: 'too-deep' } } } } } } };

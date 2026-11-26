@@ -102,6 +102,19 @@ describe("Tier 5 Partition 2: Adversarial CLI, Socket Framing, Auth & Extension 
     const valRes = await runCli(["foundry", "validate", "--bogus-flag", "val1", pkgDir, "--json"], { sandbox: sb });
     assert.equal(valRes.code, 0, `Expected foundry validate with unknown flag to succeed, got:\n${valRes.stdout}\n${valRes.stderr}`);
     assert.equal(valRes.json?.ok, true);
+
+    const p2Dir = path.join(sb.root, "p2-force-agent");
+    fs.mkdirSync(p2Dir, { recursive: true });
+    fs.writeFileSync(path.join(p2Dir, "opl-package.json"), JSON.stringify({ stale: true }), "utf8");
+    const forceInitRes = await runCli(["foundry", "init", "--force", p2Dir, "--id", "p2-agent", "--json"], { sandbox: sb });
+    assert.equal(
+      forceInitRes.code,
+      0,
+      `Expected foundry init --force <dir> --id p2-agent to exit 0, got:\n${forceInitRes.stdout}\n${forceInitRes.stderr}`
+    );
+    assert.equal(forceInitRes.json?.ok, true);
+    const createdManifest = JSON.parse(fs.readFileSync(path.join(p2Dir, "opl-package.json"), "utf8"));
+    assert.equal(createdManifest.identity?.id, "p2-agent");
   });
 
   it("T5-P2-04 (Bug 3): external socket without consumerBindToken cannot forge connect.requestAccess", async () => {

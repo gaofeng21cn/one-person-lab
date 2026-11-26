@@ -5,10 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { resolveStatePaths } from '@opl/core';
+import { isProcessAlive, resolveStatePaths } from '@opl/core';
 import { spawnDetachedDaemon, stopDaemonGracefully } from '../src/cli/client.ts';
 import {
-  TestRpcClient,
   connectTestRpc,
   createDaemonSandbox,
   writeMinimalV2Package,
@@ -19,16 +18,24 @@ test('T5-DAEMON-01 (G2-01 / Bug 1): spawnDetachedDaemon propagates OPL_STATE_DIR
   const customStateDir = path.join(tmpDir, 'isolated-state');
   const prevEnv = process.env.OPL_STATE_DIR;
   delete process.env.OPL_STATE_DIR;
+  let bootPids = new Set<number>();
   try {
     const paths = resolveStatePaths({ stateDir: customStateDir });
     const results = await Promise.all(
       Array.from({ length: 5 }, () => spawnDetachedDaemon(paths)),
     );
-    const pids = new Set(results.map((r) => r.pid));
-    assert.equal(pids.size, 1, 'All 5 concurrent callers must converge on 1 opld PID');
+    bootPids = new Set(results.map((r) => r.pid));
+    assert.equal(bootPids.size, 1, 'All 5 concurrent callers must converge on 1 opld PID');
     assert.equal(fs.existsSync(paths.session_file), true);
   } finally {
-    await stopDaemonGracefully(customStateDir).catch(() => undefined);
+    const stopRes = await stopDaemonGracefully(customStateDir);
+    assert.equal(stopRes.stopped, true, 'stopDaemonGracefully must report stopped: true');
+    for (const pid of bootPids) {
+      assert.equal(isProcessAlive(pid), false, `Booted opld PID ${pid} must not remain alive after stop`);
+    }
+    const paths = resolveStatePaths({ stateDir: customStateDir });
+    assert.equal(fs.existsSync(paths.session_file), false, 'opld.session.json must be removed after stop');
+    assert.equal(fs.existsSync(paths.lock_file), false, 'opld.lock must be removed after stop');
     if (prevEnv !== undefined) process.env.OPL_STATE_DIR = prevEnv;
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
@@ -210,8 +217,44 @@ test('T5-DAEMON-03 (G2-07 / Bug 9): socket server caps oversized NDJSON buffer (
   assert.equal((res.frames[0] as { error?: { code?: number } })?.error?.code, -32600);
 
   // Batch array rejected with -32600
-  const client = new TestRpcClient(sb.sessionPath);
-  await client.connect();
-  await client.handshake('opl_app', '2.0');
-  await client.close();
+  const batchRes = await new Promise<{ frames: Array<{ id?: number | null; error?: { code?: number }; result?: unknown }> }>(
+    (resolve, reject) => {
+      const sock = net.createConnection(srv.session.socket_path);
+      const frames: Array<{ id?: number | null; error?: { code?: number }; result?: unknown }> = [];
+      let buf = '';
+      let sentBatch = false;
+      sock.setEncoding('utf8');
+      sock.on('error', reject);
+      sock.on('data', (c) => {
+        buf += c;
+        let idx: number;
+        while ((idx = buf.indexOf('\n')) >= 0) {
+          const frame = JSON.parse(buf.slice(0, idx)) as { id?: number | null; error?: { code?: number }; result?: unknown };
+          frames.push(frame);
+          buf = buf.slice(idx + 1);
+          if (!sentBatch && frame.id === 1) {
+            sentBatch = true;
+            sock.write(`${JSON.stringify([{ jsonrpc: '2.0', id: 9, method: 'daemon.health' }])}\n`);
+          } else if (sentBatch) {
+            sock.destroy();
+            resolve({ frames });
+            return;
+          }
+        }
+      });
+      sock.on('connect', () => {
+        sock.write(
+          `${JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'daemon.handshake',
+            params: { token: srv.session.token, client_kind: 'opl_app', api_version: '2.0' },
+          })}\n`,
+        );
+      });
+      setTimeout(() => reject(new Error('Timed out waiting for batch array -32600 response')), 5000);
+    },
+  );
+  assert.equal(batchRes.frames.length, 2);
+  assert.equal(batchRes.frames[1]?.error?.code, -32600);
 });

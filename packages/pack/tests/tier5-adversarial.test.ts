@@ -340,3 +340,62 @@ test('T5-PACK-04 (G2-11): OplPackageManifestV2Schema superRefine rejects subtle 
     );
   }
 });
+
+test('T5-PACK-05 (New Bug A): migrateV1Package preserves all manifest-referenced subpaths for nested opl.package.v2 with clean: true', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 't5-pack-nested-v2-'));
+  try {
+    const repo = path.join(tmpDir, 'custom-agent');
+    const nested = path.join(repo, 'plugins', 'custom-agent');
+    fs.mkdirSync(path.join(nested, 'agent', 'stages'), { recursive: true });
+    fs.mkdirSync(path.join(nested, 'contrib'), { recursive: true });
+    fs.mkdirSync(path.join(nested, 'mcp'), { recursive: true });
+    fs.mkdirSync(path.join(nested, 'dsh'), { recursive: true });
+
+    fs.writeFileSync(path.join(nested, 'agent', 'stages', 'manifest.json'), JSON.stringify({ stages: [{ stage_id: 's1' }] }), 'utf8');
+    fs.writeFileSync(path.join(nested, 'contrib', 'handler.mjs'), 'export default async () => ({ ok: true });\n', 'utf8');
+    fs.writeFileSync(path.join(nested, 'mcp', 'server.mjs'), 'console.log("mcp");\n', 'utf8');
+    fs.writeFileSync(path.join(nested, 'dsh', 'client.mjs'), 'export const client = true;\n', 'utf8');
+    fs.writeFileSync(path.join(nested, 'dsh', 'host.mjs'), 'export const host = true;\n', 'utf8');
+    fs.writeFileSync(
+      path.join(nested, 'opl-package.json'),
+      JSON.stringify({
+        schema_version: 'opl.package.v2',
+        identity: {
+          id: 'custom-agent',
+          version: '1.0.0',
+          intent: 'agent',
+          name: { 'zh-CN': 'Custom', 'en-US': 'Custom' },
+          summary: { 'zh-CN': 'Summary', 'en-US': 'Summary' },
+          publisher: 'one-person-lab',
+        },
+        provides: {
+          agent: { stages_ref: './agent/stages/manifest.json' },
+          mcp_servers: [{ id: 'srv-1', transport: 'stdio', command: 'node', args: ['./mcp/server.mjs'] }],
+          contribution_handler: { kind: 'esm_module', module: './contrib/handler.mjs', export: 'default' },
+        },
+        ui: {
+          dsh_client: {
+            client_entry: './dsh/client.mjs',
+            host_entry: './dsh/host.mjs',
+            slots: ['main'],
+          },
+        },
+      }),
+    );
+
+    const mig = migrateV1Package({ repoDir: repo, apply: true, clean: true });
+    assert.equal(mig.applied, true);
+    assert.equal(mig.cleaned, true);
+    assert.equal(fs.existsSync(path.join(repo, 'plugins')), false);
+    assert.equal(fs.existsSync(path.join(repo, 'agent', 'stages', 'manifest.json')), true);
+    assert.equal(fs.existsSync(path.join(repo, 'contrib', 'handler.mjs')), true);
+    assert.equal(fs.existsSync(path.join(repo, 'mcp', 'server.mjs')), true);
+    assert.equal(fs.existsSync(path.join(repo, 'dsh', 'client.mjs')), true);
+    assert.equal(fs.existsSync(path.join(repo, 'dsh', 'host.mjs')), true);
+
+    const built = buildPackage(repo, { writeLock: true });
+    assert.equal(built.manifest.identity.id, 'custom-agent');
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

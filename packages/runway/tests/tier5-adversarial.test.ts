@@ -13,6 +13,7 @@ import {
   RunwayRuntime,
   ScheduleRunner,
   analyzeCodexSessionJsonl,
+  buildAgyEphemeralSettingsPayload,
   computeNextCronTime,
   parseAgyStreamJsonLine,
   type ExecutorAdapter,
@@ -330,5 +331,240 @@ test('T5-RUNWAY-05 (G-RUNWAY-02): concurrent pauseTask during reattach stream pr
 
   const bundle = env.store.getTask(task.task_id)!;
   assert.equal(bundle.task.status, 'paused_by_human');
-  assert.notEqual(att.attempt.status, 'succeeded');
+  assert.equal(bundle.attempts.length, 1);
+  assert.equal(bundle.attempts[0]?.attempt_id, att.attempt.attempt_id);
+  assert.notEqual(bundle.attempts[0]?.status, 'succeeded');
+});
+
+test('T5-RUNWAY-06 (BUG-P1-09): sanitizes human_gate.question and error.code in executeStage, Antigravity human_gate_requested, and reconcile', async (t) => {
+  const env = createRunwayTestEnv();
+  t.after(() => env.cleanup());
+
+  // 1. Custom adapter human_gate with >2048-char, blank, and secret-bearing questions
+  const badQuestions = [
+    'Q'.repeat(2500),
+    '   \n\t  ',
+    'Approve token sk-ant-api03-secret_token_12345678901234567890 before deploy',
+  ];
+  for (const [idx, question] of badQuestions.entries()) {
+    const reg = new ExecutorRegistry();
+    reg.register(
+      makeMockAdapter(`hg_exec_${idx}`, {
+        execute: async () => ({
+          status: 'human_gate',
+          artifact_refs: [],
+          human_gate: { question, options: ['approve', 'cancel'] },
+        }),
+      }),
+    );
+    const runtime = new RunwayRuntime({
+      db: env.db,
+      store: env.store,
+      registry: reg,
+      workspaceService: env.workspaceService,
+    });
+    const task = env.store.createTask({
+      workspace_id: env.workspaceId,
+      title: `HG-${idx}`,
+      goal_prompt: 'Sanitize human_gate.question',
+      stages: [{ stage_id: 's1', executor_id: `hg_exec_${idx}` }],
+    });
+    const res = await runtime.executeStage(task.stage_runs[0]!.stage_run_id);
+    assert.equal(res.stage_run.status, 'human_gate');
+    assert.equal(res.task.status, 'awaiting_human');
+    const hgObj = JSON.parse(res.stage_run.human_gate_json ?? '{}') as { question?: string };
+    assert.ok(hgObj.question && hgObj.question.length > 0 && hgObj.question.length <= 2048);
+    assert.equal(hgObj.question.includes('sk-ant-api03-'), false);
+    const tl = queryTimeline(env.db, { task_id: task.task_id });
+    assert.equal(JSON.stringify(tl).includes('sk-ant-api03-'), false);
+  }
+
+  // 2. Real AntigravityExecutorAdapter human_gate_requested with >2048-char & secret question
+  const agyTmp = fs.mkdtempSync(path.join(os.tmpdir(), 't5-agy-hg-'));
+  try {
+    const stubBin = path.join(agyTmp, 'agy');
+    fs.writeFileSync(
+      stubBin,
+      [
+        '#!/usr/bin/env node',
+        'process.stdout.write(JSON.stringify({ type: "system", subtype: "init", session_id: "s-hg", conversation_id: "c-hg" }) + "\\n");',
+        'process.stdout.write(JSON.stringify({ type: "human_gate_requested", question: "Authorize sk-ant-api03-secret_token_12345678901234567890 " + "Z".repeat(2500) }) + "\\n");',
+        'process.stdout.write(JSON.stringify({ type: "result", is_error: false, session_id: "s-hg", conversation_id: "c-hg" }) + "\\n");',
+      ].join('\n'),
+      { mode: 0o755 },
+    );
+    const agyReg = new ExecutorRegistry();
+    agyReg.register(new AntigravityExecutorAdapter({ binaryPath: stubBin, spoolDir: path.join(agyTmp, 'spools') }));
+    const agyRuntime = new RunwayRuntime({
+      db: env.db,
+      store: env.store,
+      registry: agyReg,
+      workspaceService: env.workspaceService,
+    });
+    const agyTask = env.store.createTask({
+      workspace_id: env.workspaceId,
+      title: 'AGY-HG',
+      goal_prompt: 'Verify real AntigravityExecutorAdapter human_gate sanitization',
+      stages: [{ stage_id: 's1', executor_id: 'antigravity' }],
+    });
+    const agyRes = await agyRuntime.executeStage(agyTask.stage_runs[0]!.stage_run_id);
+    assert.equal(agyRes.stage_run.status, 'human_gate');
+    assert.equal(agyRes.task.status, 'awaiting_human');
+    assert.equal(JSON.stringify(queryTimeline(env.db, { task_id: agyTask.task_id })).includes('sk-ant-api03-'), false);
+  } finally {
+    fs.rmSync(agyTmp, { recursive: true, force: true });
+  }
+
+  // 3. Invalid/oversized/secret error.code in executeStage() and reconcile()
+  const badCodes = [
+    'E'.repeat(150),
+    '   \t\n ',
+    'sk-ant-api03-secret_token_12345678901234567890',
+  ];
+  for (const [idx, badCode] of badCodes.entries()) {
+    const reg = new ExecutorRegistry();
+    reg.register(
+      makeMockAdapter(`bad_code_exec_${idx}`, {
+        execute: async () => ({
+          status: 'failed',
+          artifact_refs: [],
+          error: { code: badCode, message: 'boom', retryable: true },
+        }),
+      }),
+    );
+    const runtime = new RunwayRuntime({
+      db: env.db,
+      store: env.store,
+      registry: reg,
+      workspaceService: env.workspaceService,
+    });
+    const task = env.store.createTask({
+      workspace_id: env.workspaceId,
+      title: `BadCode-${idx}`,
+      goal_prompt: 'Sanitize error.code',
+      stages: [{ stage_id: 's1', executor_id: `bad_code_exec_${idx}` }],
+    });
+    const res = await runtime.executeStage(task.stage_runs[0]!.stage_run_id);
+    assert.equal(res.stage_run.status, 'human_gate');
+    const tl = queryTimeline(env.db, { task_id: task.task_id });
+    const blocker = tl.find((e) => e.entry_kind === 'typed_blocker');
+    assert.ok(blocker);
+    const code = (blocker.payload as { code: string }).code;
+    assert.ok(code.length >= 1 && code.length <= 128);
+    assert.equal(code.includes('sk-ant-api03-'), false);
+  }
+
+  const regRecBad = new ExecutorRegistry();
+  regRecBad.register(
+    makeMockAdapter('bad_code_rec', {
+      reconcile: async () => ({
+        state: 'failed',
+        outcome: {
+          status: 'failed',
+          artifact_refs: [],
+          error: { code: `sk-ant-api03-secret_token_12345678901234567890_${'E'.repeat(150)}`, message: 'fail', retryable: true },
+        },
+      }),
+    }),
+  );
+  const recTask = env.store.createTask({
+    workspace_id: env.workspaceId,
+    title: 'BadCode-Rec',
+    goal_prompt: 'Sanitize reconcile error.code',
+    stages: [{ stage_id: 's1', executor_id: 'bad_code_rec' }],
+  });
+  env.store.createAttempt({
+    stage_run_id: recTask.stage_runs[0]!.stage_run_id,
+    expected_stage_revision: 1,
+    role: 'producer',
+    executor_id: 'bad_code_rec',
+    lease_expires_at: new Date(Date.now() + 60_000).toISOString(),
+  });
+  const recRuntime = new RunwayRuntime({
+    db: env.db,
+    store: env.store,
+    registry: regRecBad,
+    workspaceService: env.workspaceService,
+  });
+  const recRep = await recRuntime.reconcile();
+  assert.equal(recRep.interrupted, 1);
+  assert.equal(env.store.getTask(recTask.task_id)!.stage_runs[0]!.status, 'human_gate');
+  assert.equal(JSON.stringify(queryTimeline(env.db, { task_id: recTask.task_id })).includes('sk-ant-api03-'), false);
+});
+
+test('T5-RUNWAY-07 (BUG-P1-10 & BUG-P1-11): concurrent pauseTask during adapter.reconcile() preserves paused_by_human without REVISION_CONFLICT, and buildAgyEphemeralSettingsPayload handles undefined skill_dirs', async (t) => {
+  // BUG-P1-11
+  const settings = buildAgyEphemeralSettingsPayload({
+    task_id: 't1',
+    stage_run_id: 'sr1',
+    attempt_id: 'att1',
+    stage_id: 's1',
+    role: 'producer',
+    executor_id: 'antigravity',
+    workspace_root: '/tmp',
+    prompt: 'hello',
+    sandbox_mode: 'workspace-write',
+    mcp_servers: [{ id: 'srv1', transport: 'stdio', command: 'node', args: ['srv.mjs'] }],
+  } as unknown as Parameters<typeof buildAgyEphemeralSettingsPayload>[0]);
+  assert.ok(settings && 'mcpServers' in settings);
+  assert.equal('skillDirs' in settings, false);
+
+  // BUG-P1-10
+  const env = createRunwayTestEnv();
+  t.after(() => env.cleanup());
+
+  let releaseReconcile!: () => void;
+  const reconcileGate = new Promise<void>((resolve) => {
+    releaseReconcile = resolve;
+  });
+  let enteredReconcile!: () => void;
+  const enteredPromise = new Promise<void>((resolve) => {
+    enteredReconcile = resolve;
+  });
+
+  const reg = new ExecutorRegistry();
+  reg.register(
+    makeMockAdapter('slow_reconcile', {
+      reconcile: async () => {
+        enteredReconcile();
+        await reconcileGate;
+        return { state: 'completed', outcome: { status: 'succeeded', artifact_refs: [] } };
+      },
+    }),
+  );
+
+  const task = env.store.createTask({
+    workspace_id: env.workspaceId,
+    title: 'Pause Mid-Reconcile',
+    goal_prompt: 'Preserve paused_by_human during adapter.reconcile',
+    stages: [{ stage_id: 's1', executor_id: 'slow_reconcile' }],
+  });
+  env.store.createAttempt({
+    stage_run_id: task.stage_runs[0]!.stage_run_id,
+    expected_stage_revision: 1,
+    role: 'producer',
+    executor_id: 'slow_reconcile',
+    lease_expires_at: new Date(Date.now() + 60_000).toISOString(),
+  });
+
+  const runtime = new RunwayRuntime({
+    db: env.db,
+    store: env.store,
+    registry: reg,
+    workspaceService: env.workspaceService,
+  });
+
+  const recPromise = runtime.reconcile();
+  await enteredPromise;
+  const paused = await runtime.pauseTask({ task_id: task.task_id, reason: 'human_paused_mid_reconcile' });
+  assert.equal(paused.task.status, 'paused_by_human');
+  releaseReconcile();
+
+  const report = await recPromise;
+  assert.equal(report.skipped_paused, 1);
+  assert.equal(report.harvested, 0);
+  const after = env.store.getTask(task.task_id)!;
+  assert.equal(after.task.status, 'paused_by_human');
+  assert.equal(after.stage_runs[0]!.status, 'paused_by_human');
+  assert.equal(after.attempts[0]!.status, 'interrupted');
 });

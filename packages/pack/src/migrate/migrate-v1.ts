@@ -448,6 +448,77 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
       addV2Reloc(sk.path, 'directory');
     }
 
+    const v2RefSubpaths: string[] = [];
+    const pushSubpath = (raw: string | undefined) => {
+      if (!raw) return;
+      const stripped = raw.replace(/^\$\{PLUGIN_ROOT\}\//, '');
+      if (stripped.startsWith('./') || stripped.includes('/') || raw.startsWith('${PLUGIN_ROOT}/')) {
+        v2RefSubpaths.push(stripped);
+      }
+    };
+    const pushArgv = (argv: readonly string[] | undefined) => {
+      for (const arg of argv ?? []) {
+        pushSubpath(arg);
+      }
+    };
+    if (validated.provides?.agent?.stages_ref) {
+      v2RefSubpaths.push(validated.provides.agent.stages_ref);
+    }
+    if (validated.provides?.agent?.authority_entrypoint) {
+      pushArgv(validated.provides.agent.authority_entrypoint.argv);
+    }
+    for (const bin of validated.provides?.cli_bin ?? []) {
+      v2RefSubpaths.push(bin.path);
+    }
+    for (const srv of validated.provides?.mcp_servers ?? []) {
+      pushSubpath(srv.command);
+      pushArgv(srv.args);
+    }
+    for (const cp of validated.provides?.connection_providers ?? []) {
+      if (cp.entrypoint.kind === 'esm_module') v2RefSubpaths.push(cp.entrypoint.module);
+      else pushArgv(cp.entrypoint.argv);
+    }
+    for (const ch of validated.provides?.channels ?? []) {
+      v2RefSubpaths.push(ch.entrypoint.module);
+    }
+    for (const rc of validated.provides?.remote_companion_connectors ?? []) {
+      v2RefSubpaths.push(rc.entrypoint.module);
+    }
+    for (const ex of validated.provides?.executors ?? []) {
+      v2RefSubpaths.push(ex.entrypoint.module);
+    }
+    for (const ce of validated.provides?.cli_extensions ?? []) {
+      if (ce.entrypoint.kind === 'esm_module') v2RefSubpaths.push(ce.entrypoint.module);
+      else pushArgv(ce.entrypoint.argv);
+    }
+    if (validated.provides?.contribution_handler) {
+      if (validated.provides.contribution_handler.kind === 'esm_module') {
+        v2RefSubpaths.push(validated.provides.contribution_handler.module);
+      } else {
+        pushArgv(validated.provides.contribution_handler.argv);
+      }
+    }
+    if (validated.ui?.dsh_client?.client_entry) {
+      v2RefSubpaths.push(validated.ui.dsh_client.client_entry);
+    }
+    if (validated.ui?.dsh_client?.host_entry) {
+      v2RefSubpaths.push(validated.ui.dsh_client.host_entry);
+    }
+    if (validated.identity.icon) {
+      v2RefSubpaths.push(validated.identity.icon);
+    }
+    for (const refPath of v2RefSubpaths) {
+      const cleanRef = stripLeadingDotSlash(refPath);
+      const topSeg = cleanRef.split('/')[0];
+      if (!topSeg || topSeg === '.' || topSeg === '..' || topSeg === 'plugins') {
+        continue;
+      }
+      const nestedTopAbs = path.join(repoRoot, nestedPluginRelDir, topSeg);
+      if (fs.existsSync(nestedTopAbs)) {
+        addV2Reloc(topSeg, fs.statSync(nestedTopAbs).isDirectory() ? 'directory' : 'file');
+      }
+    }
+
     const execRes = applyMigrationPlan({
       repoRoot,
       rootManifestPath,

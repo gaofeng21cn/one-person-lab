@@ -114,5 +114,14 @@ describe('T5-FOUNDRY (G2-14): adversarial promote/rollback authority, target mis
     const corruptRunPath = path.join(stateDir, 'foundry', 'runs', 'corrupt-run.json');
     fs.writeFileSync(corruptRunPath, '{bad-json', 'utf8');
     assert.throws(() => loadRunRecord('corrupt-run', stateDir));
+
+    // Boolean flag --force before positional <dir> must not swallow <dir>
+    const forceDir = path.join(root, 'force-agent');
+    const firstInit = ext.handlers.init([forceDir], { id: 'force-agent' });
+    assert.equal(firstInit.ok, true);
+    const secondNoForce = ext.handlers.init([forceDir], { id: 'force-agent' });
+    assert.equal(secondNoForce.ok, false);
+    const forceBeforeDir = ext.handlers.init(['--force', forceDir], { id: 'force-agent' });
+    assert.equal(forceBeforeDir.ok, true);
   });
 });

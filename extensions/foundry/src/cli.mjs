@@ -13,6 +13,8 @@ const SUBCOMMAND_HELP = {
   rollback: 'Usage: opl foundry rollback <targetAgentId> [--to-version <ver> | --version-digest <sha256:...>] --authority-receipt-ref <ref> [--expected-revision <n>] [--reason <text>] [--state-dir <dir>]',
 };
 
+const BOOLEAN_FLAGS = new Set(['force', 'help', 'json']);
+
 function mergeArgsAndOptions(rawArgs = [], rawOptions = {}) {
   const positionals = [];
   const opts = { ...rawOptions };
@@ -26,11 +28,18 @@ function mergeArgsAndOptions(rawArgs = [], rawOptions = {}) {
     if (arg.startsWith('--')) {
       const eq = arg.indexOf('=');
       if (eq !== -1) {
-        opts[arg.slice(2, eq)] = arg.slice(eq + 1);
-      } else if (i + 1 < rawArgs.length && !String(rawArgs[i + 1]).startsWith('--')) {
-        opts[arg.slice(2)] = rawArgs[++i];
+        const key = arg.slice(2, eq);
+        const val = arg.slice(eq + 1);
+        opts[key] = BOOLEAN_FLAGS.has(key) ? val === 'true' : val;
       } else {
-        opts[arg.slice(2)] = true;
+        const key = arg.slice(2);
+        if (BOOLEAN_FLAGS.has(key)) {
+          opts[key] = true;
+        } else if (i + 1 < rawArgs.length && !String(rawArgs[i + 1]).startsWith('--')) {
+          opts[key] = rawArgs[++i];
+        } else {
+          opts[key] = true;
+        }
       }
       continue;
     }
