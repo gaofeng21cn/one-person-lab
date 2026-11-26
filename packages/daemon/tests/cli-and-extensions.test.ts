@@ -523,13 +523,13 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     const immediateRes = await runDestroyCase(true);
     assert.equal(immediateRes.signal, null);
     assert.equal(immediateRes.code, 0, immediateRes.stderr);
-    assert.doesNotMatch(immediateRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+    assert.doesNotMatch(immediateRes.stderr, /Unhandled 'error' event|Error: write (?:EPIPE|ENOTCONN|ECONNRESET)|ERR_STREAM_DESTROYED|ENOTCONN|ECONNRESET/);
 
     for (let trial = 0; trial < 3; trial += 1) {
       const postChunkRes = await runDestroyCase(false);
       assert.equal(postChunkRes.signal, null);
       assert.equal(postChunkRes.code, 0, `trial ${trial}: ${postChunkRes.stderr}`);
-      assert.doesNotMatch(postChunkRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+      assert.doesNotMatch(postChunkRes.stderr, /Unhandled 'error' event|Error: write (?:EPIPE|ENOTCONN|ECONNRESET)|ERR_STREAM_DESTROYED|ENOTCONN|ECONNRESET/);
     }
 
     const headPipeRes = await new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
@@ -548,6 +548,64 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
       child.on('close', (code) => resolve({ code, stderr }));
     });
     assert.equal(headPipeRes.code, 0, headPipeRes.stderr);
-    assert.doesNotMatch(headPipeRes.stderr, /Unhandled 'error' event|Error: write EPIPE|ERR_STREAM_DESTROYED/);
+    assert.doesNotMatch(headPipeRes.stderr, /Unhandled 'error' event|Error: write (?:EPIPE|ENOTCONN|ECONNRESET)|ERR_STREAM_DESTROYED|ENOTCONN|ECONNRESET/);
+  });
+
+  it('ignores ENOTCONN and ECONNRESET stream errors in both bin-opl.ts and bin/opl while rethrowing non-pipe errors', async () => {
+    const sb = trackSandbox();
+    const binOplTs = path.join(WORKTREE_ROOT, 'packages', 'daemon', 'src', 'cli', 'bin-opl.ts');
+    const rootBinOpl = path.join(WORKTREE_ROOT, 'bin', 'opl');
+
+    const runStreamErrorProbe = (entryFile: string, codesToEmit: string[]) =>
+      new Promise<{ code: number | null; signal: NodeJS.Signals | null; stdout: string; stderr: string }>((resolve, reject) => {
+        const script = [
+          "import { pathToFileURL } from 'node:url';",
+          'const [entryFile, ...codes] = process.argv.slice(1);',
+          "process.argv = [process.execPath, entryFile, '--version'];",
+          'const installHook = (stream) => {',
+          '  let fired = false;',
+          "  stream.on('newListener', (event) => {",
+          "    if (event !== 'error' || fired) return;",
+          '    fired = true;',
+          '    queueMicrotask(() => {',
+          '      for (const code of codes) {',
+          '        stream.emit(\'error\', Object.assign(new Error(`write ${code}`), { code, syscall: \'write\' }));',
+          '      }',
+          '    });',
+          '  });',
+          '};',
+          'installHook(process.stdout);',
+          'installHook(process.stderr);',
+          'await import(pathToFileURL(entryFile).href);',
+        ].join('\n');
+
+        const child = spawn(
+          process.execPath,
+          ['--conditions=opl-source', '--experimental-strip-types', '--input-type=module', '-e', script, entryFile, ...codesToEmit],
+          {
+            cwd: WORKTREE_ROOT,
+            env: { ...sb.env, OPL_USE_DIST: '0' },
+            stdio: ['ignore', 'pipe', 'pipe'],
+          },
+        );
+        let stdout = '';
+        let stderr = '';
+        child.stdout.on('data', (c: Buffer) => { stdout += c.toString('utf8'); });
+        child.stderr.on('data', (c: Buffer) => { stderr += c.toString('utf8'); });
+        child.on('error', reject);
+        child.on('close', (code, signal) => resolve({ code, signal, stdout, stderr }));
+      });
+
+    for (const entry of [binOplTs, rootBinOpl]) {
+      const okRes = await runStreamErrorProbe(entry, ['EPIPE', 'ERR_STREAM_DESTROYED', 'ENOTCONN', 'ECONNRESET']);
+      assert.equal(okRes.signal, null);
+      assert.equal(okRes.code, 0, `${entry} stderr: ${okRes.stderr}`);
+      assert.equal(okRes.stderr, '');
+      assert.match(okRes.stdout, /\d+\.\d+\.\d+/);
+
+      const errRes = await runStreamErrorProbe(entry, ['EIO']);
+      assert.notEqual(errRes.code, 0, `${entry} should rethrow non-pipe EIO error`);
+      assert.match(errRes.stderr, /write EIO/);
+    }
   });
 });

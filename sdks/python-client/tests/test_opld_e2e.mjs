@@ -10,7 +10,14 @@ const pythonClientDir = path.resolve(testDir, '..');
 const repoRoot = path.resolve(pythonClientDir, '..', '..');
 const oplCliBin = path.join(repoRoot, 'packages', 'daemon', 'bin', 'opl');
 
-const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-py-opld-e2e-'));
+let baseTmp = os.tmpdir();
+// macOS AF_UNIX sun_path max is 104 bytes; keep opld.sock < 96 bytes
+const worstCaseSockProbe = path.join(baseTmp, 'opl-py-opld-e2e-XXXXXX', 'state', 'run', 'opld.sock');
+if (process.platform !== 'win32' && Buffer.byteLength(worstCaseSockProbe, 'utf8') >= 96 && fs.existsSync('/tmp')) {
+  baseTmp = '/tmp';
+}
+
+const tmpRoot = fs.mkdtempSync(path.join(baseTmp, 'opl-py-opld-e2e-'));
 const stateDir = path.join(tmpRoot, 'state');
 const oplHome = path.join(tmpRoot, 'opl-home');
 const workspaceDir = path.join(tmpRoot, 'workspace');

@@ -2,9 +2,11 @@ import { runCli } from './main.ts';
 
 const BROKEN_PIPE_GUARD_KEY = Symbol.for('opl.cli.brokenPipeGuardInstalled');
 
+const BROKEN_PIPE_ERROR_CODES = new Set(['EPIPE', 'ECONNRESET', 'ERR_STREAM_DESTROYED', 'ENOTCONN']);
+
 function isBrokenPipeError(err: unknown): boolean {
   const code = (err as NodeJS.ErrnoException | null | undefined)?.code;
-  return code === 'EPIPE' || code === 'ERR_STREAM_DESTROYED';
+  return typeof code === 'string' && BROKEN_PIPE_ERROR_CODES.has(code);
 }
 
 function installBrokenPipeGuard(stream: NodeJS.WriteStream): void {

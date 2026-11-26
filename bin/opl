@@ -6,11 +6,18 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const BROKEN_PIPE_GUARD_KEY = Symbol.for('opl.cli.brokenPipeGuardInstalled');
 
+const BROKEN_PIPE_ERROR_CODES = new Set(['EPIPE', 'ECONNRESET', 'ERR_STREAM_DESTROYED', 'ENOTCONN']);
+
+function isBrokenPipeError(err) {
+  const code = err?.code;
+  return typeof code === 'string' && BROKEN_PIPE_ERROR_CODES.has(code);
+}
+
 function installBrokenPipeGuard(stream) {
   if (!stream || typeof stream.on !== 'function' || stream[BROKEN_PIPE_GUARD_KEY]) return;
   stream[BROKEN_PIPE_GUARD_KEY] = true;
   stream.on('error', (err) => {
-    if (err?.code === 'EPIPE' || err?.code === 'ERR_STREAM_DESTROYED') return;
+    if (isBrokenPipeError(err)) return;
     throw err;
   });
 }
