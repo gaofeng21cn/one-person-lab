@@ -150,6 +150,11 @@ DSH 的 `owner_schedule` 只回读既有每日任务，避免重复调度。
 
 Framework 产品版本准备沿 Framework 主线进行。每日 Package 投影通过 Catalog 主线合入，仍在 GitHub Actions 中串行调度。各产品按其仓库独立准备。
 
+Framework v2 主线运行每日 Package 工作流。仍按现有 Catalog Payload 合同交付的
+Package 由该工作流指定的固定 Framework 提交提供生成、校验和发布工具。计划同时
+记录工作流提交、工具提交和 Catalog 提交。发布前核对三者与选中的 Package、owner
+源码标签及渠道前序一致。私有 owner 的发布入口使用同一工具提交。
+
 `source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
 不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。

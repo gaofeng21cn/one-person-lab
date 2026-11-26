@@ -1,6 +1,7 @@
 from __future__ import annotations
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +16,30 @@ from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(product)
+spec = importlib.util.spec_from_file_location('package_daily_release', ROOT / 'scripts/package-daily-release.py')
+package = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(package)
+
+
+class PackagePublisherCheckoutTests(unittest.TestCase):
+    def test_daily_workflow_uses_exact_legacy_tooling_without_weakening_main_authority(self):
+        controller = 'a' * 40
+        tooling = 'b' * 40
+        with patch.dict(os.environ, GITHUB_REPOSITORY='gaofeng21cn/one-person-lab',
+                        GITHUB_REF='refs/heads/main', GITHUB_SHA=controller):
+            with patch.object(package, 'git', side_effect=['', '', controller]):
+                with patch.object(package, 'run', side_effect=[subprocess.CompletedProcess([], 0),
+                                                               subprocess.CompletedProcess([], 0)]) as ancestry:
+                    package.verify_publisher_checkout(Path('/fixture'), tooling, tooling, Path('/catalog'))
+                    self.assertEqual([call.args[0][-2:] for call in ancestry.call_args_list],
+                                     [[tooling, controller], [controller, 'origin/main']])
+            with patch.object(package, 'git', side_effect=['', '', controller]):
+                with patch.object(package, 'run', return_value=subprocess.CompletedProcess([], 1)):
+                    with self.assertRaisesRegex(ReleaseError, 'canonical Framework history'):
+                        package.verify_publisher_checkout(Path('/fixture'), tooling, tooling, Path('/catalog'))
+        with patch.object(package, 'git', side_effect=['', '', controller]):
+            with self.assertRaisesRegex(ReleaseError, 'fresh canonical main'):
+                package.verify_publisher_checkout(Path('/fixture'), tooling, None, Path('/catalog'))
 
 
 class ProductReleaseTests(unittest.TestCase):
