@@ -21,6 +21,8 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  # Catalog Package publication still uses the publisher exercised by run 45738204734.
+  PACKAGE_PUBLISHER_TOOLING_COMMIT: e73718a2a2ef760cb1fddd57d8b922960f9d9762
 
 jobs:
   detect-package-channel-change:
@@ -32,10 +34,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - name: Checkout OPL
+      - name: Checkout Package release controller
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: main
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Checkout compatible Package publisher tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.PACKAGE_PUBLISHER_TOOLING_COMMIT }}
+          path: .package-publisher
           fetch-depth: 0
           persist-credentials: false
       - name: Setup Node.js
@@ -43,7 +52,9 @@ jobs:
         with:
           node-version: '26'
           cache: npm
+          cache-dependency-path: .package-publisher/package-lock.json
       - name: Install dependencies
+        working-directory: .package-publisher
         run: npm ci --ignore-scripts
       - name: Create scoped publication identity
         id: publisher-token
@@ -73,6 +84,8 @@ jobs:
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-daily-release.py \
+            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
+            --publisher-tooling-commit "$PACKAGE_PUBLISHER_TOOLING_COMMIT" \
             --flow-root "$RUNNER_TEMP/opl-flow" \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output "$RUNNER_TEMP/opl-package-preparation.json" \
@@ -95,7 +108,8 @@ jobs:
         run: |
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 scripts/sync-private-package-publishers.py --catalog-root "$RUNNER_TEMP/opl-catalog" "${args[@]}"
+          python3 .package-publisher/scripts/sync-private-package-publishers.py \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" "${args[@]}"
       - name: Compare independent Package fingerprints
         env:
           GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token || github.token }}
@@ -104,7 +118,7 @@ jobs:
           set -euo pipefail
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 scripts/package-channel-detection.py \
+          python3 .package-publisher/scripts/package-channel-detection.py \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output-root dist/opl-daily-packages \
             --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
