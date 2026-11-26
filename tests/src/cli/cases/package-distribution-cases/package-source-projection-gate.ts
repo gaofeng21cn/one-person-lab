@@ -148,6 +148,31 @@ test('package source projection gate binds annotated owner tag, exact commit, UR
   assert.equal(result.file_count, 2);
 });
 
+test('package source projection gate resolves a typed Catalog manifest, shared payload and allowlist', (t) => {
+  const fixture = standardFixture(t);
+  const catalogRoot = path.join(fixture.frameworkRoot, 'catalog');
+  const packagesRoot = path.join(catalogRoot, 'packages');
+  const manifestPath = path.join(packagesRoot, 'agents', 'mas.json');
+  const allowlistPath = path.join(catalogRoot, 'allowlists', 'mas.json');
+  const payload = JSON.parse(fs.readFileSync(fixture.payloadPath, 'utf8'));
+  writeJson(manifestPath, JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8')));
+  writeJson(path.join(packagesRoot, 'payloads', path.basename(fixture.payloadPath)), payload);
+  const validate = () => validatePackageSourceProjection({
+    frameworkRoot: fixture.frameworkRoot,
+    catalogRoot,
+    spec: { ...fixture.spec, package_manifest_ref: manifestPath },
+    ownerRepoPath: fixture.ownerRoot,
+  });
+  assert.throws(validate,
+    (error: unknown) => (error as { code?: string }).code === 'payload_allowlist_missing');
+  writeJson(allowlistPath, {
+    package_id: 'mas',
+    source_root: payload.source_root,
+    paths: payload.files.map((file: { path: string }) => file.path),
+  });
+  assert.equal(validate().status, 'validated');
+});
+
 test('package source projection gate allows a private projection of legacy or public owner metadata', (t) => {
   const fixture = standardFixture(t);
   const ownerPath = path.join(fixture.ownerRoot, fixture.spec.owner_package_manifest_ref);

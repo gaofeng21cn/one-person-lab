@@ -90,16 +90,26 @@ export {
 } from './release-bundle/index.ts';
 export { assertCredentialHandleOnlyPayload } from './connection-registry.ts';
 export {
+  addOplSoftwareSource,
   checkOplSoftwareSource,
   configureOplSoftwareSource,
   disconnectOplSoftwareSource,
   executeOplSoftwareSourceAction,
   listOplSoftwareSources,
+  refreshOplCatalogSource,
+  removeOplSoftwareSource,
   resolvePackageSourceCredentialProvider,
   softwareSourceActionCatalog,
   SOFTWARE_SOURCE_ACTION_IDS,
 } from './software-sources.ts';
 export type { SoftwareSourceActionId } from './software-sources.ts';
+export {
+  DEFAULT_OPL_CATALOG_INDEX_URL,
+  readCatalogSourceCacheStatus,
+  refreshCatalogSource,
+  removeCatalogSourceCache,
+} from './software-catalog-source.ts';
+export type { CatalogFetchRequest, CatalogFetchResponse, CatalogFetchRunner, CatalogSourceCacheMeta, CatalogSourceCacheStatus } from './software-catalog-source.ts';
 export type { SoftwareSource, SoftwareSourceStatus } from './software-sources-types.ts';
 export { SOFTWARE_INSTALLATION_ACTION_ID, softwareInstallationActionCatalog, executeSoftwareInstallationAction } from './software-installation.ts';
 export {

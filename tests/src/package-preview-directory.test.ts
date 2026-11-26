@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
 
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
 import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
@@ -11,7 +12,7 @@ import type { AgentPackageAccessDecision } from '../../src/adapters/integration/
 import { compactFastAgentPackageDirectory } from '../../src/read-models/operator/app-state-fast-projection.ts';
 
 const source = JSON.parse(fs.readFileSync(
-  new URL('../../contracts/opl-framework/packages/opl-flow.json', import.meta.url), 'utf8',
+  catalogFixtureManifestPath('opl-flow'), 'utf8',
 ));
 
 function descriptor(options: { packageId?: string; installed?: boolean; private?: boolean;

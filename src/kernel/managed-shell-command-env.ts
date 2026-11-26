@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { FrameworkContractError, isRecord } from './contract-validation.ts';
 import { optionalString, readJsonFileOrNull, readJsonPayloadFile } from './json-file.ts';
+import { listCurrentPackageProjections, PACKAGE_CATEGORY_SUBDIRS } from './standard-agent-registry.ts';
 
 const UV_CACHE_RECOVERY_MARKER = 'uv-cache-archive-missing.recovery.json';
 type ManagedShellRecoveryTrigger = 'uv_cache_archive_missing' | 'managed_python_env_missing_dependency';
@@ -13,9 +14,6 @@ const MANAGED_SHELL_RECOVERY_TRIGGERS = new Set<string>([
   'managed_python_env_missing_dependency',
 ]);
 const DOMAIN_CLEAN_RUNNER_PROFILE_ROLE = 'domain_compatibility_clean_runner' as const;
-const AGENT_PACKAGE_DESCRIPTOR_DIR = fileURLToPath(
-  new URL('../../contracts/opl-framework/packages/', import.meta.url),
-);
 
 export type DomainCleanRunnerProfile = {
   domainId: string;
@@ -125,28 +123,42 @@ function normalizeCleanRunnerProfileFromDescriptor(
   };
 }
 
+function readCleanRunnerDescriptors(descriptorDir: string): Array<{ sourceRef: string; payload: unknown }> {
+  if (!fs.existsSync(descriptorDir)) return [];
+  return fs.readdirSync(descriptorDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+    .map((entry) => {
+      const filePath = path.join(descriptorDir, entry.name);
+      return { sourceRef: filePath, payload: readJsonPayloadFile(filePath) };
+    });
+}
+
 export function loadDomainCleanRunnerProfilesFromAgentPackageDescriptors(
-  descriptorDir = AGENT_PACKAGE_DESCRIPTOR_DIR,
+  descriptorDir?: string,
 ): ReadonlyArray<DomainCleanRunnerProfile> {
-  return fs.readdirSync(descriptorDir)
-    .filter((fileName) => fileName.endsWith('.json'))
-    .sort()
-    .flatMap((fileName) => {
-      const sourceRef = `contracts/opl-framework/packages/${fileName}`;
-      const descriptor = readJsonPayloadFile(path.join(descriptorDir, fileName));
+  const entries = descriptorDir === undefined
+    ? listCurrentPackageProjections(undefined, { officialOnly: true })
+      .map(({ source_ref, payload }) => ({ sourceRef: source_ref, payload }))
+    : [descriptorDir, ...PACKAGE_CATEGORY_SUBDIRS.map((category) => path.join(descriptorDir, category))]
+      .flatMap(readCleanRunnerDescriptors);
+  const seenDomainIds = new Set<string>();
+  return entries
+    .sort((left, right) => left.sourceRef.localeCompare(right.sourceRef, 'en'))
+    .flatMap(({ sourceRef, payload: descriptor }) => {
       if (!isRecord(descriptor)) {
         throw cleanRunnerDescriptorError(sourceRef, '<root>', 'Agent package descriptor must be a JSON object.');
       }
       const profile = normalizeCleanRunnerProfileFromDescriptor(descriptor, sourceRef);
-      return profile ? [profile] : [];
+      if (!profile || seenDomainIds.has(profile.domainId)) return [];
+      seenDomainIds.add(profile.domainId);
+      return [profile];
     });
 }
 
-const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES: ReadonlyArray<DomainCleanRunnerProfile> =
-  loadDomainCleanRunnerProfilesFromAgentPackageDescriptors();
-
 export const DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILE_REGISTRY: DomainCleanRunnerProfileRegistry = {
-  profiles: DEFAULT_DOMAIN_CLEAN_RUNNER_PROFILES,
+  get profiles() {
+    return loadDomainCleanRunnerProfilesFromAgentPackageDescriptors();
+  },
 };
 
 export function createDomainCleanRunnerProfileRegistry(

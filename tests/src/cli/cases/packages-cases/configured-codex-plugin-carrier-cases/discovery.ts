@@ -7,7 +7,6 @@ import {
   path,
   parseJsonText,
   removeFixtureTree,
-  repoRoot,
   registryPayload,
   runCli,
   runCliAsync,
@@ -50,6 +49,7 @@ import {
 import { execFileSync } from 'node:child_process';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
 import { codexNativeReadbackFixture } from '../../../helpers/codex-native-readback-fixture.ts';
+import { catalogFixtureManifestPath, catalogFixturePackageRoot } from '../../../../helpers/catalog-fixture.ts';
 
 test('GitHub archive payload reads the owner source path independently from its install path', () => {
   const commit = '1'.repeat(40);
@@ -275,12 +275,8 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
     const entries = result.opl_agent_packages.directory.entries;
     assert.deepEqual(entries.map((entry: any) => entry.package_id).sort(), expectedPackageIds);
     assert.equal(entries.some((entry: any) => entry.package_id === 'mas-scholar-skills'), false);
-    for (const packageId of [
-      'opl-channel-weixin',
-      'opl-fleet-agent',
-    ]) {
-      assert.equal(entries.some((entry: any) => entry.package_id === packageId), true, packageId);
-    }
+    assert.ok(entries.some((entry: any) => entry.package_id === 'opl-fleet-agent'));
+    assert.ok(!entries.some((entry: any) => entry.package_id === 'opl-channel-weixin'));
     assert.equal(result.opl_agent_packages.installed_package_count, 0);
     assert.equal(result.opl_agent_packages.directory.installable_package_count,
       entries.filter((entry: any) => entry.installability.installable).length);
@@ -293,7 +289,8 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
         assert.equal(entry.recommended_action, null);
         continue;
       }
-      assert.equal(entry.catalog_scope, 'software', entry.package_id);
+      assert.equal(entry.catalog_scope,
+      entry.software_type === 'dependency' ? 'host_component' : 'software', entry.package_id);
       if (entry.installability.installable) {
         assert.equal(entry.installability.status, 'installable', entry.package_id);
         assert.equal(entry.recommended_action, 'agent_package_install', entry.package_id);
@@ -878,12 +875,7 @@ test('disabled native plugin without a Framework owner descriptor stays non-call
 });
 
 test('current headless owner projection keeps a disabled same-version install callable', () => {
-  const projectionPath = path.resolve(
-    'contracts',
-    'opl-framework',
-    'packages',
-    'opl-fleet-agent.json',
-  );
+  const projectionPath = catalogFixtureManifestPath('opl-fleet-agent');
   const projected = normalizePackageManifest(
     parseJsonText(fs.readFileSync(projectionPath, 'utf8')),
     pathToFileURL(projectionPath).href,
@@ -966,7 +958,7 @@ function writeFleetOwnerCheckout(sourcePath: string, lockPaths: string[]) {
 }
 
 test('installed descriptor keeps the physical carrier content lock only when the carrier ships every locked file', () => {
-  const projectionPath = path.resolve('contracts', 'opl-framework', 'packages', 'opl-fleet-agent.json');
+  const projectionPath = catalogFixtureManifestPath('opl-fleet-agent');
   const projectionText = fs.readFileSync(projectionPath, 'utf8');
   const projected = normalizePackageManifest(parseJsonText(projectionText), pathToFileURL(projectionPath).href);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-physical-content-lock-'));
@@ -1033,7 +1025,7 @@ test('installed discovery includes internal modules without exposing interactive
   const userHome = path.join(root, 'user-codex');
   const sourcePath = path.join(root, 'internal-module');
   const interactivePath = path.join(root, 'interactive-plugin');
-  const projectionPath = path.resolve('contracts/opl-framework/packages/opl-fleet-agent.json');
+  const projectionPath = catalogFixtureManifestPath('opl-fleet-agent');
   const owner = JSON.parse(fs.readFileSync(projectionPath, 'utf8'));
   const normalized = normalizePackageManifest(owner, pathToFileURL(projectionPath).href);
   try {
@@ -1294,7 +1286,7 @@ test('package status projects and bulk update visits required installed owner de
     })),
   };
   fs.cpSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages'),
+    catalogFixturePackageRoot,
     projectionRoot,
     { recursive: true },
   );
@@ -1315,7 +1307,10 @@ test('package status projects and bulk update visits required installed owner de
     digest: contentDigest,
   };
   fs.mkdirSync(path.join(projectionRoot, 'payloads'), { recursive: true });
-  fs.writeFileSync(path.join(projectionRoot, 'mas.json'), formatJsonPayload(projectedMas));
+  fs.writeFileSync(
+    path.join(projectionRoot, path.relative(catalogFixturePackageRoot, catalogFixtureManifestPath('mas'))),
+    formatJsonPayload(projectedMas),
+  );
   fs.writeFileSync(path.join(projectionRoot, payloadRef), formatJsonPayload(payload));
   fs.writeFileSync(binary, `#!/usr/bin/env node\nimport fs from 'node:fs';\nfs.appendFileSync(process.env.FIXTURE_CODEX_CALLS, process.argv.slice(2).join(' ') + '\\n');\nprocess.stdout.write(${JSON.stringify(pluginList([
     {

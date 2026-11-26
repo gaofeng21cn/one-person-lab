@@ -7,7 +7,6 @@ import {
   path,
   parseJsonText,
   removeFixtureTree,
-  repoRoot,
   registryPayload,
   runCli,
   runCliAsync,
@@ -49,6 +48,7 @@ import {
 } from '../configured-codex-plugin-carrier-shared.ts';
 import type { CodexPluginCommandRunner } from '../configured-codex-plugin-carrier-shared.ts';
 import { codexNativeReadbackFixture } from '../../../helpers/codex-native-readback-fixture.ts';
+import { catalogFixtureManifestPath } from '../../../../helpers/catalog-fixture.ts';
 
 test('Package mutations advance to a newer owner projection without allowing downgrade', () => {
   const installed = {
@@ -124,7 +124,7 @@ test('packages update uses the current owner projection to rename an installed O
   const legacySource = path.join(root, 'legacy-source');
   const targetSource = path.join(root, 'target-source');
   const projection = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts', 'opl-framework', 'packages', 'opl-flow.json'),
+    catalogFixtureManifestPath('opl-flow'),
     'utf8',
   )) as any;
   const legacyManifest = structuredClone(projection);
@@ -238,7 +238,7 @@ for (const action of ['update', 'repair']) {
     const registryPath = path.join(root, 'registry.jsonl');
     const binary = path.join(root, 'codex.mjs');
     const manifest = parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/obf.json'), 'utf8',
+      catalogFixtureManifestPath('obf'), 'utf8',
     )) as any;
     manifest.version = '0.0.1';
     try {

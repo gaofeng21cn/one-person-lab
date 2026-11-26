@@ -116,7 +116,7 @@ export function loadOplPackageSpecs(packageDirectory?: string): PackageSpec[] {
     listFirstPartyAgentPackageManifests(packageDirectory)
       .map((manifest) => [manifest.package_id, manifest]),
   );
-  return listCurrentPackageProjections(packageDirectory).map(({ source_ref, payload }) => {
+  return listCurrentPackageProjections(packageDirectory, { officialOnly: true }).map(({ source_ref, payload }) => {
     const packageId = projectionString(payload, 'package_id');
     const label = projectionString(payload, 'display_name');
     const ownerManifestKind = projectionOwnerManifestKind(payload);
@@ -177,8 +177,6 @@ function isFrameworkManagedPackage(spec: PackageSpec) {
 function isFrameworkPublishedPackage(spec: PackageSpec) {
   return isFrameworkManagedPackage(spec) && spec.publication_channel_admission === 'admitted';
 }
-
-const PUBLISHED_PACKAGE_SPECS = loadOplPackageSpecs().filter(isFrameworkPublishedPackage);
 
 function resolveOwner(inputOwner?: string) {
   if (inputOwner?.trim()) {
@@ -293,8 +291,8 @@ function buildPackageReleaseDiscipline(spec: PackageSpec, rollbackVersion: strin
   };
 }
 
-function dependencyOf(moduleId: string) {
-  return PUBLISHED_PACKAGE_SPECS
+function dependencyOf(moduleId: string, publishedPackageSpecs: readonly PackageSpec[]) {
+  return publishedPackageSpecs
     .filter((spec) => spec.capability_dependencies?.some((dependency) => dependency.module_id === moduleId))
     .map((spec) => spec.package_id);
 }
@@ -340,6 +338,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
   const retainVersions = normalizeRetainVersions(input.retainVersions);
   const rollbackVersion = input.rollbackVersion === undefined ? null : input.rollbackVersion;
   const baseVersion = frameworkVersion(input.frameworkVersion);
+  const publishedPackageSpecs = loadOplPackageSpecs().filter(isFrameworkPublishedPackage);
   return {
     manifest_version: 1,
     manifest_role: 'local_package_distribution_projection',
@@ -396,7 +395,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
         },
       },
       package_artifacts: Object.fromEntries(
-        PUBLISHED_PACKAGE_SPECS.map((spec) => [
+        publishedPackageSpecs.map((spec) => [
           spec.package_id,
           (() => {
             const packageVersion = projectedPackageVersion(spec);
@@ -442,7 +441,7 @@ export function buildOplPackageManifest(input: BuildPackageManifestInput = {}) {
             install_strategy: 'extract_to_managed_package_root',
             codex_standalone_distribution: buildCodexStandaloneDistribution(spec),
             capability_dependencies: spec.capability_dependencies ?? [],
-            dependency_of: dependencyOf(spec.module_id),
+            dependency_of: dependencyOf(spec.module_id, publishedPackageSpecs),
             };
           })(),
         ]),

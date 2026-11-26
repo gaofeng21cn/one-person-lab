@@ -141,6 +141,10 @@ test('domains.json g2 keeps retired boundary terms out of active domain fields',
       embeds_opl_runtime: false,
     });
     assert.equal(typeof domain.independent_domain_agent?.agent_id, 'string');
+    assert.equal(
+      domain.registry_entry?.agent_package_manifest_ref,
+      `catalog://public-registry:opl/packages/agents/${domain.independent_domain_agent?.agent_id}.json`,
+    );
     assert.equal(domain.independent_domain_agent?.opl_top_level_domain_agent, true);
     assert.equal(typeof domain.single_app_skill?.skill_id, 'string');
     assert.equal(Array.isArray(domain.domain_truth_owner), true);
@@ -290,7 +294,7 @@ test('standard agent admission gates freeze required package boundaries without 
   assert.equal(gates.admission_policy.production_readiness_claim_allowed, false);
   assert.equal(
     gates.admission_policy.standard_agent_registry_source_ref,
-    'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
+    'catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection',
   );
   assert.equal(
     gates.admission_policy.legacy_domain_catalog_role,

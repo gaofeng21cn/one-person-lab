@@ -120,7 +120,7 @@ const NO_AUTHORITY = {
 } as const;
 
 export function buildCodexFamilyPluginSpecs(packageDirectory?: string): CodexFamilyPluginSpec[] {
-  const excluded = new Set(listCurrentPackageProjections(packageDirectory)
+  const excluded = new Set(listCurrentPackageProjections(packageDirectory, { officialOnly: true })
     .filter(({ payload }) => payload.publication_channel_admission === 'development_only'
       || payload.publication_channel_admission === 'retired')
     .map(({ payload }) => payload.package_id));

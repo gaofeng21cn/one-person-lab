@@ -9,6 +9,11 @@ import assert from 'node:assert/strict';
 
 import { loadOplPackageSpecs } from '../../../../../src/adapters/integration/package-distribution.ts';
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
+import {
+  catalogFixtureAllowlistRoot,
+  catalogFixtureManifestPath,
+  catalogFixturePackageRoot,
+} from '../../../helpers/catalog-fixture.ts';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
 const generator = path.join(repoRoot, 'scripts/first-party-package-payload.mjs');
@@ -21,7 +26,7 @@ const packageTemplates = Object.fromEntries(
   Object.entries({ agent: 'mag', capability: 'mas-scholar-skills', workflow: 'opl-flow' }).map(([kind, id]) => [
     kind,
     JSON.parse(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages', `${id}.json`),
+      catalogFixtureManifestPath(id),
       'utf8',
     )) as Record<string, any>,
   ]),
@@ -1049,17 +1054,17 @@ test('Framework allowlists and payloads validate at their explicit schema bounda
     path.join(repoRoot, 'contracts/opl-framework/package-payload-manifest-v2.schema.json'),
     'utf8',
   )) as Record<string, any>;
-  const canonicalIds = loadOplPackageSpecs().map((spec) => spec.package_id);
-  const packageRoot = path.join(repoRoot, 'contracts/opl-framework/packages');
-  const payloadRoot = path.join(packageRoot, 'payloads');
+  const canonicalIds = loadOplPackageSpecs(catalogFixturePackageRoot).map((spec) => spec.package_id);
+  assert.ok(canonicalIds.length > 0);
+  const payloadRoot = path.join(catalogFixturePackageRoot, 'payloads');
   const manifests = Object.fromEntries(canonicalIds.map((id) => [
     id,
-    JSON.parse(fs.readFileSync(path.join(packageRoot, `${id}.json`), 'utf8')) as Record<string, any>,
+    JSON.parse(fs.readFileSync(catalogFixtureManifestPath(id), 'utf8')) as Record<string, any>,
   ]));
   const allowlists = Object.fromEntries(canonicalIds.map((id) => [
     id,
     JSON.parse(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlists', `${id}.json`),
+      path.join(catalogFixtureAllowlistRoot, `${id}.json`),
       'utf8',
     )) as Record<string, any>,
   ]));
@@ -1082,10 +1087,10 @@ test('Framework allowlists and payloads validate at their explicit schema bounda
 
   for (const id of canonicalIds) {
     const manifest = manifests[id];
-    const allowlistPath = path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlists', `${id}.json`);
+    const allowlistPath = path.join(catalogFixtureAllowlistRoot, `${id}.json`);
     const allowlist = JSON.parse(fs.readFileSync(allowlistPath, 'utf8')) as Record<string, any>;
     const payload = JSON.parse(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages', manifest.codex_surface.plugin_payload_manifest_url),
+      path.join(catalogFixturePackageRoot, manifest.codex_surface.plugin_payload_manifest_url),
       'utf8',
     )) as Record<string, any>;
     assert.doesNotThrow(() => assertJsonSchemaPayload({

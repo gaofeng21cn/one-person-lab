@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { catalogFixtureManifestPath } from '../../../helpers/catalog-fixture.ts';
 
 import { parseJsonText } from '../../../../../src/kernel/json-file.ts';
 import { normalizePackageManifest } from '../../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
@@ -14,7 +15,7 @@ test('all package manifest normalizers preserve typed Codex default exposure', (
     ['mas-scholar-skills', false],
     ['opl-flow', true],
   ] as const) {
-    const manifestPath = path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`);
+    const manifestPath = catalogFixtureManifestPath(packageId);
     const payload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, unknown>;
     payload.rollback_ref = `rollback-ref:${packageId}/legacy`;
     const normalized = normalizePackageManifest(payload, pathToFileURL(manifestPath).href);
@@ -31,12 +32,7 @@ test('all package manifest normalizers preserve typed Codex default exposure', (
 });
 
 test('only capability Packages may declare headless internal Codex interaction', () => {
-  const manifestPath = path.resolve(
-    'contracts',
-    'opl-framework',
-    'packages',
-    'opl-fleet-agent.json',
-  );
+  const manifestPath = catalogFixtureManifestPath('opl-fleet-agent');
   const payload = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
   payload.codex_surface.interaction_mode = 'headless_internal';
   const normalized = normalizePackageManifest(payload, pathToFileURL(manifestPath).href);
@@ -50,7 +46,7 @@ test('only capability Packages may declare headless internal Codex interaction',
     (error: any) => error?.details?.failure_code === 'agent_package_codex_interaction_mode_invalid',
   );
 
-  const agentPath = path.resolve('contracts', 'opl-framework', 'packages', 'mas.json');
+  const agentPath = catalogFixtureManifestPath('mas');
   const agentPayload = parseJsonText(fs.readFileSync(agentPath, 'utf8')) as Record<string, any>;
   agentPayload.codex_surface.interaction_mode = 'headless_internal';
   assert.throws(
@@ -61,11 +57,10 @@ test('only capability Packages may declare headless internal Codex interaction',
 
 test('internal OPL carriers stay headless while interactive Packages remain selectable', () => {
   for (const [packageId, expectedMode] of [
-    ['opl-channel-weixin', 'headless_internal'],
     ['opl-fleet-agent', 'headless_internal'],
     ['opl-flow', 'interactive'],
   ] as const) {
-    const manifestPath = path.resolve('contracts', 'opl-framework', 'packages', `${packageId}.json`);
+    const manifestPath = catalogFixtureManifestPath(packageId);
     const normalized = normalizePackageManifest(
       parseJsonText(fs.readFileSync(manifestPath, 'utf8')),
       pathToFileURL(manifestPath).href,

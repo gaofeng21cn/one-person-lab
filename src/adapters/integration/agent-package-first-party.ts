@@ -1,11 +1,7 @@
-import {
-  CANONICAL_OPL_PACKAGE_IDS,
-  canonicalAgentPackageId,
-} from './agent-package-identity.ts';
-
-const FIRST_PARTY_PACKAGE_IDS = new Set<string>(CANONICAL_OPL_PACKAGE_IDS);
+import { listProjectedOplPackageIds } from '../../kernel/standard-agent-registry.ts';
+import { canonicalAgentPackageId } from './agent-package-identity.ts';
 
 export function isFirstPartyPackage(packageId: string | null | undefined) {
   const canonicalId = canonicalAgentPackageId(packageId);
-  return canonicalId !== null && FIRST_PARTY_PACKAGE_IDS.has(canonicalId);
+  return canonicalId !== null && listProjectedOplPackageIds().includes(canonicalId);
 }

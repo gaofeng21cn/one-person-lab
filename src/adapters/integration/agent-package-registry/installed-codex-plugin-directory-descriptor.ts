@@ -10,8 +10,10 @@ import {
   type ResolvedAgentPluginManifest,
 } from '../../../kernel/agent-plugin-manifest.ts';
 import {
+  APP_PROFILE_COMPATIBILITY_SOURCE_ID,
+  listAppProfileCompatibilityProjections,
   listCurrentPackageProjections,
-  PACKAGE_PROJECTION_ROOT,
+  OFFICIAL_PACKAGE_CATALOG_SOURCE_ID,
 } from '../../../kernel/standard-agent-registry.ts';
 import { canonicalAgentPackageId } from '../agent-package-identity.ts';
 import { isFirstPartyPackage } from '../agent-package-first-party.ts';
@@ -218,7 +220,7 @@ export function readInstalledPackageDescriptor(entry: InstalledCarrierEntry): In
     return {
       manifest,
       manifestPath,
-      catalog_scope: 'software',
+      catalog_scope: manifest.presentation?.software_type === 'dependency' ? 'host_component' : 'software',
       ...codexPackageCatalogProvenance({ ...entry, ownerManifest: hasOwnerManifest, ownerSource: manifest.source }),
       manifest_sha256: sha256Text(manifestText),
       sourcePath: entry.sourcePath,
@@ -248,32 +250,36 @@ export function readInstalledPackageDescriptor(entry: InstalledCarrierEntry): In
   }
 }
 
-function projectedManifestPath(sourceRef: string) {
-  return path.isAbsolute(sourceRef)
-    ? sourceRef
-    : path.join(PACKAGE_PROJECTION_ROOT, path.basename(sourceRef));
-}
-
 function readProjectedPackageDescriptor(
   projection: ReturnType<typeof listCurrentPackageProjections>[number],
 ): InstalledPackageDescriptor | null {
   try {
-    const manifestPath = projectedManifestPath(projection.source_ref);
+    const manifestPath = projection.manifest_path;
     const manifestText = fs.readFileSync(manifestPath, 'utf8');
     const manifest = normalizePackageManifest(
       JSON.parse(manifestText),
       pathToFileURL(manifestPath).toString(),
     );
     const carrier = manifest.configured_codex_plugin_carrier;
-    if (!carrier || !isFirstPartyPackage(manifest.package_id)) return null;
+    if (!carrier) return null;
+    const official = projection.source_id === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID
+      || projection.source_id === APP_PROFILE_COMPATIBILITY_SOURCE_ID;
+    // Catalog-controlled authorities remain scoped to their registered source.
+    // A third-party entry cannot declare Framework owner identity.
+    if (!official && (manifest.source !== 'third_party'
+      || manifest.visibility !== 'public'
+      || manifest.management_scope === 'local_component')) return null;
     return {
       manifest,
       manifestPath,
-      catalog_scope: 'software',
+      catalog_source_id: projection.source_id,
+      catalog_scope: manifest.presentation?.software_type === 'dependency' ? 'host_component' : 'software',
       ...codexPackageCatalogProvenance({
         pluginId: carrier.carrier.pluginId,
         marketplaceSource: carrier.carrier.marketplaceSource,
-        ownerProjection: true,
+        ownerProjection: official,
+        ownerManifest: !official,
+        ownerSource: manifest.source,
       }),
       manifest_sha256: sha256Text(manifestText),
       sourcePath: manifestPath,
@@ -302,9 +308,9 @@ function readProjectedPackageDescriptor(
 
 export function discoverCurrentOwnerPackageDescriptors(input: { packageId?: string | null } = {}) {
   const discovered = new Map<string, InstalledPackageDescriptor>();
-  for (const projection of listCurrentPackageProjections()) {
+  for (const projection of [...listAppProfileCompatibilityProjections(), ...listCurrentPackageProjections()]) {
     const descriptor = readProjectedPackageDescriptor(projection);
-    if (!descriptor) continue;
+    if (!descriptor || discovered.has(descriptor.manifest.package_id)) continue;
     if (input.packageId && descriptor.manifest.package_id !== input.packageId) continue;
     discovered.set(descriptor.manifest.package_id, descriptor);
   }
@@ -318,6 +324,10 @@ export function withCurrentOwnerProjection(
   if (!ownerProjection
     || descriptor.manifest.package_id !== ownerProjection.manifest.package_id
     || !installedDescriptorMatchesConfiguredCarrier(descriptor)) return descriptor;
+  if (ownerProjection.catalog_origin === 'external'
+    && (descriptor.manifest.source !== 'third_party'
+      || descriptor.manifest.source_repo !== ownerProjection.manifest.source_repo
+      || descriptor.pluginId !== ownerProjection.pluginId)) return descriptor;
   // Access belongs to the current owner, even when the physical installation
   // has a newer version than the embedded projection. Keep its runtime/content
   // identity and native lifecycle selector while refreshing that policy binding.
@@ -332,6 +342,7 @@ export function withCurrentOwnerProjection(
       ...descriptor,
       catalog_origin: ownerProjection.catalog_origin,
       origin_basis: ownerProjection.origin_basis,
+      catalog_source_id: ownerProjection.catalog_source_id,
       manifest: {
         ...descriptor.manifest,
         visibility: ownerProjection.manifest.visibility,
@@ -380,6 +391,7 @@ export function withCurrentOwnerProjection(
     ...descriptor,
     catalog_origin: ownerProjection.catalog_origin,
     origin_basis: ownerProjection.origin_basis,
+    catalog_source_id: ownerProjection.catalog_source_id,
     manifest: { ...ownerProjection.manifest, ...physicalLock, presentation },
     manifestPath: ownerProjection.manifestPath,
     manifest_sha256: ownerProjection.manifest_sha256,

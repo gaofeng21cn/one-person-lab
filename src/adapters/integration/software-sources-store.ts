@@ -4,7 +4,10 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { FrameworkContractError, isRecord } from '../../kernel/contract-validation.ts';
 import { resolveOplStatePaths } from '../../kernel/runtime-state-paths.ts';
+import { DEFAULT_OPL_CATALOG_INDEX_URL } from './software-catalog-source.ts';
 import { SOFTWARE_SOURCE_STATUSES, type SoftwareSource } from './software-sources-types.ts';
+
+const CATALOG_SOURCE_ID_PATTERN = /^catalog:([a-z0-9](?:[a-z0-9._-]{0,61}[a-z0-9])?)$/;
 
 export function softwareSourcesFile(env: NodeJS.ProcessEnv = process.env) {
   const stateDir = env === process.env ? resolveOplStatePaths().state_dir
@@ -16,7 +19,28 @@ export function softwareSourcesFile(env: NodeJS.ProcessEnv = process.env) {
 export function softwareSourceFailure(reasonCode: string, message: string): never {
   throw new FrameworkContractError('cli_usage_error', message, { reason_code: reasonCode });
 }
-export function sourceTemplate(sourceId: string): SoftwareSource {
+export function normalizeCatalogSourceUrl(value: unknown): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    softwareSourceFailure('software_source_url_invalid', 'Catalog source url must be a non-empty https:// or file:// URL.');
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(value.trim());
+  } catch {
+    softwareSourceFailure('software_source_url_invalid', 'Catalog source url is not a valid URL.');
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'file:') {
+    softwareSourceFailure('software_source_url_invalid', 'Catalog source url must use https:// or file://.');
+  }
+  if (parsed.username || parsed.password) {
+    softwareSourceFailure('software_source_url_invalid', 'Catalog source url must not embed credentials.');
+  }
+  return parsed.toString();
+}
+export function sourceTemplate(
+  sourceId: string,
+  custom?: { source_ref?: string; display_name?: string },
+): SoftwareSource {
   const common = { enabled: true, credential_handle: null, verified_at: null, verification_reason: null, revision: 'default' };
   if (sourceId === 'homebrew:gaofeng21cn-one-person-lab') return {
     ...common, source_id: sourceId, provider_id: 'homebrew', display_name: 'OPL Homebrew',
@@ -24,10 +48,21 @@ export function sourceTemplate(sourceId: string): SoftwareSource {
   };
   if (sourceId === 'public-registry:opl') return {
     ...common, source_id: sourceId, provider_id: 'public_registry', display_name: 'OPL Package Catalog',
-    source_kind: 'registry', source_ref: 'https://github.com/gaofeng21cn/one-person-lab/tree/main/contracts/opl-framework/packages', visibility: 'public', status: 'public',
+    source_kind: 'registry', source_ref: DEFAULT_OPL_CATALOG_INDEX_URL, visibility: 'public', status: 'public',
   };
+  const catalogMatch = CATALOG_SOURCE_ID_PATTERN.exec(sourceId);
+  if (catalogMatch) {
+    const sourceRef = normalizeCatalogSourceUrl(custom?.source_ref);
+    const displayName = typeof custom?.display_name === 'string' && custom.display_name.trim()
+      ? custom.display_name.trim()
+      : `Catalog (${catalogMatch[1]})`;
+    return {
+      ...common, source_id: sourceId, provider_id: 'catalog', display_name: displayName,
+      source_kind: 'registry', source_ref: sourceRef, visibility: 'public', status: 'unknown',
+    };
+  }
   const match = /^github-packages:([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)$/.exec(sourceId);
-  if (!match) softwareSourceFailure('software_source_id_invalid', 'Use a known public source or github-packages:<owner>.');
+  if (!match) softwareSourceFailure('software_source_id_invalid', 'Use a known public source, catalog:<name>, or github-packages:<owner>.');
   return {
     ...common, source_id: sourceId, provider_id: 'github_packages', display_name: `${match[1]} / GitHub`,
     source_kind: 'registry', source_ref: `https://github.com/${match[1]}`, visibility: 'authorized_only', status: 'signed_out',
@@ -52,7 +87,10 @@ export function readSoftwareSources(env: NodeJS.ProcessEnv = process.env): Softw
     const seen = new Set<string>();
     for (const entry of payload.sources) {
       if (!isRecord(entry) || typeof entry.source_id !== 'string' || seen.has(entry.source_id)) throw new Error();
-      const template = sourceTemplate(entry.source_id);
+      const template = sourceTemplate(entry.source_id, {
+        source_ref: typeof entry.source_ref === 'string' ? entry.source_ref : undefined,
+        display_name: typeof entry.display_name === 'string' ? entry.display_name : undefined,
+      });
       if (typeof entry.enabled !== 'boolean'
         || typeof entry.revision !== 'string' || !SOFTWARE_SOURCE_STATUSES.includes(entry.status as SoftwareSource['status'])
         || !(entry.verified_at === null || typeof entry.verified_at === 'string')
@@ -74,17 +112,23 @@ export function readSoftwareSources(env: NodeJS.ProcessEnv = process.env): Softw
   }
 }
 export function readSoftwareSource(sourceId: string, env: NodeJS.ProcessEnv = process.env) {
-  return readSoftwareSources(env).find(source => source.source_id === sourceId) ?? sourceTemplate(sourceId);
+  const existing = readSoftwareSources(env).find(source => source.source_id === sourceId);
+  if (existing) return existing;
+  if (CATALOG_SOURCE_ID_PATTERN.test(sourceId)) {
+    softwareSourceFailure('software_source_not_found', `Catalog software source is not registered: ${sourceId}`);
+  }
+  return sourceTemplate(sourceId);
 }
-export function writeSoftwareSource(source: SoftwareSource, expectedRevision: string) {
-  const file = softwareSourcesFile();
+export function writeSoftwareSource(source: SoftwareSource, expectedRevision: string, env: NodeJS.ProcessEnv = process.env) {
+  const file = softwareSourcesFile(env);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const lock = `${file}.lock`;
   try { fs.mkdirSync(lock); } catch { softwareSourceFailure('software_source_busy', 'Another software source change is in progress; retry after it completes.'); }
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    const sources = readSoftwareSources();
-    const current = sources.find(candidate => candidate.source_id === source.source_id) ?? sourceTemplate(source.source_id);
+    const sources = readSoftwareSources(env);
+    const current = sources.find(candidate => candidate.source_id === source.source_id)
+      ?? sourceTemplate(source.source_id, { source_ref: source.source_ref, display_name: source.display_name });
     if (current.revision !== expectedRevision) softwareSourceFailure('software_source_changed', 'Software source configuration changed during verification; read it again before retrying.');
     const next = { ...source, revision: randomUUID() };
     const retained = sources.filter(candidate => candidate.source_id !== source.source_id);
@@ -92,6 +136,61 @@ export function writeSoftwareSource(source: SoftwareSource, expectedRevision: st
     fs.writeFileSync(temporary, `${JSON.stringify({ surface_kind: 'opl_software_sources_store.v1', sources: retained }, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
     fs.renameSync(temporary, file);
     return next;
+  } finally {
+    fs.rmSync(temporary, { force: true });
+    fs.rmdirSync(lock);
+  }
+}
+export function addCatalogSoftwareSource(
+  input: { source_id: string; url: string; display_name?: string },
+  env: NodeJS.ProcessEnv = process.env,
+): SoftwareSource {
+  if (!CATALOG_SOURCE_ID_PATTERN.test(input.source_id)) {
+    softwareSourceFailure('software_source_id_invalid', 'Custom catalog source_id must match catalog:<slug>.');
+  }
+  const candidate = sourceTemplate(input.source_id, {
+    source_ref: input.url,
+    display_name: input.display_name,
+  });
+  const file = softwareSourcesFile(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const lock = `${file}.lock`;
+  try { fs.mkdirSync(lock); } catch { softwareSourceFailure('software_source_busy', 'Another software source change is in progress; retry after it completes.'); }
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    const sources = readSoftwareSources(env);
+    if (sources.some(existing => existing.source_id === candidate.source_id)) {
+      softwareSourceFailure('software_source_already_exists', `Software source ${candidate.source_id} already exists.`);
+    }
+    const next = { ...candidate, revision: randomUUID() };
+    const updated = [...sources, next];
+    fs.writeFileSync(temporary, `${JSON.stringify({ surface_kind: 'opl_software_sources_store.v1', sources: updated }, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporary, file);
+    return next;
+  } finally {
+    fs.rmSync(temporary, { force: true });
+    fs.rmdirSync(lock);
+  }
+}
+export function removeCatalogSoftwareSource(sourceId: string, env: NodeJS.ProcessEnv = process.env): SoftwareSource {
+  if (!CATALOG_SOURCE_ID_PATTERN.test(sourceId)) {
+    softwareSourceFailure('software_source_builtin_remove_forbidden', 'Only catalog:<slug> sources can be removed.');
+  }
+  const file = softwareSourcesFile(env);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const lock = `${file}.lock`;
+  try { fs.mkdirSync(lock); } catch { softwareSourceFailure('software_source_busy', 'Another software source change is in progress; retry after it completes.'); }
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  try {
+    const sources = readSoftwareSources(env);
+    const removed = sources.find(candidate => candidate.source_id === sourceId);
+    if (!removed) {
+      softwareSourceFailure('software_source_not_found', `Catalog software source is not registered: ${sourceId}`);
+    }
+    const retained = sources.filter(candidate => candidate.source_id !== sourceId);
+    fs.writeFileSync(temporary, `${JSON.stringify({ surface_kind: 'opl_software_sources_store.v1', sources: retained }, null, 2)}\n`, { encoding: 'utf8', mode: 0o600, flag: 'wx' });
+    fs.renameSync(temporary, file);
+    return removed;
   } finally {
     fs.rmSync(temporary, { force: true });
     fs.rmdirSync(lock);

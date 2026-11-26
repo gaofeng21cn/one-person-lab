@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
+
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
 
 import { Context } from '@deepseek-ai/cordis';
 
@@ -29,10 +30,8 @@ import {
 } from '../../src/host/plugins/cordis-agent-executor-experiment.ts';
 import { buildCordisRunwayAttemptCompositionSnapshot } from '../../src/host/plugins/cordis-runway-attempt.ts';
 
-const repoRoot = path.resolve(import.meta.dirname, '..', '..');
-
-function readJson(relativePath: string): Record<string, unknown> {
-  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, unknown>;
+function readManifest(packageId: string): Record<string, unknown> {
+  return parseJsonText(fs.readFileSync(catalogFixtureManifestPath(packageId), 'utf8')) as Record<string, unknown>;
 }
 
 function profileSnapshot() {
@@ -53,19 +52,19 @@ function profileSnapshot() {
 
 test('default host contracts classify standard agents, capability packages, and workflow profiles', () => {
   const cases = [
-    ['contracts/opl-framework/packages/mas.json', 'standard_agent_runtime'],
-    ['contracts/opl-framework/packages/mag.json', 'standard_agent_runtime'],
-    ['contracts/opl-framework/packages/rca.json', 'standard_agent_runtime'],
-    ['contracts/opl-framework/packages/oma.json', 'standard_agent_runtime'],
-    ['contracts/opl-framework/packages/obf.json', 'standard_agent_runtime'],
-    ['contracts/opl-framework/packages/mas-scholar-skills.json', 'capability_provider'],
-    ['contracts/opl-framework/packages/opl-persona.json', 'capability_provider'],
-    ['contracts/opl-framework/packages/opl-relay.json', 'capability_provider'],
-    ['contracts/opl-framework/packages/opl-flow.json', 'workflow_profile_source'],
+    ['mas', 'standard_agent_runtime'],
+    ['mag', 'standard_agent_runtime'],
+    ['rca', 'standard_agent_runtime'],
+    ['oma', 'standard_agent_runtime'],
+    ['obf', 'standard_agent_runtime'],
+    ['mas-scholar-skills', 'capability_provider'],
+    ['opl-persona', 'capability_provider'],
+    ['opl-relay', 'capability_provider'],
+    ['opl-flow', 'workflow_profile_source'],
   ] as const;
-  for (const [relativePath, expectedKind] of cases) {
-    const manifest = readJson(relativePath) as PackageHostManifest;
-    assert.equal(resolvePackageHostIntegration(manifest).integration_kind, expectedKind, relativePath);
+  for (const [packageId, expectedKind] of cases) {
+    const manifest = readManifest(packageId) as PackageHostManifest;
+    assert.equal(resolvePackageHostIntegration(manifest).integration_kind, expectedKind, packageId);
   }
   assert.equal(readStandardAgentHostContract().standalone_policy, 'allowed');
   assert.equal(readCapabilityPackageHostContract().standalone_policy, 'allowed');
@@ -140,9 +139,9 @@ test('host context resolves standard stage services and remains digest-stable ac
 test('capability and workflow packages get non-blocking descriptor host contexts', () => {
   const snapshot = profileSnapshot();
   for (const [packageId, manifest, trigger] of [
-    ['opl-persona', readJson('contracts/opl-framework/packages/opl-persona.json') as PackageHostManifest, 'descriptor_discovery'],
-    ['mas-scholar-skills', readJson('contracts/opl-framework/packages/mas-scholar-skills.json') as PackageHostManifest, 'descriptor_discovery'],
-    ['opl-flow', readJson('contracts/opl-framework/packages/opl-flow.json') as PackageHostManifest, 'profile_materialization'],
+    ['opl-persona', readManifest('opl-persona') as PackageHostManifest, 'descriptor_discovery'],
+    ['mas-scholar-skills', readManifest('mas-scholar-skills') as PackageHostManifest, 'descriptor_discovery'],
+    ['opl-flow', readManifest('opl-flow') as PackageHostManifest, 'profile_materialization'],
   ] as const) {
     const context = buildPackageHostContext({
       package_id: packageId,
@@ -164,7 +163,7 @@ test('Cordis package host plugin exposes the same resolver to hosted Packages', 
   try {
     const service = context.get(CORDIS_PACKAGE_HOST_SERVICE);
     assert.ok(service);
-    const manifest = readJson('contracts/opl-framework/packages/mas.json') as PackageHostManifest;
+    const manifest = readManifest('mas') as PackageHostManifest;
     const resolved = service.resolve({
       manifest,
       integration_trigger: 'handler_ref',

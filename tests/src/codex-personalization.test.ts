@@ -16,6 +16,8 @@ import { createFakeCodexPluginManagerFixture, runCli } from './cli/helpers.ts';
 import { writeManagedRuntimeSourceFixture } from './cli/cases/packages-cases/managed-runtime-source-fixture.ts';
 import { agentPackageManifest, formatJsonPayload } from './cli/cases/packages-cases/helpers.ts';
 
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
 function sha256(content: string) {
   return `sha256:${crypto.createHash('sha256').update(content).digest('hex')}`;
 }
@@ -24,7 +26,7 @@ function flowProjectionSourceIsPublished() {
   if (process.env.CI === 'true') return true;
   try {
     const manifest = JSON.parse(fs.readFileSync(
-      path.join(process.cwd(), 'contracts/opl-framework/packages/opl-flow.json'),
+      catalogFixtureManifestPath('opl-flow'),
       'utf8',
     ));
     const commit = manifest.codex_surface?.carrier_source_commit;
@@ -189,7 +191,7 @@ if (args === 'app-server --stdio') {
 
 test('Codex user instructions restore the installed owner profile even when its version matches the catalog', () => {
   const projection = JSON.parse(fs.readFileSync(
-    new URL('../../contracts/opl-framework/packages/opl-flow.json', import.meta.url), 'utf8',
+    catalogFixtureManifestPath('opl-flow'), 'utf8',
   ));
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-owner-profile-'));
   const previousCodexHome = process.env.CODEX_HOME;

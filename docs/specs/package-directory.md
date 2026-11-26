@@ -4,7 +4,7 @@
 
 ## 目录是谁的真相
 
-OPL Package Directory 是 Framework 的 owner projection。公开源与获授权私有源合并到同一目录，使用同一 Package identity、安装状态和 owner action。入口为：
+Framework 将软件源目录与本机安装事实投影为 OPL Package Directory。官方源条目以同一 Package identity 关联公开展示、下载权限、安装状态和维护动作。可通过以下入口查看。
 
 ```bash
 opl packages list --json
@@ -18,18 +18,18 @@ App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Packag
 
 ## 管理范围与产品类型
 
-软件中心先回答“这是由谁维护的软件”，再回答“它是什么、装了什么、能否更新”。默认范围是 OPL 自己维护的软件，覆盖标准和非标准智能体、应用、能力包及其所有受支持载体；OPL 核心只是其中一组架构关系。
+软件中心先回答“这是由谁维护的软件”，再回答“它是什么、装了什么、能否更新”。默认范围是 OPL 自己维护的软件，覆盖标准和非标准智能体、应用、扩展、通道和运行依赖及其受支持载体；OPL 核心只是其中一组架构关系。
 
 | 管理范围 | 内容 | 生命周期入口 |
 | --- | --- | --- |
-| OPL 软件 | OPL 自行维护、有独立用途和生命周期的软件；公开与获授权私有软件共用目录 | 统一安装、更新、卸载入口，调用该软件实际安装器 |
+| OPL 软件 | OPL 自行维护、有独立用途和生命周期的软件；公开软件和需授权安装的软件共用目录 | 统一安装、更新、卸载入口，调用该软件实际安装器 |
 | 其他来源 | Codex 等平台提供的插件、独立 Skills 及其他外部软件 | 按实际来源和管理器展示；使用原平台支持的操作 |
 | 运行组件 | 有明确依赖或内嵌关系、由父产品统一维护的组件 | 显示父产品和依赖关系，从父产品维护入口处理 |
 | 部署目标 | 云端、移动端、设备端或远端服务产品 | 只提供部署向导、环境检查和远端状态；不进入本机安装清单 |
 
 插件是一种交付方式。OPL 软件即使通过 Codex 插件安装，也仍在 OPL 软件中；PDF、Documents 等外部可选扩展即使随 Codex 提供，也仍属于其他来源。随附安装只证明交付方式，不能据此把扩展称为运行依赖。只有实际依赖合同支持时才使用 `catalog_scope=host_component`；独立软件或用户扩展使用 `catalog_scope=software`。
 
-产品类型仅提供三个筛选：**智能体、应用、能力包**。标准与非标准智能体采用同一产品类型；工作流按实际产品职责声明。当前 owner 字段为 `presentation.software_type=agent|application|capability`，目录输出 `software_type`。未声明时，只有 `standard_agent` 沿原合同兼容为 `agent`，其余保持 `unknown`。`standard_agent`、`workflow_profile`、`capability_package` 是既有加载和调用合同，放在技术详情中，不决定用户默认分组。MCP App、桌面、Web、CLI 是入口或运行形态；独立移动端、设备端和云端产品必须声明 `management_scope=deployment_target`，只显示在部署关联中。
+产品分类使用 **智能体、应用、扩展、通道、依赖**。目录从 owner 声明的 `presentation.software_type` 输出 `agent`、`application`、`extension`、`channel` 或 `dependency`。已有 descriptor 的 `capability` 归一为 `extension`。未声明类型的标准智能体沿原合同归为 `agent`，其余显示 `unknown`。运行加载与调用使用 `standard_agent`、`workflow_profile` 和 `capability_package` 等合同。MCP App、桌面、Web、CLI 是软件入口，独立移动端、设备端和云端产品通过 `management_scope=deployment_target` 出现在部署关联中。
 
 维护归属由 Framework 投影，App 不按名称、ID 前缀或 publisher 字符串猜测：
 
@@ -67,7 +67,7 @@ OPL 归属优先来自中央 owner projection；已经安装且拥有真实 OPL 
 
 OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件目录的获取渠道。其他来源的软件按原管理器独立呈现；独立 Skills 由其原生 Skill 管理入口负责，不把插件列表当作所有 Skills 的清单。只有明确的内嵌或依赖合同才进入运行组件。用户连接的 Obsidian 资料库、邮箱、GitHub 账号和模型账号属于共享资源或连接，通过原有 Connect、知识和账号 owner 管理。
 
-当前来源 provider 实现为公开 registry、受授权的 GitHub Packages 和 Homebrew tap。其他本机应用载体按同一合同接入自身 adapter；独立远端部署不进入此本机安装目录；软件属于某种产品类型不等于其所有载体都已接通。固定源码只保留为开发者覆盖 provider，不是软件中心来源。
+软件源接入独立 OPL 目录、受授权的 GitHub Packages 和 Homebrew tap。其他本机应用载体按同一合同接入自身 adapter；独立远端部署不进入此本机安装目录；软件属于某种产品类型不等于其所有载体都已接通。固定源码只保留为开发者覆盖 provider，不是软件中心来源。
 
 开发 checkout 可作为某个软件显式选择的开发来源覆盖，不因存在于工作区而自动成为分发源。它必须绑定明确版本和回读合同，但永远不成为普通安装、更新或修复动作的来源。软件源连接成功、来源有版本、本机已安装和当前运行采用该版本必须分别检查。
 
@@ -75,26 +75,26 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 
 | 维护对象 | 物理入口 | 责任 |
 | --- | --- | --- |
-| 第一方目录 projection | [`contracts/opl-framework/packages/`](../../contracts/opl-framework/packages)；[GitHub 入口](https://github.com/gaofeng21cn/one-person-lab/tree/main/contracts/opl-framework/packages) | 从 Package owner descriptor 形成可分发的语义声明；与 native carrier 回读合并，不保存本机安装事实 |
+| 官方目录 | [`gaofeng21cn/opl-catalog`](https://github.com/gaofeng21cn/opl-catalog) | 维护按产品分类的 Package 目录条目与可刷新索引。Framework 提供软件源协议并合并本机 carrier 回读 |
 | 公开 Homebrew tap | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Formula/Cask、宿主和原生依赖的安装更新 |
 | 公开 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和匿名读取回读 |
 | 私有 Package 制品 | 发行制品使用 descriptor 的 `publication_ref`，第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/` | OCI 包级权限、签名和授权回读；不提供源码安装路径 |
 | 当前用户的目录与状态 | `opl packages list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
 
-公开仓内只放可公开的目录声明。需要隐藏名称、说明或版本的私有条目由受权限保护的软件源提供，Framework 对当前身份获准的条目做同样的 identity 合并；不能先把完整私有清单放入公开文件，再依赖 UI 隐藏。软件源配置和凭证不进入公共 Package metadata。
+官方目录可显示需授权软件已获准公开的名称、说明、版本和产品分类。受保护元数据随授权来源提供，Framework 以同一 Package identity 合并。软件源凭证由 provider 管理，制品由实际安装来源交付。
 
 ## 私有 Package 的访问与生命周期
 
-私有源沿用公开 Package 的安装与管理界面，其软件源 CLI 与授权配置入口见 [软件源控制面](./software-sources.md)。访问规则分成独立的四个判断：
+私有源沿用公开 Package 的安装与管理界面，其软件源 CLI 与授权配置入口见 [软件源控制面](./software-sources.md)。各判断由实际 owner 执行。
 
 | 判断 | 权威 owner | 含义 |
 | --- | --- | --- |
-| 目录可见性 | Package 发布者和软件源 | 当前身份能否读取名称、版本和 descriptor；`visibility=authorized_only` 的条目需要授权后发现 |
+| 目录可见性 | Package 发布者和软件源 | 已获准公开的展示信息可由官方目录匿名读取。受保护的详情来自已授权的软件源 |
 | 制品下载 | GitHub/GHCR 或其他 registry | 当前身份能否读取选定 Package 的 manifest、payload、source archive 与 digest；仓库 read 不自动授予 package pull |
 | 本机安装与管理 | Package owner 与 native carrier | 已安装、启停、依赖、更新、修复和卸载事实，以及每个动作的当前可执行性 |
 | 运行时资源与业务动作 | Connect、知识 owner 与领域 owner | 已安装消费者能否访问知识、账号或业务能力；安装授权不授予券商操作或私人知识访问 |
 
-`visibility`、`access_policy_ref` 和 `credential_provider` 是来源声明。访问状态、授权修订和校验时间由可信安装器及 provider 回读产生，descriptor 自称 authorized 不构成授权。目录按当前身份过滤后计数，未获准发现或已撤权的条目不进入可安装目录（已安装本地项保留管理事实与卸载入口，后续远端读取拒止）。快速 App state 保持只读缓存，缺少快照或过期时由 `access_refresh_required=true` 触发 `source_check` 刷新；运行时连接规则见 [Connect 连接授权](./connection-authorization.md)。
+`visibility`、`access_policy_ref` 和 `credential_provider` 是来源声明。访问状态、授权修订和校验时间由可信安装器及 provider 回读产生，descriptor 自称 authorized 不构成授权。目录显示已公开的条目及授权状态。下载、安装、更新和其他远端读取取决于独立的制品授权。本地已安装项保留管理事实与卸载入口。快速 App state 使用只读缓存，缺少快照或过期时通过 `access_refresh_required=true` 请求 `source_check` 刷新。运行时连接规则见 [Connect 连接授权](./connection-authorization.md)。
 
 ## Homebrew 的位置
 

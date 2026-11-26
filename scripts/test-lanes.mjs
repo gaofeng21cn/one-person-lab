@@ -242,14 +242,18 @@ function spawnStep(cmd, args, ctx, extraEnv = {}) {
 }
 
 export function runNodeTestStep(step, context) {
+  const environment = {
+    OPL_PACKAGE_PROJECTION_DIR: path.join(repoRoot, 'tests/fixtures/catalog/packages'),
+    ...step.env,
+  };
   const argsFor = (files) => ['--conditions=opl-source', ...(step.stripTypes ? ['--experimental-strip-types'] : []), '--test', ...files];
   if (!Number.isInteger(step.batchSize) || step.batchSize <= 0 || step.files.length <= step.batchSize) {
-    return spawnStep(process.execPath, argsFor(step.files), { ...context, stepKind: step.kind, batchFiles: step.files }, stepEnv(step.env));
+    return spawnStep(process.execPath, argsFor(step.files), { ...context, stepKind: step.kind, batchFiles: step.files }, stepEnv(environment));
   }
   const chunks = Array.from({ length: Math.ceil(step.files.length / step.batchSize) }, (_, i) => step.files.slice(i * step.batchSize, (i + 1) * step.batchSize));
   const failedBatches = [];
   for (const [batchIndex, files] of chunks.entries()) {
-    const res = spawnStep(process.execPath, argsFor(files), { ...context, stepKind: step.kind, batchIndex, batchCount: chunks.length, batchFiles: files }, stepEnv(step.env));
+    const res = spawnStep(process.execPath, argsFor(files), { ...context, stepKind: step.kind, batchIndex, batchCount: chunks.length, batchFiles: files }, stepEnv(environment));
     if (res.status !== 0) { failedBatches.push({ batchIndex, batchCount: chunks.length, files }); if (!continueOnFailure()) return { ...res, failedBatches }; }
   }
   return failedBatches.length ? { status: 1, failedBatches } : { status: 0 };

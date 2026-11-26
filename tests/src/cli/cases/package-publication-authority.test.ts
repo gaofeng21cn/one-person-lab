@@ -48,6 +48,24 @@ test('private publication uses the private owner identity with the same daily pr
   assert.equal(validateScheduledPublication(value), 'release-stable');
 });
 
+test('automated publication binds both the plan and selected Package to the Catalog revision', () => {
+  const original = fixture();
+  const catalogCommit = 'd'.repeat(40);
+  const value = {
+    ...original,
+    inputs: { ...original.inputs, expected_catalog_source_commit: catalogCommit },
+    plan: { ...original.plan, catalog_source_commit: catalogCommit,
+      packages: original.plan.packages.map(entry => ({ ...entry, expected_catalog_source_commit: catalogCommit })) },
+  };
+  assert.equal(validateScheduledPublication(value), 'release-stable-automated');
+  assert.throws(() => validateScheduledPublication({
+    ...value, plan: { ...value.plan, catalog_source_commit: 'e'.repeat(40) },
+  }), /requested Catalog commit/);
+  assert.throws(() => validateScheduledPublication({
+    ...value, plan: { ...value.plan, packages: original.plan.packages },
+  }), /plan Package entry/);
+});
+
 test('a generated projection may advance main after the workflow started without changing workflow provenance', () => {
   const value = fixture();
   value.plan.framework_source_commit = 'd'.repeat(40);

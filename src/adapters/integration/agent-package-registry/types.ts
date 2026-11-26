@@ -137,8 +137,10 @@ export type AgentPackageHomeShortcutPresentation = {
   route: AgentPackageHomeShortcutRoute;
 };
 
+export type PackageSoftwareType = 'agent' | 'application' | 'extension' | 'channel' | 'dependency';
+
 export type AgentPackagePresentation = {
-  software_type?: 'agent' | 'application' | 'capability';
+  software_type?: PackageSoftwareType;
   /** Relative, immutable Package asset path. The host must reject remote URLs. */
   icon_ref?: string;
   display_name_i18n: AgentPackageLocalizedText;

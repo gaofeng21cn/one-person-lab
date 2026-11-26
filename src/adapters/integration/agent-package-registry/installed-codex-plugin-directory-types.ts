@@ -78,6 +78,8 @@ export type InstalledPackageManifest = Pick<
 >>;
 
 export type InstalledPackageDescriptor = Partial<PackageCatalogProvenance> & {
+  /** The software source that supplied the current owner descriptor. */
+  catalog_source_id?: string;
   /** A dependency contract, not a bundled distribution path, identifies a Host component. */
   catalog_scope?: 'software' | 'host_component';
   manifest: InstalledPackageManifest;

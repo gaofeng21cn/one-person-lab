@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
+
 import {
   loadStandardAgentRegistry,
   matchesStandardDomainAgentCatalogEntry,
@@ -45,7 +47,7 @@ function nativeHelperContract() {
 
 function unknownAgentProjection() {
   const fixture = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+    catalogFixtureManifestPath('mas'),
     'utf8',
   )) as Record<string, any>;
   fixture.package_id = 'future-agent';
@@ -102,7 +104,7 @@ test('native helper owner split declares the registry projection without a dupli
 
   assert.equal(Object.hasOwn(contract.owner_split, 'domain_truth_owners'), false);
   assert.deepEqual(contract.owner_split.domain_truth_owner_registry, {
-    source_ref: 'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection',
+    source_ref: 'catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection',
     series_membership: 'standard_domain_agent',
     projection_field: 'project',
   });
@@ -253,7 +255,7 @@ test('a standalone workflow profile never becomes a local Agent wrapper', () => 
   const packageDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-workflow-profile-registry-'));
   try {
     fs.copyFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/opl-flow.json'),
+      catalogFixtureManifestPath('opl-flow'),
       path.join(packageDirectory, 'opl-flow.json'),
     );
     assert.deepEqual(loadStandardAgentRegistry(packageDirectory), []);
@@ -302,7 +304,7 @@ test('standard Agent descriptor namespace collisions fail before alias maps dive
 
   try {
     fs.copyFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+      catalogFixtureManifestPath('mas'),
       path.join(packageDirectory, 'mas.json'),
     );
     writeUnknownAgentProjection(packageDirectory, futureAgent);

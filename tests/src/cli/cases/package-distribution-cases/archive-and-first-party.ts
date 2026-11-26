@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 
 import {
   assert,
-  createGitModuleRemoteFixture,
   execFileSync,
   fs,
   normalizeFirstPartyAgentPackageManifest,
@@ -10,7 +9,6 @@ import {
   parseJsonText,
   path,
   repoRoot,
-  runCli,
   test,
 } from './helpers.ts';
 import { assertJsonSchemaPayload } from '../../../../../src/kernel/schema-registry.ts';
@@ -20,8 +18,10 @@ import {
   normalizeWorkflowProfilePackageManifest,
 } from '../../../../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
-  getPublicationAdmittedOplPackageSpecs,
-} from '../../../../../src/adapters/integration/package-distribution.ts';
+  catalogFixtureAllowlistRoot,
+  catalogFixtureManifestPath,
+  catalogFixturePackageRoot,
+} from '../../../helpers/catalog-fixture.ts';
 
 const publishedDistributionPayload = {
   payload_kind: 'ghcr_oci_opl_package',
@@ -40,166 +40,6 @@ const publishedDistributionPayload = {
   promotion_policy: 'daily_candidate_gates_then_promote_latest_stable',
   install_truth: 'resolved_digest_lock',
 };
-
-function createOwnerPackageFixture(
-  repoName: string,
-  packageId: string,
-  ownerVersion: string,
-  kind: 'standard_agent' | 'capability_package' | 'workflow_profile' = 'standard_agent',
-) {
-  const appOwnedWeixin = repoName === 'one-person-lab-app' && packageId === 'opl-channel-weixin';
-  const pluginRoot = appOwnedWeixin
-    ? 'packages/opl-channel-weixin'
-    : kind === 'standard_agent'
-    || repoName === 'opl-relay'
-    || repoName === 'opl-persona'
-    || repoName === 'opl-fleet-agent'
-    ? `plugins/${repoName}`
-    : '.';
-  const manifestRef = appOwnedWeixin
-    ? `${pluginRoot}/opl-package.json`
-    : kind === 'capability_package'
-      ? pluginRoot === '.'
-        ? 'contracts/opl_capability_package_manifest.json'
-        : `${pluginRoot}/opl-package.json`
-      : kind === 'workflow_profile'
-        ? 'contracts/workflow-policy.json'
-        : 'contracts/opl_agent_package_manifest.json';
-  const ownerManifest = kind === 'workflow_profile'
-    ? { package: { id: packageId, version: ownerVersion, owner: packageId, kind: 'workflow_profile' } }
-    : {
-        surface_kind: kind === 'capability_package'
-          ? 'opl_capability_package_manifest.v2'
-          : 'opl_agent_package_manifest.v1',
-        ...(kind === 'standard_agent' ? { agent_id: packageId } : {}),
-        package_id: packageId,
-        version: ownerVersion,
-        ...(kind === 'capability_package' ? {
-          capability_abi: { id: 'mas-scholar-skills.v1' },
-          content_lock: { digest: `sha256:${'8'.repeat(64)}`, paths: [] },
-        } : {}),
-      };
-  const extraFiles: Record<string, string> = {
-    [manifestRef]: `${JSON.stringify(ownerManifest, null, 2)}\n`,
-    [`${pluginRoot}/.codex-plugin/plugin.json`.replace(/^\.\//, '')]: `${JSON.stringify({
-      name: appOwnedWeixin ? packageId : repoName,
-      version: ownerVersion,
-    }, null, 2)}\n`,
-  };
-  if (kind === 'standard_agent' || repoName === 'opl-fleet-agent') {
-    extraFiles[`${pluginRoot}/plugin.json`] = `${JSON.stringify({
-      $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json',
-      name: repoName,
-      version: ownerVersion,
-    }, null, 2)}\n`;
-  }
-  if (repoName === 'med-autoscience' || repoName === 'med-autogrant') {
-    extraFiles['pyproject.toml'] = `[project]\nname = "${repoName}"\nversion = "${ownerVersion}"\n`;
-  } else if (kind === 'standard_agent') {
-    extraFiles['package.json'] = `${JSON.stringify({ name: repoName, version: ownerVersion }, null, 2)}\n`;
-  }
-  return {
-    ...createGitModuleRemoteFixture(repoName, { extraFiles }),
-    packageId,
-    packageVersion: ownerVersion,
-  };
-}
-
-function createFrozenFrameworkFixture(version: string) {
-  const sourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-frozen-framework-'));
-  const files: Record<string, string> = {
-    'package.json': `${JSON.stringify({
-      name: 'one-person-lab',
-      version,
-      files: [
-        'bin',
-        'dist',
-        'contracts/opl-framework',
-      ],
-      scripts: { build: 'fixture-build', prepare: 'fixture-prepare' },
-    }, null, 2)}\n`,
-    'package-lock.json': `${JSON.stringify({
-      name: 'one-person-lab',
-      version,
-      lockfileVersion: 3,
-      requires: true,
-      packages: { '': { name: 'one-person-lab', version } },
-    }, null, 2)}\n`,
-    'bin/opl': '#!/bin/sh\nexit 0\n',
-    'dist/entrypoints/cli.js': 'export {};\n',
-    'contracts/opl-framework/fixture.json': '{}\n',
-  };
-  for (const [relativePath, content] of Object.entries(files)) {
-    const target = path.join(sourceRoot, relativePath);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, content, 'utf8');
-  }
-  fs.chmodSync(path.join(sourceRoot, 'bin/opl'), 0o755);
-  execFileSync('git', ['init', '--quiet'], { cwd: sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['config', 'user.name', 'OPL Fixture'], { cwd: sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['config', 'user.email', 'fixture@one-person-lab.invalid'], { cwd: sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['add', '--all'], { cwd: sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'Frozen Framework fixture'], {
-    cwd: sourceRoot,
-    encoding: 'utf8',
-  });
-  return {
-    sourceRoot,
-    headSha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim(),
-  };
-}
-
-function addFrameworkPackageProjections(
-  sourceRoot: string,
-  fixtures: Record<string, ReturnType<typeof createOwnerPackageFixture>>,
-) {
-  for (const spec of getPublicationAdmittedOplPackageSpecs()) {
-    const fixture = Object.values(fixtures).find((candidate) => candidate.packageId === spec.package_id);
-    assert.ok(fixture);
-    const sourceCommit = fixture.getHeadSha();
-    assert.match(sourceCommit, /^[0-9a-f]{40}$/);
-    const canonicalManifestPath = path.join(repoRoot, spec.package_manifest_ref);
-    const projectedManifest = parseJsonText(
-      fs.readFileSync(canonicalManifestPath, 'utf8'),
-    ) as Record<string, any>;
-    const canonicalPayloadRef = projectedManifest.codex_surface.plugin_payload_manifest_url;
-    const projectedPayload = parseJsonText(fs.readFileSync(
-      path.join(path.dirname(canonicalManifestPath), canonicalPayloadRef),
-      'utf8',
-    )) as Record<string, any>;
-    const payloadRef = `payloads/${spec.package_id}-${fixture.packageVersion}.json`;
-    const target = path.join(sourceRoot, spec.package_manifest_ref);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, `${JSON.stringify({
-      ...projectedManifest,
-      version: fixture.packageVersion,
-      codex_surface: {
-        ...projectedManifest.codex_surface,
-        carrier_source_commit: sourceCommit,
-        plugin_payload_manifest_url: payloadRef,
-      },
-    }, null, 2)}\n`, 'utf8');
-    const payloadTarget = path.join(path.dirname(target), payloadRef);
-    fs.mkdirSync(path.dirname(payloadTarget), { recursive: true });
-    fs.writeFileSync(payloadTarget, `${JSON.stringify({
-      ...projectedPayload,
-      package_version: fixture.packageVersion,
-      source_commit: sourceCommit,
-      files: projectedPayload.files.map((file: Record<string, unknown>) => ({
-        ...file,
-        source_url: typeof file.source_url === 'string'
-          ? file.source_url.replace(/\/[0-9a-f]{40}\//, `/${sourceCommit}/`)
-          : file.source_url,
-      })),
-    }, null, 2)}\n`, 'utf8');
-  }
-  execFileSync('git', ['add', '--all'], { cwd: sourceRoot, encoding: 'utf8' });
-  execFileSync('git', ['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'Add Package projections'], {
-    cwd: sourceRoot,
-    encoding: 'utf8',
-  });
-  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: sourceRoot, encoding: 'utf8' }).trim();
-}
 
 test('App component resolver canonicalizes a Draft alias without weakening immutable asset locks', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-app-component-'));
@@ -292,7 +132,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     ['mas', 'mag', 'rca', 'oma', 'obf'].map((id) => [
       id,
       parseJsonText(fs.readFileSync(
-        path.join(repoRoot, `contracts/opl-framework/packages/${id}.json`),
+        catalogFixtureManifestPath(id),
         'utf8',
       )) as Record<string, any>,
     ]),
@@ -424,7 +264,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
     const payloadRef = sourceManifest.codex_surface.plugin_payload_manifest_url;
     assert.match(payloadRef, /^payloads\/[a-z0-9.-]+\.json$/);
     const payload = parseJsonText(fs.readFileSync(
-      path.join(repoRoot, 'contracts/opl-framework/packages', payloadRef),
+      path.join(catalogFixturePackageRoot, payloadRef),
       'utf8',
     )) as Record<string, any>;
     assert.equal(payload.package_id, sourceManifest.package_id);
@@ -501,7 +341,7 @@ test('first-party agent package manifests declare Codex carrier and OPL package 
 
 test('static first-party presentation is optional without weakening manifest validation', () => {
   const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mag.json'),
+    catalogFixtureManifestPath('mag'),
     'utf8',
   )) as Record<string, any>;
   const invalidPresentation = {
@@ -544,7 +384,7 @@ test('home shortcut icon_id is preserved when valid and rejected when malformed'
     'utf8',
   )) as Record<string, any>;
   const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+    catalogFixtureManifestPath('mas'),
     'utf8',
   )) as Record<string, any>;
   const withIcon = {
@@ -588,7 +428,7 @@ test('home shortcut icon_id is preserved when valid and rejected when malformed'
 
 test('MAS Scholar Skills provider manifest separates core Skill exports from module contract ids', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/capability-package-manifest.schema.json');
-  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/mas-scholar-skills.json');
+  const manifestPath = catalogFixtureManifestPath('mas-scholar-skills');
   const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
   const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
   assert.doesNotThrow(() => assertJsonSchemaPayload({
@@ -629,7 +469,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
     }, manifestPath),
     /package_role must identify a Framework capability package/,
   );
-  const payloadPath = path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url);
+  const payloadPath = path.join(catalogFixturePackageRoot, manifest.codex_surface.plugin_payload_manifest_url);
   const payload = parseJsonText(fs.readFileSync(payloadPath, 'utf8')) as Record<string, any>;
   const publicationProjectionOrder = manifest.publication_projection_order;
   const publicationSource = manifest.publication_source;
@@ -637,7 +477,6 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
   assert.equal(publicationProjectionOrder, 60);
   assert.equal(publicationSource.module_id, 'scholarskills');
   assert.equal(compatibilityProjection.registry_short_label, 'ScholarSkills');
-  assert.equal(manifest.version, '0.2.32');
   assert.deepEqual(manifest.consumer_policy.supported_required_by, ['mas', 'mag']);
   assert.equal(manifest.consumer_policy.supported_optional_consumer_agent_ids, undefined);
   assert.equal(manifest.content_lock.canonicalization, 'ordered_path_length_file_length_bytes');
@@ -668,7 +507,7 @@ test('MAS Scholar Skills provider manifest separates core Skill exports from mod
 
 test('OPL Flow is a workflow-profile Package without Agent identity', () => {
   const schemaPath = path.join(repoRoot, 'contracts/opl-framework/workflow-profile-package-manifest.schema.json');
-  const manifestPath = path.join(repoRoot, 'contracts/opl-framework/packages/opl-flow.json');
+  const manifestPath = catalogFixtureManifestPath('opl-flow');
   const schema = parseJsonText(fs.readFileSync(schemaPath, 'utf8')) as Record<string, any>;
   const manifest = parseJsonText(fs.readFileSync(manifestPath, 'utf8')) as Record<string, any>;
   assert.doesNotThrow(() => assertJsonSchemaPayload({
@@ -678,7 +517,7 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
   }, manifest));
   const normalized = normalizeWorkflowProfilePackageManifest(manifest, manifestPath);
   const payload = parseJsonText(fs.readFileSync(
-    path.join(path.dirname(manifestPath), manifest.codex_surface.plugin_payload_manifest_url),
+    path.join(catalogFixturePackageRoot, manifest.codex_surface.plugin_payload_manifest_url),
     'utf8',
   )) as Record<string, any>;
   assert.equal(manifest.surface_kind, 'opl_workflow_profile_package_manifest.v1');
@@ -704,7 +543,7 @@ test('OPL Flow is a workflow-profile Package without Agent identity', () => {
   assert.match(payload.source_commit, /^[0-9a-f]{40}$/);
   assert.equal(payload.files.some((file: Record<string, unknown>) => file.path === 'opl-package.json'), true);
   const allowlist = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/package-payload-allowlists/opl-flow.json'),
+    path.join(catalogFixtureAllowlistRoot, 'opl-flow.json'),
     'utf8',
   )) as Record<string, any>;
   assert.deepEqual(
@@ -787,7 +626,7 @@ test('first-party agent package manifest rejects non-canonical identity fields',
 
 test('first-party agent package manifest rejects unknown Codex carrier distributions', () => {
   const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/oma.json'),
+    catalogFixtureManifestPath('oma'),
     'utf8',
   )) as Record<string, any>;
   assert.throws(
@@ -817,7 +656,7 @@ test('first-party Package descriptors do not resurrect Framework-owned lock auth
     false,
   );
 
-  const packageDirectory = path.join(repoRoot, 'contracts/opl-framework/packages');
+  const packageDirectory = path.join(catalogFixturePackageRoot, 'agents');
   const descriptors = fs.readdirSync(packageDirectory)
     .filter((fileName) => fileName.endsWith('.json'))
     .map((fileName) => ({
@@ -834,7 +673,7 @@ test('first-party Package descriptors do not resurrect Framework-owned lock auth
 });
 
 test('current first-party agent projections bind their exact immutable payload identity', () => {
-  const packageDirectory = path.join(repoRoot, 'contracts/opl-framework/packages');
+  const packageDirectory = path.join(catalogFixturePackageRoot, 'agents');
   const currentManifests = fs.readdirSync(packageDirectory)
     .filter((fileName) => fileName.endsWith('.json'))
     .map((fileName) => ({
@@ -848,7 +687,7 @@ test('current first-party agent projections bind their exact immutable payload i
   for (const { manifest } of currentManifests) {
     const payloadRef = `payloads/${manifest.package_id}-${manifest.version}.json`;
     assert.equal(manifest.codex_surface.plugin_payload_manifest_url, payloadRef);
-    const payload = parseJsonText(fs.readFileSync(path.join(packageDirectory, payloadRef), 'utf8')) as Record<string, any>;
+    const payload = parseJsonText(fs.readFileSync(path.join(catalogFixturePackageRoot, payloadRef), 'utf8')) as Record<string, any>;
     assert.equal(payload.package_id, manifest.package_id);
     assert.equal(payload.package_version, manifest.version);
     assert.equal(payload.plugin_id, manifest.codex_surface.plugin_id);
@@ -858,7 +697,7 @@ test('current first-party agent projections bind their exact immutable payload i
 
 test('MAS first-party agent package manifest fails closed for unsafe dependency declarations', () => {
   const manifest = parseJsonText(fs.readFileSync(
-    path.join(repoRoot, 'contracts/opl-framework/packages/mas.json'),
+    catalogFixtureManifestPath('mas'),
     'utf8',
   )) as Record<string, any>;
   assert.deepEqual(normalizeFirstPartyAgentPackageManifest({

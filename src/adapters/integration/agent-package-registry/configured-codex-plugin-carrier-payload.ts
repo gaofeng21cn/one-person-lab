@@ -12,8 +12,9 @@ import { resolveAgentPluginManifest } from '../../../kernel/agent-plugin-manifes
 import { parseJsonText } from '../../../kernel/json-file.ts';
 import { packageContentDigest } from '../../../kernel/package-content-lock.ts';
 import {
+  listAppProfileCompatibilityProjections,
   listCurrentPackageProjections,
-  PACKAGE_PROJECTION_ROOT,
+  resolvePackagesRootForManifest,
 } from '../../../kernel/standard-agent-registry.ts';
 import {
   localReadbackFailure,
@@ -26,16 +27,12 @@ import type { AgentPackageConfiguredCodexPluginCarrierDescriptor } from './types
 import { assertPackageDownloadAllowed, packageAccessSubject } from './package-access.ts';
 import { acquireHostedPackageSource } from './configured-codex-plugin-carrier-source.ts';
 
-function projectedManifestPath(sourceRef: string) {
-  return path.isAbsolute(sourceRef)
-    ? sourceRef
-    : path.join(PACKAGE_PROJECTION_ROOT, path.basename(sourceRef));
-}
 export function packagePayloadProjection(packageId: string, packageDirectory?: string) {
-  const projection = listCurrentPackageProjections(packageDirectory)
+  const compatibility = packageDirectory === undefined ? listAppProfileCompatibilityProjections() : [];
+  const projection = [...compatibility, ...listCurrentPackageProjections(packageDirectory)]
     .find((candidate) => candidate.payload.package_id === packageId);
   if (!projection) return null;
-  const manifestPath = projectedManifestPath(projection.source_ref);
+  const manifestPath = projection.manifest_path;
   const codexSurface = isRecord(projection.payload.codex_surface)
     ? projection.payload.codex_surface
     : null;
@@ -50,9 +47,10 @@ export function packagePayloadProjection(packageId: string, packageDirectory?: s
     ? contentLock.paths.filter((candidate): candidate is string => typeof candidate === 'string')
     : null;
   if (!payloadRef || !pluginId || !sourceCommit || !/^[0-9a-f]{40}$/.test(sourceCommit)) return null;
-  const payloadPath = path.resolve(path.dirname(manifestPath), payloadRef);
-  if (payloadPath !== path.dirname(manifestPath)
-    && !payloadPath.startsWith(`${path.dirname(manifestPath)}${path.sep}`)) return null;
+  const packagesRoot = resolvePackagesRootForManifest(manifestPath);
+  const payloadPath = path.resolve(packagesRoot, payloadRef);
+  if (payloadPath !== packagesRoot
+    && !payloadPath.startsWith(`${packagesRoot}${path.sep}`)) return null;
   return {
     payloadPath,
     ownerManifest: projection.payload,

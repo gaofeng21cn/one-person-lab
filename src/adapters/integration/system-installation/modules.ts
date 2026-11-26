@@ -51,7 +51,7 @@ import {
   readPackagedModuleGitSnapshot,
   readPackagedModuleMarker,
 } from './module-packaged.ts';
-import { DOMAIN_MODULE_SPECS } from './module-specs.ts';
+import { buildDomainModuleSpecs } from './module-specs.ts';
 
 const MODULE_WORKFLOW_DEPS = {
   readPackagedModuleGitSnapshot,
@@ -68,12 +68,8 @@ function runManagedWorkflow(spec: DomainModuleRuntimeSpec, checkoutPath: string)
   return runManagedModuleWorkflow(spec, checkoutPath, MODULE_WORKFLOW_DEPS);
 }
 
-export const DEFAULT_OPL_MODULE_IDS: readonly OplModuleId[] = DOMAIN_MODULE_SPECS
-  .filter((entry) => entry.default_install)
-  .map((entry) => entry.module_id);
-
 export function listDefaultOplDomainModuleSpecs(): DomainModuleSpec[] {
-  return DOMAIN_MODULE_SPECS
+  return buildDomainModuleSpecs()
     .filter((entry) => entry.default_install)
     .map((entry) => ({
       module_id: entry.module_id,
@@ -564,14 +560,15 @@ function findModuleSpecOrThrow(moduleId: string): DomainModuleRuntimeSpec {
   const canonical = (
     resolveStandardAgent(moduleId)?.module_id.toLowerCase() as OplModuleId | undefined
   ) ?? LEGACY_RUNTIME_MODULE_ALIASES.get(normalized) ?? normalized;
-  const spec = DOMAIN_MODULE_SPECS.find((entry) => entry.module_id === canonical);
+  const modules = buildDomainModuleSpecs();
+  const spec = modules.find((entry) => entry.module_id === canonical);
   if (!spec) {
     throw new FrameworkContractError(
       'cli_usage_error',
       'Unknown OPL module id.',
       {
         module_id: moduleId,
-        available_module_ids: DOMAIN_MODULE_SPECS.map((entry) => entry.module_id),
+        available_module_ids: modules.map((entry) => entry.module_id),
       },
       2,
     );
@@ -593,7 +590,7 @@ export function inspectOplModule(
 
 export function buildOplModules(input: { profile?: ModuleInspectionProfile } = {}) {
   const profile = input.profile ?? 'full';
-  const modules = DOMAIN_MODULE_SPECS.map((spec) => inspectModule(spec, profile));
+  const modules = buildDomainModuleSpecs().map((spec) => inspectModule(spec, profile));
   const defaultModules = modules.filter((entry) => entry.default_install);
   return {
     version: 'g2',

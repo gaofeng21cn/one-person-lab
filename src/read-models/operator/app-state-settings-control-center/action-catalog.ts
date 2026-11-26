@@ -9,6 +9,7 @@ import type { SettingsAction } from './types.ts';
 
 const SOURCE_ACTION_TASK_KINDS: Record<string, SettingsAction['task_kind']> = {
   source_list: 'read', source_check: 'check', source_configure: 'configure', source_disconnect: 'configure',
+  source_add: 'configure', source_remove: 'configure',
   source_setup: 'configure', source_refresh: 'refresh', source_install: 'install', source_update: 'update', source_uninstall: 'uninstall',
 };
 

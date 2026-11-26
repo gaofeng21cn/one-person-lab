@@ -5,6 +5,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
+import { catalogFixtureAllowlistRoot, catalogFixtureManifestPath, catalogFixturePackageRoot } from './helpers/catalog-fixture.ts';
+
 import { resolvePackageHostIntegration } from '../../src/authority/packages/package-host-integration.ts';
 import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import { FrameworkContractError } from '../../src/kernel/contract-validation.ts';
@@ -13,8 +15,8 @@ import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { runAppContribution } from '../../src/read-models/operator/app-contribution-broker.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
-const manifestRef = 'contracts/opl-framework/packages/opl-fleet-agent.json';
-const allowlistRef = 'contracts/opl-framework/package-payload-allowlists/opl-fleet-agent.json';
+const manifestRef = catalogFixtureManifestPath('opl-fleet-agent');
+const allowlistRef = path.join(catalogFixtureAllowlistRoot, 'opl-fleet-agent.json');
 const appContributionsSchemaRefs = [
   'contracts/opl-framework/app-contributions.schema.json',
   'contracts/opl-framework/capability-package-manifest.schema.json',
@@ -23,7 +25,7 @@ const appContributionsSchemaRefs = [
 ] as const;
 
 function readJson(relativePath: string) {
-  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
+  return parseJsonText(fs.readFileSync(path.resolve(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
 function assertSchema(relativePath: string, schemaId: string, payload: unknown) {
@@ -55,14 +57,13 @@ function validateAppContributionsSchema(relativePath: string, payload: unknown) 
 }
 
 function normalizedManifest() {
-  const manifestPath = path.join(repoRoot, manifestRef);
-  return normalizePackageManifest(readJson(manifestRef), pathToFileURL(manifestPath).href);
+  return normalizePackageManifest(readJson(manifestRef), pathToFileURL(manifestRef).href);
 }
 
 test('Fleet Agent owner projection is a schema-valid capability Package with one immutable payload', () => {
   const manifest = readJson(manifestRef);
   const allowlist = readJson(allowlistRef);
-  const payloadRef = `contracts/opl-framework/packages/${manifest.codex_surface.plugin_payload_manifest_url}`;
+  const payloadRef = path.join(catalogFixturePackageRoot, manifest.codex_surface.plugin_payload_manifest_url);
   const payload = readJson(payloadRef);
 
   assertSchema(

@@ -4,6 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
 
+import { catalogFixtureAllowlistRoot, catalogFixtureManifestPath, catalogFixturePackageRoot } from './helpers/catalog-fixture.ts';
+
 import {
   readCapabilityPackageHostContract,
   resolvePackageHostIntegration,
@@ -19,11 +21,11 @@ import { validateJsonSchemaPayload } from '../../src/kernel/schema-registry.ts';
 import { buildAppUiContributionsProjection } from '../../src/read-models/operator/app-state-ui-contributions.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
-const manifestRef = 'contracts/opl-framework/packages/opl-link-desktop-connector.json';
-const allowlistRef = 'contracts/opl-framework/package-payload-allowlists/opl-link-desktop-connector.json';
+const manifestRef = catalogFixtureManifestPath('opl-link-desktop-connector');
+const allowlistRef = path.join(catalogFixtureAllowlistRoot, 'opl-link-desktop-connector.json');
 
 function readJson(relativePath: string): Record<string, any> {
-  return parseJsonText(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')) as Record<string, any>;
+  return parseJsonText(fs.readFileSync(path.resolve(repoRoot, relativePath), 'utf8')) as Record<string, any>;
 }
 
 function assertSchema(relativePath: string, payload: unknown) {
@@ -39,7 +41,7 @@ function assertSchema(relativePath: string, payload: unknown) {
 test('retired OPL Link metadata preserves one exact private owner cohort', () => {
   const manifest = readJson(manifestRef);
   const allowlist = readJson(allowlistRef);
-  const payloadRef = path.join(path.dirname(manifestRef), manifest.codex_surface.plugin_payload_manifest_url);
+  const payloadRef = path.join(catalogFixturePackageRoot, manifest.codex_surface.plugin_payload_manifest_url);
   const payload = readJson(payloadRef);
   const ownerCommit = manifest.codex_surface.carrier_source_commit;
   const contentLockDigest = manifest.content_lock.digest;
@@ -91,8 +93,7 @@ test('retired OPL Link metadata preserves one exact private owner cohort', () =>
 test('retired metadata preserves installed remote companion integration without a publication target', () => {
   const manifest = readJson(manifestRef);
   const hostManifest = manifest as PackageHostManifest;
-  const manifestPath = path.join(repoRoot, manifestRef);
-  const normalized = normalizePackageManifest(hostManifest, pathToFileURL(manifestPath).href);
+  const normalized = normalizePackageManifest(hostManifest, pathToFileURL(manifestRef).href);
   const specs = getOplPackageSpecs();
   const spec = specs.find((entry) => entry.package_id === manifest.package_id);
   const publicationSpec = getPublicationAdmittedOplPackageSpecs()

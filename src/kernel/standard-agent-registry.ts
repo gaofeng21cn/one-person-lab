@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readAgentPackageReadinessPort } from './agent-package-readiness-port.ts';
+import {
+  listActiveSyncedCatalogPackageRoots,
+  OFFICIAL_OPL_CATALOG_ID as OFFICIAL_PACKAGE_CATALOG_SOURCE_ID,
+} from './software-catalog-cache-paths.ts';
 
 export type StandardAgentSeriesMembership = 'standard_domain_agent' | 'capability_package';
 
@@ -35,11 +39,14 @@ export type StandardAgentRegistryEntry =
 
 export type CurrentPackageProjection = {
   source_ref: string;
+  source_id: string;
+  manifest_path: string;
   payload: Record<string, unknown>;
 };
 
+export { OFFICIAL_PACKAGE_CATALOG_SOURCE_ID };
 export const STANDARD_AGENT_REGISTRY_REF =
-  'contracts/opl-framework/packages/*.json#/standard_agent_descriptor_projection';
+  'catalog://public-registry:opl/packages/agents/*.json#/standard_agent_descriptor_projection';
 export const STANDARD_AGENT_SERIES_MEMBERSHIP = 'standard_domain_agent' as const;
 export const FRAMEWORK_CAPABILITY_PACKAGE_MEMBERSHIP = 'capability_package' as const;
 
@@ -51,10 +58,128 @@ export const PACKAGE_PROJECTION_ROOT = path.join(
   'packages',
 );
 export const PACKAGE_PROJECTION_ROOT_ENV = 'OPL_PACKAGE_PROJECTION_DIR';
+export const PACKAGE_CATALOG_ROOT_ENV = 'OPL_CATALOG_ROOT';
+export const PACKAGE_CATALOG_SEED_DIR_ENV = 'OPL_CATALOG_SEED_DIR';
 
-export function resolvePackageProjectionRoot() {
-  const configured = process.env[PACKAGE_PROJECTION_ROOT_ENV]?.trim();
-  return configured ? path.resolve(configured) : PACKAGE_PROJECTION_ROOT;
+export const PACKAGE_CATEGORY_SUBDIRS = [
+  'agents',
+  'applications',
+  'extensions',
+  'channels',
+  'dependencies',
+] as const;
+
+const PACKAGE_CATEGORY_SUBDIR_SET = new Set<string>(PACKAGE_CATEGORY_SUBDIRS);
+const PACKAGE_PROJECTION_PREFIX = 'contracts/opl-framework/packages/';
+const APP_PROFILE_COMPATIBILITY_PREFIX = 'contracts/opl-framework/app-profile-compatibility/';
+export const APP_PROFILE_COMPATIBILITY_SOURCE_ID = 'app-profile-compatibility';
+
+export function isPackageCategorySubdir(name: string): boolean {
+  return PACKAGE_CATEGORY_SUBDIR_SET.has(name);
+}
+
+export function resolvePackagesRootForManifest(manifestPath: string): string {
+  const manifestDir = path.dirname(manifestPath);
+  return PACKAGE_CATEGORY_SUBDIR_SET.has(path.basename(manifestDir))
+    ? path.dirname(manifestDir)
+    : manifestDir;
+}
+
+type PackageProjectionRoot = { sourceId: string; packageDir: string };
+
+/** Frozen App profiles can still request the legacy local component until native cutover. */
+export function listAppProfileCompatibilityProjections() {
+  const packageDir = path.join(frameworkRoot, APP_PROFILE_COMPATIBILITY_PREFIX);
+  return [...listProjectionsInSingleRoot({ sourceId: APP_PROFILE_COMPATIBILITY_SOURCE_ID, packageDir }, true).values()];
+}
+
+export function resolveOfficialPackageCatalogSeedDir(env: NodeJS.ProcessEnv = process.env) {
+  const seedRoot = env[PACKAGE_CATALOG_SEED_DIR_ENV]?.trim();
+  return [
+    ...(seedRoot ? [path.resolve(seedRoot)] : []),
+    path.join(frameworkRoot, 'catalog-seed'),
+    path.join(frameworkRoot, 'dist', 'catalog-seed'),
+  ].find((candidate) =>
+    fs.statSync(path.join(candidate, 'packages'), { throwIfNoEntry: false })?.isDirectory()) ?? null;
+}
+
+function packageProjectionRoots(env: NodeJS.ProcessEnv = process.env): PackageProjectionRoot[] {
+  const configured = env[PACKAGE_PROJECTION_ROOT_ENV]?.trim();
+  if (configured) {
+    return [{ sourceId: OFFICIAL_PACKAGE_CATALOG_SOURCE_ID, packageDir: path.resolve(configured) }];
+  }
+
+  const synced = listActiveSyncedCatalogPackageRoots(env);
+  const official = synced.find(({ sourceId }) => sourceId === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID);
+  const external = synced.filter(({ sourceId }) => sourceId !== OFFICIAL_PACKAGE_CATALOG_SOURCE_ID);
+  if (official) return [official, ...external];
+
+  const catalogRoot = env[PACKAGE_CATALOG_ROOT_ENV]?.trim();
+  const seedRoot = resolveOfficialPackageCatalogSeedDir(env);
+  const candidates = [
+    ...(catalogRoot ? [path.resolve(catalogRoot, 'packages')] : []),
+    ...(seedRoot ? [path.join(seedRoot, 'packages')] : []),
+    PACKAGE_PROJECTION_ROOT,
+  ];
+  const packageDir = candidates.find((candidate) =>
+    fs.statSync(candidate, { throwIfNoEntry: false })?.isDirectory());
+  return packageDir ? [{ sourceId: OFFICIAL_PACKAGE_CATALOG_SOURCE_ID, packageDir }, ...external] : external;
+}
+
+function findManifestInPackageRoot(
+  relative: string,
+  packageRoot: string,
+): { matched: boolean; path: string } {
+  const direct = path.resolve(packageRoot, relative);
+  if (fs.existsSync(direct) || relative.includes('/')) {
+    return { matched: fs.existsSync(direct), path: direct };
+  }
+  const basename = path.basename(relative);
+  const matches = PACKAGE_CATEGORY_SUBDIRS
+    .map((subdir) => path.join(packageRoot, subdir, basename))
+    .filter((candidate) => fs.existsSync(candidate));
+  if (matches.length > 1) {
+    throw new Error(`Package descriptor exists in multiple category subdirectories: ${basename}`);
+  }
+  if (matches.length === 1) {
+    return { matched: true, path: matches[0]! };
+  }
+  return { matched: false, path: direct };
+}
+
+export function resolveProjectedManifestPath(
+  sourceRef: string,
+  packageRoot?: string,
+): string {
+  if (path.isAbsolute(sourceRef)) return sourceRef;
+  if (sourceRef.startsWith('catalog://')) {
+    const match = /^catalog:\/\/(public-registry:opl|catalog:[a-z0-9][a-z0-9._-]*)\/packages\/([a-z]+\/[a-z0-9][a-z0-9.-]*\.json)$/.exec(sourceRef);
+    if (!match || !isPackageCategorySubdir(match[2]!.split('/')[0]!)) {
+      throw new Error(`Invalid catalog Package manifest reference: ${sourceRef}`);
+    }
+    const [, sourceId, relative] = match;
+    const sourceRoot = packageRoot && sourceId === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID
+      ? packageRoot
+      : packageProjectionRoots().find((root) => root.sourceId === sourceId)?.packageDir;
+    if (!sourceRoot) throw new Error(`Software source is not available for manifest reference: ${sourceRef}`);
+    const resolved = findManifestInPackageRoot(relative!, sourceRoot);
+    // An installed older catalog layout may still have the same official ID
+    // in its original location at the root.
+    return resolved.matched ? resolved.path : findManifestInPackageRoot(path.posix.basename(relative!), sourceRoot).path;
+  }
+  const normalized = sourceRef.replace(/\\/g, '/').replace(/^\/+/, '');
+  const relative = normalized.startsWith(PACKAGE_PROJECTION_PREFIX)
+    ? normalized.slice(PACKAGE_PROJECTION_PREFIX.length)
+    : normalized;
+  if (packageRoot !== undefined) {
+    return findManifestInPackageRoot(relative, packageRoot).path;
+  }
+  const roots = packageProjectionRoots().filter(({ sourceId }) => sourceId === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID);
+  for (const { packageDir } of roots) {
+    const resolved = findManifestInPackageRoot(relative, packageDir);
+    if (resolved.matched) return resolved.path;
+  }
+  return findManifestInPackageRoot(relative, roots[0]?.packageDir ?? PACKAGE_PROJECTION_ROOT).path;
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -133,32 +258,67 @@ function projectionOrder(payload: Record<string, unknown>) {
   return typeof value === 'number' && Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
 
-export function listCurrentPackageProjections(
-  packageDirectory = resolvePackageProjectionRoot(),
-): CurrentPackageProjection[] {
-  if (!fs.existsSync(packageDirectory)) return [];
-  return fs.readdirSync(packageDirectory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-    .flatMap((entry) => {
-      const absolutePath = path.join(packageDirectory, entry.name);
-      const parsed = record(JSON.parse(fs.readFileSync(absolutePath, 'utf8')));
-      const packageId = stringValue(parsed?.package_id);
-      if (!parsed || !packageId || entry.name !== `${packageId}.json`) return [];
-      return [{
-        source_ref: packageDirectory === PACKAGE_PROJECTION_ROOT
-          ? path.posix.join('contracts/opl-framework/packages', entry.name)
-          : absolutePath,
-        payload: parsed,
-      }];
-    })
-    .sort((left, right) => {
-      const orderDelta = projectionOrder(left.payload) - projectionOrder(right.payload);
-      return orderDelta || left.source_ref.localeCompare(right.source_ref, 'en');
-    });
+function comparePackageProjections(left: CurrentPackageProjection, right: CurrentPackageProjection) {
+  const orderDelta = projectionOrder(left.payload) - projectionOrder(right.payload);
+  return orderDelta || left.source_ref.localeCompare(right.source_ref, 'en');
 }
 
-export function listProjectedOplPackageIds(packageDirectory = resolvePackageProjectionRoot()) {
-  return listCurrentPackageProjections(packageDirectory)
+function listProjectionsInSingleRoot(
+  { packageDir: packageDirectory, sourceId }: PackageProjectionRoot,
+  explicit: boolean,
+): Map<string, CurrentPackageProjection> {
+  const byId = new Map<string, CurrentPackageProjection>();
+  if (!fs.existsSync(packageDirectory)) return byId;
+  const searchDirs: Array<{ subdir: string | null; dir: string }> = [
+    ...PACKAGE_CATEGORY_SUBDIRS.map((subdir) => ({ subdir, dir: path.join(packageDirectory, subdir) })),
+    { subdir: null, dir: packageDirectory },
+  ];
+  const seenRefs = new Map<string, string>();
+  for (const { subdir, dir } of searchDirs) {
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+      const absolutePath = path.join(dir, entry.name);
+      const parsed = record(JSON.parse(fs.readFileSync(absolutePath, 'utf8')));
+      const packageId = stringValue(parsed?.package_id);
+      if (!parsed || !packageId || entry.name !== `${packageId}.json`) continue;
+      const sourceRef = explicit
+        ? absolutePath
+        : packageDirectory === PACKAGE_PROJECTION_ROOT
+          ? path.posix.join('contracts/opl-framework/packages', subdir ?? '', entry.name)
+          : subdir ? `catalog://${sourceId}/packages/${subdir}/${entry.name}` : absolutePath;
+      const previous = seenRefs.get(packageId);
+      if (previous) {
+        throw new Error(`Duplicate package projection for ${packageId}: ${previous} and ${sourceRef}`);
+      }
+      seenRefs.set(packageId, sourceRef);
+      byId.set(packageId, { source_ref: sourceRef, source_id: sourceId, manifest_path: absolutePath, payload: parsed });
+    }
+  }
+  return byId;
+}
+
+export function listCurrentPackageProjections(
+  packageDirectory?: string,
+  options: { officialOnly?: boolean } = {},
+): CurrentPackageProjection[] {
+  const roots = packageDirectory !== undefined
+    ? [{ packageDir: path.resolve(packageDirectory), sourceId: OFFICIAL_PACKAGE_CATALOG_SOURCE_ID }]
+    : packageProjectionRoots().filter(({ sourceId }) => !options.officialOnly || sourceId === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID);
+  const merged = new Map<string, CurrentPackageProjection>();
+  for (const root of roots) {
+    for (const [packageId, projection] of listProjectionsInSingleRoot(root, packageDirectory !== undefined)) {
+      if (!merged.has(packageId)) merged.set(packageId, projection);
+    }
+  }
+  return [...merged.values()].sort(comparePackageProjections);
+}
+
+export function listProjectedOplPackageIds(packageDirectory?: string) {
+  const projections = packageDirectory === undefined
+    ? syncOfficialPackageRegistry().projections
+    : listCurrentPackageProjections(packageDirectory, { officialOnly: true });
+  return projections
     .map(({ payload }) => stringValue(payload.package_id))
     .filter((packageId): packageId is string => packageId !== null);
 }
@@ -397,9 +557,12 @@ function assertRegistryNamespaceUnique(
 }
 
 export function loadStandardAgentRegistry(
-  packageDirectory = resolvePackageProjectionRoot(),
+  packageDirectory?: string,
 ): StandardAgentRegistryEntry[] {
-  const projections = listCurrentPackageProjections(packageDirectory);
+  return standardAgentRegistryFromProjections(listCurrentPackageProjections(packageDirectory, { officialOnly: true }));
+}
+
+function standardAgentRegistryFromProjections(projections: CurrentPackageProjection[]) {
   const standardAgents = projections
     .map(standardAgentEntry)
     .filter((entry): entry is StandardDomainAgentRegistryEntry => entry !== null);
@@ -411,8 +574,68 @@ export function loadStandardAgentRegistry(
   return registry;
 }
 
-export const STANDARD_AGENT_REGISTRY: readonly StandardAgentRegistryEntry[] =
-  loadStandardAgentRegistry();
+function projectionRootsFingerprint(roots: readonly string[]): string {
+  const parts: string[] = [];
+  for (const root of roots) {
+    parts.push(`root:${root}`);
+    if (!fs.existsSync(root)) continue;
+    for (const subdir of ['', ...PACKAGE_CATEGORY_SUBDIRS]) {
+      const dir = subdir ? path.join(root, subdir) : root;
+      if (!fs.existsSync(dir)) continue;
+      const files = fs.readdirSync(dir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .map((entry) => entry.name)
+        .sort();
+      for (const fileName of files) {
+        const stat = fs.statSync(path.join(dir, fileName));
+        parts.push(`${subdir}/${fileName}:${stat.mtimeMs}:${stat.size}`);
+      }
+    }
+  }
+  return parts.join('|');
+}
+
+const registryBacking: StandardAgentRegistryEntry[] = [];
+let officialProjections: CurrentPackageProjection[] = [];
+let cachedRegistryFingerprint: string | null = null;
+
+function syncOfficialPackageRegistry() {
+  const roots = packageProjectionRoots().filter(({ sourceId }) => sourceId === OFFICIAL_PACKAGE_CATALOG_SOURCE_ID);
+  const fingerprint = projectionRootsFingerprint(roots.map(({ packageDir }) => packageDir));
+  if (fingerprint !== cachedRegistryFingerprint) {
+    const projections = roots.flatMap((root) => [...listProjectionsInSingleRoot(root, false).values()])
+      .sort(comparePackageProjections);
+    const next = standardAgentRegistryFromProjections(projections);
+    registryBacking.length = 0;
+    registryBacking.push(...next);
+    officialProjections = projections;
+    cachedRegistryFingerprint = fingerprint;
+  }
+  return { registry: registryBacking, projections: officialProjections };
+}
+
+export const STANDARD_AGENT_REGISTRY: readonly StandardAgentRegistryEntry[] = new Proxy(registryBacking, {
+  get(target, prop, receiver) {
+    syncOfficialPackageRegistry();
+    return Reflect.get(target, prop, receiver);
+  },
+  has(target, prop) {
+    syncOfficialPackageRegistry();
+    return Reflect.has(target, prop);
+  },
+  ownKeys(target) {
+    syncOfficialPackageRegistry();
+    return Reflect.ownKeys(target);
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    syncOfficialPackageRegistry();
+    return Reflect.getOwnPropertyDescriptor(target, prop);
+  },
+  getPrototypeOf(target) {
+    syncOfficialPackageRegistry();
+    return Reflect.getPrototypeOf(target);
+  },
+});
 
 let discoveringInstalledAgents = false;
 
@@ -433,7 +656,7 @@ export function listStandardAgentRegistry(): StandardAgentRegistryEntry[] {
     discoveringInstalledAgents = false;
   }
   const registry = [...entries.values()];
-  assertRegistryNamespaceUnique(listCurrentPackageProjections(), registry);
+  assertRegistryNamespaceUnique(syncOfficialPackageRegistry().projections, registry);
   return registry;
 }
 

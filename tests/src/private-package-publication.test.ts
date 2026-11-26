@@ -5,7 +5,8 @@ import path from 'node:path';
 import test from 'node:test';
 import type { spawnSync } from 'node:child_process';
 import { verifyPrivatePackagePublication } from '../../src/adapters/integration/agent-package-registry/private-package-publication.ts';
-import { PACKAGE_PROJECTION_ROOT } from '../../src/kernel/standard-agent-registry.ts';
+
+const trustedKeyRoot = path.resolve(import.meta.dirname, '../../contracts/opl-framework/keys');
 
 const subject = `ghcr.io/example/one-person-lab-private-packages/private-agent@sha256:${'a'.repeat(64)}`;
 const base = {
@@ -21,7 +22,7 @@ const firstParty = {
 };
 
 test('first-party private publication uses the Framework trust root independently of projection overrides', () => {
-  const trusted = path.resolve(PACKAGE_PROJECTION_ROOT, '../keys/private-package-signing.pub');
+  const trusted = path.join(trustedKeyRoot, 'private-package-signing.pub');
   const previous = process.env.OPL_PACKAGE_PROJECTION_DIR;
   process.env.OPL_PACKAGE_PROJECTION_DIR = '/untrusted/overridden/packages';
   try {
@@ -129,7 +130,7 @@ test('a Package-specific trust root replaces the shared root only for its bound 
     subject: firstParty.subject.replace('/private-agent@', `/${packageId}@`),
     accessPolicyRef: firstParty.accessPolicyRef.replace('/private-agent', `/${packageId}`) };
   const run = ((_binary: string, args: string[]) => {
-    const trusted = path.resolve(PACKAGE_PROJECTION_ROOT, `../keys/private-packages/${packageId}.pub`);
+    const trusted = path.join(trustedKeyRoot, 'private-packages', `${packageId}.pub`);
     assert.equal(args[args.indexOf('--public-key') + 1], trusted);
     assert.match(fs.readFileSync(trusted, 'utf8'), /^-----BEGIN PUBLIC KEY-----/);
     return { status: 0, stdout: JSON.stringify({ status: 'verified', subject: scoped.subject }) };

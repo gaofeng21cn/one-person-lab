@@ -291,7 +291,7 @@ export function repoNameForModuleId(moduleId: string): string | null {
   const spec = buildDomainModuleSpecs().find((entry) => entry.module_id === normalized);
   if (spec?.repo_name) return spec.repo_name;
   const agent = resolveStandardAgent(normalized);
-  const matched = listCurrentPackageProjections().find(({ payload }) => {
+  const matched = listCurrentPackageProjections(undefined, { officialOnly: true }).find(({ payload }) => {
     const runtimeCarrier = payload.runtime_source_carrier;
     const carrierModuleId = runtimeCarrier && typeof runtimeCarrier === 'object' && !Array.isArray(runtimeCarrier)
       ? (runtimeCarrier as Record<string, unknown>).module_id

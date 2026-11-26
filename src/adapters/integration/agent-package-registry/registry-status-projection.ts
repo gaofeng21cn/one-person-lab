@@ -37,6 +37,7 @@ import { packageInstallSource, packageInstallSourceAvailable } from './package-i
 import { packageArtworkUrl } from './package-artwork.ts';
 import { miniAppPresentation } from './miniapp-presentation.ts';
 import { packageInstallationProjection } from './package-installation-projection.ts';
+import { OFFICIAL_OPL_CATALOG_ID, readOfficialCatalogPublicSummaries, type CatalogPublicSummary } from '../software-catalog-source.ts';
 
 export type OplAgentPackageStatusInput = {
   packageId?: string | null;
@@ -48,6 +49,7 @@ export type PackageSnapshot = {
   installed: Map<string, InstalledPackageDescriptor>;
   access: Map<string, AgentPackageAccessDecision>;
   currentOwner?: Map<string, InstalledPackageDescriptor>;
+  publicSummaries?: Map<string, CatalogPublicSummary>;
 };
 
 export function packageSnapshot(input: {
@@ -86,6 +88,7 @@ export function packageSnapshot(input: {
     installed,
     access,
     currentOwner: discoverCurrentOwnerPackageDescriptors(),
+    publicSummaries: input.includeAvailable ? readOfficialCatalogPublicSummaries(env) : undefined,
   };
 }
 
@@ -472,10 +475,13 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
     package_role: manifest.package_role,
     management_scope: manifest.management_scope,
     deployment_target: manifest.deployment_target,
-    catalog_scope: parentComponent ? 'host_component' : target.catalog_scope ?? 'software',
+    catalog_scope: manifest.presentation?.software_type === 'dependency' || parentComponent
+      ? 'host_component'
+      : target.catalog_scope ?? 'software',
     ...packageCatalogProvenance(currentOwner?.catalog_origin === 'opl'
       ? { ...descriptor, catalog_origin: currentOwner.catalog_origin, origin_basis: currentOwner.origin_basis }
       : descriptor),
+    source_id: target.catalog_source_id ?? null,
     software_type: currentOwner?.manifest.presentation?.software_type
       ?? manifest.presentation?.software_type
       ?? (manifest.package_role === 'standard_agent' ? 'agent' : 'unknown'),
@@ -551,6 +557,63 @@ function directoryEntry(descriptor: InstalledPackageDescriptor, detail: 'fast' |
   };
 }
 
+function lockedCatalogEntry(descriptor: InstalledPackageDescriptor, access: AgentPackageAccessDecision, summary: CatalogPublicSummary) {
+  const manifest = descriptor.manifest;
+  return {
+    package_id: manifest.package_id,
+    display_name: summary.display_name,
+    display_name_i18n: summary.display_name_i18n ?? null,
+    description: presentationText(summary.description_i18n, null),
+    description_i18n: summary.description_i18n ?? null,
+    software_type: manifest.presentation?.software_type ?? 'unknown',
+    package_role: manifest.package_role,
+    catalog_scope: 'software' as const,
+    catalog_origin: 'opl' as const,
+    origin_basis: 'owner_projection' as const,
+    catalog_source: { manager: 'opl_packages', marketplace_id: OFFICIAL_OPL_CATALOG_ID, delivery: 'marketplace' as const },
+    source_id: OFFICIAL_OPL_CATALOG_ID,
+    installed: false,
+    activated: false,
+    codex_visible: false,
+    package_access: {
+      visibility: 'authorized_only' as const,
+      status: access.status,
+      provider_id: access.provider_id,
+      source_id: access.source_id,
+      source_ref: null,
+      access_policy_ref: null,
+      credential_handle: null,
+      verified_at: null,
+      expires_at: null,
+      security_revision: null,
+      reason: access.reason,
+      discover_allowed: false,
+      download_allowed: false,
+    },
+    installability: { status: 'blocked' as const, installable: false, reason: access.reason },
+    installations: [] as ReturnType<typeof directoryEntry>['installations'],
+    configured_carrier: null,
+    installed_carrier_readback: null,
+    app_contributions: null,
+    installed_version: null,
+    selected_version: null,
+    recommended_action: null,
+    readiness: {
+      status: 'not_installed' as const,
+      operational_ready: false,
+      launch_allowed: false,
+      verification_deferred: false,
+      reason: access.reason,
+      detail_surface: null,
+      status_read_error: null,
+    },
+    available_actions: [],
+    home_shortcuts: [],
+    home_shortcut_ids: [],
+    authority_boundary: refsOnlyAuthorityBoundary(),
+  };
+}
+
 export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full') {
   const entries = [...snapshot.descriptors.values()]
     .filter((descriptor) => !isProjectLocalCapabilityPackage(descriptor.manifest))
@@ -558,8 +621,19 @@ export function directoryFrom(snapshot: PackageSnapshot, detail: 'fast' | 'full'
     .filter((descriptor) => descriptor.readiness.installed
       || (descriptor.manifest.publication_channel_admission !== 'development_only'
         && descriptor.manifest.publication_channel_admission !== 'retired'))
-    .map((entry) => directoryEntry(entry, detail, snapshot.access.get(entry.manifest.package_id), snapshot.currentOwner?.get(entry.manifest.package_id)))
-    .filter((entry) => entry.installed || entry.package_access.discover_allowed)
+    .flatMap((descriptor): Array<ReturnType<typeof directoryEntry> | ReturnType<typeof lockedCatalogEntry>> => {
+      const id = descriptor.manifest.package_id;
+      const owner = snapshot.currentOwner?.get(id);
+      const access = snapshot.access.get(id) ?? resolvePackageAccessDecision(descriptor.manifest, process.env, {
+        verification: detail === 'fast' ? 'cached' : 'live',
+      });
+      const installed = descriptor.readiness.installed && installedDescriptorMatchesConfiguredCarrier(descriptor);
+      if (installed || access.discover_allowed) return [directoryEntry(descriptor, detail, access, owner)];
+      const summary = snapshot.publicSummaries?.get(id);
+      return summary && owner?.catalog_source_id === OFFICIAL_OPL_CATALOG_ID && owner.catalog_scope === 'software'
+        && owner.manifest.source_repo === summary.owner_source_repo
+        ? [lockedCatalogEntry(owner, access, summary)] : [];
+    })
     .sort((left, right) => left.display_name.localeCompare(right.display_name, 'en'));
   return {
     surface_kind: 'opl_agent_package_directory.v1' as const,

@@ -94,7 +94,7 @@ function projectionString(value: unknown) {
 }
 
 export function buildDomainModuleSpecs(packageDirectory?: string): DomainModuleRuntimeSpec[] {
-  const projections = listCurrentPackageProjections(packageDirectory);
+  const projections = listCurrentPackageProjections(packageDirectory, { officialOnly: true });
   const packageProjections = new Map(
     projections.map(({ payload }) => [projectionString(payload.package_id), payload]),
   );

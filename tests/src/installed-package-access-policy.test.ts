@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import path from 'node:path';
 import test from 'node:test';
 import { pathToFileURL } from 'node:url';
+import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
 
 import { normalizePackageManifest } from '../../src/adapters/integration/agent-package-registry/manifest-normalizers.ts';
 import {
@@ -15,7 +15,7 @@ import { packageAccessSubject, resolvePackageAccessDecision } from '../../src/ad
 const publicationRef = 'ghcr.io/gaofeng21cn/one-person-lab-packages/occ:latest-stable';
 
 function descriptor(version: string, privateOwner = false): InstalledPackageDescriptor {
-  const manifestPath = path.resolve('contracts/opl-framework/packages/occ.json');
+  const manifestPath = catalogFixtureManifestPath('occ');
   const owner = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   owner.version = version;
   owner.visibility = privateOwner ? 'authorized_only' : 'public';

@@ -8,22 +8,30 @@ import sys
 from pathlib import Path
 from package_release.common import git, read, run, write
 from package_release.channels import public_channel, publication_entry
+from package_release.projection import PackageProjection, catalog_root_from
 
 
 def detect(args):
     root = args.framework_root.resolve()
+    catalog = catalog_root_from(args)
+    paths = PackageProjection(root, catalog)
     output = args.output_root.resolve()
     output.mkdir(parents=True, exist_ok=True)
     commit = git(root, 'rev-parse', 'HEAD')
+    catalog_commit = git(catalog, 'rev-parse', 'HEAD') if catalog else None
     summary = json.loads(run(['node', '--experimental-strip-types', '--input-type=module', '-e',
         "import {buildDailyPackageCandidates} from './scripts/package-channel-candidates.mjs';"
         "import {getPublicationAdmittedOplPackageSpecs} from './src/adapters/integration/package-distribution.ts';"
-        "console.log(JSON.stringify(buildDailyPackageCandidates(getPublicationAdmittedOplPackageSpecs())));"], cwd=root).stdout)
+        "const root = process.argv[1];"
+        "console.log(JSON.stringify(buildDailyPackageCandidates(getPublicationAdmittedOplPackageSpecs(root), root)));",
+        paths.packages], cwd=root).stdout)
     selected = set(summary['candidate_fingerprint']) | set(summary['owner_managed_packages'])
     unknown = set(args.package_id or []) - selected
     if unknown:
         raise RuntimeError('Unregistered Package selection: ' + ', '.join(sorted(unknown)))
     preparation = read(args.preparation) if args.preparation else {'packages': []}
+    if args.preparation and catalog and preparation.get('catalog_source_commit') != catalog_commit:
+        raise RuntimeError('Catalog checkout differs from the prepared daily projection')
     blocked = [{'package_id': row['package_id'], 'reason': row['reason']}
                for row in preparation['packages'] if row['status'] == 'blocked']
     excluded = {row['package_id'] for row in blocked}
@@ -32,7 +40,7 @@ def detect(args):
         if pid in excluded or (args.package_id and pid not in args.package_id):
             continue
         try:
-            manifest = read(root / 'contracts/opl-framework/packages' / f'{pid}.json')
+            manifest = read(paths.manifest(pid))
             # Source visibility is checked before any registry classification.
             from package_release.common import gh, slug
             repo = gh('repos/' + slug(manifest['source_repo']))
@@ -55,7 +63,7 @@ def detect(args):
     entries = []
     for pid in plan['changed_packages']:
         try:
-            manifest = read(root / 'contracts/opl-framework/packages' / f'{pid}.json')
+            manifest = read(paths.manifest(pid))
             predecessor = current[pid]['digest'] or 'none'
             entries.append(publication_entry(pid, manifest, candidates[pid], predecessor, commit))
         except Exception as exc:
@@ -65,9 +73,8 @@ def detect(args):
         if pid in excluded or (args.package_id and pid not in args.package_id):
             continue
         try:
-            manifest_path = root / 'contracts/opl-framework/packages' / f'{pid}.json'
-            manifest = read(manifest_path)
-            payload = read(manifest_path.parent / manifest['codex_surface']['plugin_payload_manifest_url'])
+            manifest = read(paths.manifest(pid))
+            payload = read(paths.payload(manifest))
             fingerprint = {'package_version': payload['package_version'], 'owner_source_commit': payload['source_commit']}
             private_entries.append(publication_entry(pid, manifest, fingerprint, 'resolve-authenticated', commit))
         except Exception as exc:
@@ -79,6 +86,10 @@ def detect(args):
                 'packages': entries + private_entries, 'ready_packages': entries,
                 'owner_managed_packages': private_entries, 'needs_owner_release': [],
                 'blocked_packages': blocked + plan['violations']}
+    if catalog_commit:
+        dispatch['catalog_source_commit'] = catalog_commit
+        for entry in dispatch['packages']:
+            entry['expected_catalog_source_commit'] = catalog_commit
     write(output / 'package-publication-dispatch-plan.json', dispatch)
     with open(os.environ.get('GITHUB_STEP_SUMMARY', os.devnull), 'a') as stream:
         stream.write(f"### Daily Package channels\n\nPublic ready: {len(entries)}. Private owner plans: {len(private_entries)}. Blocked: {len(dispatch['blocked_packages'])}.\n")
@@ -89,6 +100,7 @@ def detect(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--framework-root', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--catalog-root', type=Path)
     parser.add_argument('--output-root', type=Path, required=True)
     parser.add_argument('--package-id', action='append')
     parser.add_argument('--preparation', type=Path)
