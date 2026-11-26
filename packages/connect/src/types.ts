@@ -163,6 +163,7 @@ export interface RequestAccessInput {
   readonly consumer_package_id?: string;
   readonly consumer_bind_token?: string;
   readonly session_id?: string;
+  readonly client_context?: ClientContext;
   readonly connection_id: string;
   readonly capability_ids: readonly string[];
   readonly expires_at?: string | null;

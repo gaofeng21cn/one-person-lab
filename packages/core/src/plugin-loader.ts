@@ -251,7 +251,12 @@ export class PluginLoader {
   }
 
   async disposeAll(): Promise<{ errors: Array<{ plugin_id: string; error: unknown }> }> {
-    const order = this.resolvedOrderCache ?? this.resolveOrder();
+    let order: readonly string[];
+    try {
+      order = this.resolvedOrderCache ?? this.resolveOrder();
+    } catch {
+      order = [...this.plugins.keys()];
+    }
     const reverseOrder = [...order].reverse();
     const errors: Array<{ plugin_id: string; error: unknown }> = [];
 

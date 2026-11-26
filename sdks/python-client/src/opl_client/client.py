@@ -38,6 +38,7 @@ class OplClient:
         self.server_info: dict[str, Any] = {}
 
     def connect(self) -> "OplClient":
+        self.close()
         session = json.loads(self._session_path.read_text(encoding="utf-8"))
         socket_path = session["socket_path"]
         token = session["token"]
@@ -75,9 +76,14 @@ class OplClient:
     def _handle_frame(self, msg: dict[str, Any], expected_id: int | None = None) -> tuple[bool, Any]:
         if "id" in msg:
             msg_id = msg["id"]
+            if msg_id is None and msg.get("error") is None and "method" in msg:
+                self._buffered_events.append(msg)
+                return False, None
             if msg_id is None and msg.get("error") is not None:
                 err = msg["error"]
                 raise OplRpcError(err.get("code", -1), err.get("message", "Unknown"), err.get("data"))
+            if expected_id is not None and isinstance(msg_id, int) and msg_id < expected_id:
+                return False, None
             if expected_id is not None and msg_id != expected_id:
                 raise RuntimeError(f"Mismatched RPC id: expected {expected_id}, got {msg_id}")
             if msg.get("error") is not None:
@@ -117,7 +123,8 @@ class OplClient:
                 if not stripped:
                     continue
                 msg = json.loads(stripped)
-                self._handle_frame(msg, expected_id=None)
+                if "id" not in msg or (msg.get("id") is None and msg.get("error") is None and "method" in msg):
+                    self._buffered_events.append(msg)
 
         if method_prefix is None:
             events = list(self._buffered_events)

@@ -344,6 +344,10 @@ export function walkSourceFiles(rootDir: string): SnapshotFileEntry[] {
     if (!isWithinRealRoot(realRoot, targetReal)) {
       continue;
     }
+    const relTarget = path.relative(realRoot, targetReal).replace(/\\/g, '/');
+    if (relTarget.split('/').some((seg) => SKIPPED_DIR_NAMES.has(seg))) {
+      continue;
+    }
     const targetStat = fs.statSync(targetReal, { throwIfNoEntry: false });
     if (!targetStat) continue;
     if (targetStat.isDirectory()) {

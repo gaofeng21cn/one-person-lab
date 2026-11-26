@@ -132,6 +132,107 @@ function getBoolFlag(parsed: ParsedCliArgs, name: string): boolean {
   return parsed.flags.get(name) === true;
 }
 
+function parseIntegerFlag(
+  parsed: ParsedCliArgs,
+  name: string,
+  options: { readonly min?: number; readonly max?: number } = {},
+): number | undefined {
+  if (!parsed.flags.has(name)) return undefined;
+  const raw = parsed.flags.get(name);
+  if (typeof raw !== 'string' || !/^-?\d+$/.test(raw.trim())) {
+    throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Flag '${name}' must be a valid integer.`);
+  }
+  const num = Number(raw.trim());
+  if (!Number.isSafeInteger(num)) {
+    throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Flag '${name}' is out of safe integer range.`);
+  }
+  if (options.min !== undefined && num < options.min) {
+    throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Flag '${name}' must be >= ${options.min}.`);
+  }
+  if (options.max !== undefined && num > options.max) {
+    throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Flag '${name}' must be <= ${options.max}.`);
+  }
+  return num;
+}
+
+function parseJsonFlag(parsed: ParsedCliArgs, name: string): unknown | undefined {
+  if (!parsed.flags.has(name)) return undefined;
+  const raw = parsed.flags.get(name);
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Flag '${name}' requires a JSON value.`);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new DaemonRpcError(
+      -32602,
+      'INVALID_INPUT',
+      `Invalid JSON for '${name}': ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
+function extractExtensionArgsAndOpts(
+  argv: readonly string[],
+  namespace: string,
+  subcommand: string,
+  help: boolean,
+): { readonly args: string[]; readonly opts: Record<string, unknown> } {
+  const args: string[] = [];
+  const opts: Record<string, unknown> = help ? { help: true } : {};
+  let seenNs = false;
+  let seenSub = false;
+  for (let i = 0; i < argv.length; i += 1) {
+    const tok = argv[i]!;
+    if (
+      tok === '--json'
+      || tok === '--quiet'
+      || tok === '-q'
+      || tok === '--help'
+      || tok === '-h'
+      || tok === '--version'
+      || tok === '-V'
+    ) {
+      continue;
+    }
+    if (!seenNs) {
+      if (tok === '--state-dir') {
+        const val = argv[++i];
+        if (val !== undefined) opts['state-dir'] = val;
+        continue;
+      }
+      if (tok.startsWith('--state-dir=')) {
+        opts['state-dir'] = tok.slice('--state-dir='.length);
+        continue;
+      }
+      if (tok === namespace) seenNs = true;
+      continue;
+    }
+    if (!seenSub) {
+      if (tok === subcommand) seenSub = true;
+      continue;
+    }
+    if (tok.startsWith('--')) {
+      const eq = tok.indexOf('=');
+      if (eq !== -1) {
+        opts[tok.slice(2, eq)] = tok.slice(eq + 1);
+        continue;
+      }
+      if (VALUE_FLAGS.has(tok) && i + 1 < argv.length) {
+        opts[tok.slice(2)] = argv[++i]!;
+        continue;
+      }
+      args.push(tok);
+      if (i + 1 < argv.length && !argv[i + 1]!.startsWith('--')) {
+        args.push(argv[++i]!);
+      }
+      continue;
+    }
+    args.push(tok);
+  }
+  return { args, opts };
+}
+
 function readCliVersion(): string {
   try {
     const pkgPath = path.resolve(import.meta.dirname, '../../package.json');
@@ -322,25 +423,32 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
     return 0;
   }
 
-  if (parsed.positionals.length === 0) {
-    if (parsed.help) {
-      const extensions = await discoverCliExtensions();
+  try {
+    if (parsed.flags.get('--state-dir') === true) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', "Flag '--state-dir' requires a path value.");
+    }
+    const stateDir = getStringFlag(parsed, '--state-dir');
+    const rpc = (method: string, params: Record<string, unknown> = {}) =>
+      callDaemonRpc(method, params, stateDir ? { stateDir } : {});
+
+    if (parsed.positionals.length === 0) {
+      if (parsed.help) {
+        const extensions = await discoverCliExtensions(stateDir);
+        process.stdout.write(renderTopHelp(extensions));
+        return 0;
+      }
+      const extensions = await discoverCliExtensions(stateDir);
       process.stdout.write(renderTopHelp(extensions));
+      return 2;
+    }
+
+    const [ns, sub, ...rest] = parsed.positionals;
+
+    if (parsed.help && ns && ns in NAMESPACE_SUBCOMMANDS) {
+      process.stdout.write(renderNamespaceHelp(ns));
       return 0;
     }
-    const extensions = await discoverCliExtensions();
-    process.stdout.write(renderTopHelp(extensions));
-    return 2;
-  }
 
-  const [ns, sub, ...rest] = parsed.positionals;
-
-  if (parsed.help && !sub && ns && ns in NAMESPACE_SUBCOMMANDS) {
-    process.stdout.write(renderNamespaceHelp(ns));
-    return 0;
-  }
-
-  try {
     switch (ns) {
       case 'daemon': {
         if (!sub || !(NAMESPACE_SUBCOMMANDS.daemon?.some((c) => c.name === sub))) {
@@ -348,41 +456,41 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'start') {
           if (getBoolFlag(parsed, '--foreground')) {
-            return await runDaemonForeground();
+            return await runDaemonForeground(stateDir ? { stateDir } : {});
           }
-          const paths = resolveStatePaths();
+          const paths = resolveStatePaths({ stateDir });
           const sess = await spawnDetachedDaemon(paths);
           emitOutput({ ok: true, started: true, ...sess }, parsed);
           return 0;
         }
         if (sub === 'stop') {
-          const out = await stopDaemonGracefully();
+          const out = await stopDaemonGracefully(stateDir);
           emitOutput(out, parsed);
           return 0;
         }
         if (sub === 'restart') {
-          await stopDaemonGracefully();
-          const paths = resolveStatePaths();
+          await stopDaemonGracefully(stateDir);
+          const paths = resolveStatePaths({ stateDir });
           const sess = await spawnDetachedDaemon(paths);
           emitOutput({ ok: true, restarted: true, ...sess }, parsed);
           return 0;
         }
         if (sub === 'status') {
-          const status = await getDaemonStatus();
+          const status = await getDaemonStatus(stateDir);
           emitOutput(status, parsed);
           return 0;
         }
         if (sub === 'logs') {
-          const paths = resolveStatePaths();
+          const paths = resolveStatePaths({ stateDir });
           const logPath = path.join(paths.state_dir, 'logs', 'opld.log');
-          const linesCount = Number(getStringFlag(parsed, '--lines') ?? '100');
+          const linesCount = parseIntegerFlag(parsed, '--lines', { min: 1 }) ?? 100;
           const content = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
           const lines = content.split('\n').filter(Boolean).slice(-linesCount);
           emitOutput(parsed.json ? { ok: true, log_path: logPath, lines } : lines.join('\n'), parsed);
           return 0;
         }
         if (sub === 'doctor') {
-          const res = await callDaemonRpc('daemon.doctor', {
+          const res = await rpc('daemon.doctor', {
             include_first_run: getBoolFlag(parsed, '--include-first-run'),
           });
           emitOutput(res, parsed);
@@ -400,7 +508,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!targetPath) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl workspace init requires <path>.');
           }
-          const res = await callDaemonRpc('workspace.init', {
+          const res = await rpc('workspace.init', {
             root_path: targetPath,
             name: getStringFlag(parsed, '--name'),
             domain_id: getStringFlag(parsed, '--domain'),
@@ -409,7 +517,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           return 0;
         }
         if (sub === 'list') {
-          emitOutput(await callDaemonRpc('workspace.list', {}), parsed);
+          emitOutput(await rpc('workspace.list', {}), parsed);
           return 0;
         }
         if (sub === 'inspect') {
@@ -417,7 +525,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!wsId) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl workspace inspect requires <workspaceId>.');
           }
-          emitOutput(await callDaemonRpc('workspace.inspect', { workspace_id: wsId }), parsed);
+          emitOutput(await rpc('workspace.inspect', { workspace_id: wsId }), parsed);
           return 0;
         }
         if (sub === 'sources') {
@@ -431,7 +539,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl workspace sources add requires <path>.');
             }
             emitOutput(
-              await callDaemonRpc('workspace.sources.bind', {
+              await rpc('workspace.sources.bind', {
                 workspace_id: wsId,
                 scope,
                 adapter_kind: adapter,
@@ -443,7 +551,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           }
           if (action === 'list') {
             emitOutput(
-              await callDaemonRpc('workspace.knowledge.list', {
+              await rpc('workspace.knowledge.list', {
                 workspace_id: getStringFlag(parsed, '--workspace'),
               }),
               parsed,
@@ -456,7 +564,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl workspace sources remove requires <sourceId>.');
             }
             emitOutput(
-              await callDaemonRpc('workspace.sources.remove', {
+              await rpc('workspace.sources.remove', {
                 source_id: sourceId,
                 workspace_id: getStringFlag(parsed, '--workspace'),
               }),
@@ -474,7 +582,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl workspace snapshot requires --stage-run.');
           }
           emitOutput(
-            await callDaemonRpc('workspace.snapshots.create', {
+            await rpc('workspace.snapshots.create', {
               workspace_id: wsId,
               stage_run_id: stageRunId,
               source_id: sourceId,
@@ -492,7 +600,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           const revision = getStringFlag(parsed, '--revision');
           if (action === 'propose') {
             emitOutput(
-              await callDaemonRpc('workspace.writeback.propose', {
+              await rpc('workspace.writeback.propose', {
                 workspace_id: wsId,
                 source_id: sourceId,
                 target_path: targetPath,
@@ -505,7 +613,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           }
           if (action === 'commit') {
             emitOutput(
-              await callDaemonRpc('workspace.writeback.commit', {
+              await rpc('workspace.writeback.commit', {
                 workspace_id: wsId,
                 source_id: sourceId,
                 target_path: targetPath,
@@ -528,7 +636,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         if (sub === 'search' || sub === 'list') {
           const query = sub === 'search' ? rest[0] ?? getStringFlag(parsed, '--query') : getStringFlag(parsed, '--query');
           emitOutput(
-            await callDaemonRpc('pack.list', {
+            await rpc('pack.list', {
               intent: getStringFlag(parsed, '--intent'),
               origin: getStringFlag(parsed, '--origin'),
               query,
@@ -551,7 +659,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             emitOutput({ manifest, dir: realRoot, lock }, parsed);
             return 0;
           }
-          emitOutput(await callDaemonRpc('pack.inspect', { package_id: target }), parsed);
+          emitOutput(await rpc('pack.inspect', { package_id: target }), parsed);
           return 0;
         }
         if (sub === 'build') {
@@ -587,7 +695,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_MANIFEST', `Missing opl-package.json in ${dir}`);
           }
           const syncCodex = !getBoolFlag(parsed, '--no-codex-sync');
-          emitOutput(await callDaemonRpc('pack.link', { dir: path.resolve(dir), sync_codex: syncCodex }), parsed);
+          emitOutput(await rpc('pack.link', { dir: path.resolve(dir), sync_codex: syncCodex }), parsed);
           return 0;
         }
         if (sub === 'unlink') {
@@ -595,7 +703,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!packageId) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack unlink requires <packageId>.');
           }
-          emitOutput(await callDaemonRpc('pack.unlink', { package_id: packageId }), parsed);
+          emitOutput(await rpc('pack.unlink', { package_id: packageId }), parsed);
           return 0;
         }
         if (sub === 'install') {
@@ -604,12 +712,12 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack install requires <source>.');
           }
           const syncCodex = !getBoolFlag(parsed, '--no-codex-sync');
-          emitOutput(await callDaemonRpc('pack.install', { source, sync_codex: syncCodex }), parsed);
+          emitOutput(await rpc('pack.install', { source, sync_codex: syncCodex }), parsed);
           return 0;
         }
         if (sub === 'update') {
           if (getBoolFlag(parsed, '--all')) {
-            emitOutput(await callDaemonRpc('pack.updateAll', { updates: [] }), parsed);
+            emitOutput(await rpc('pack.updateAll', { updates: [] }), parsed);
             return 0;
           }
           const packageId = rest[0];
@@ -617,7 +725,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!packageId || !source) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack update requires <packageId> --source <spec>.');
           }
-          emitOutput(await callDaemonRpc('pack.update', { package_id: packageId, source }), parsed);
+          emitOutput(await rpc('pack.update', { package_id: packageId, source }), parsed);
           return 0;
         }
         if (sub === 'uninstall') {
@@ -625,7 +733,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!packageId) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack uninstall requires <packageId>.');
           }
-          emitOutput(await callDaemonRpc('pack.uninstall', { package_id: packageId }), parsed);
+          emitOutput(await rpc('pack.uninstall', { package_id: packageId }), parsed);
           return 0;
         }
         if (sub === 'enable' || sub === 'disable') {
@@ -634,7 +742,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', `opl pack ${sub} requires <packageId>.`);
           }
           emitOutput(
-            await callDaemonRpc('pack.toggle', { package_id: packageId, enabled: sub === 'enable' }),
+            await rpc('pack.toggle', { package_id: packageId, enabled: sub === 'enable' }),
             parsed,
           );
           return 0;
@@ -642,7 +750,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         if (sub === 'sync') {
           const packageId = getStringFlag(parsed, '--package');
           emitOutput(
-            await callDaemonRpc('pack.codexSync', {
+            await rpc('pack.codexSync', {
               ...(packageId ? { package_id: packageId } : {}),
               import_external: true,
             }),
@@ -659,7 +767,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'list') {
           emitOutput(
-            await callDaemonRpc('connect.list', {
+            await rpc('connect.list', {
               provider_type: getStringFlag(parsed, '--provider-type'),
               status: getStringFlag(parsed, '--status'),
             }),
@@ -677,10 +785,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               'opl connect add requires --provider-type and --display-name.',
             );
           }
-          const capsRaw = getStringFlag(parsed, '--capabilities');
-          const capabilities = capsRaw ? JSON.parse(capsRaw) : undefined;
+          const capabilities = parseJsonFlag(parsed, '--capabilities');
           emitOutput(
-            await callDaemonRpc('connect.add', {
+            await rpc('connect.add', {
               connection_id: getStringFlag(parsed, '--connection-id'),
               provider_type: providerType,
               display_name: displayName,
@@ -699,7 +806,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!connId) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl connect check requires <connectionId>.');
           }
-          emitOutput(await callDaemonRpc('connect.check', { connection_id: connId }), parsed);
+          emitOutput(await rpc('connect.check', { connection_id: connId }), parsed);
           return 0;
         }
         if (sub === 'remove') {
@@ -708,7 +815,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl connect remove requires <connectionId>.');
           }
           emitOutput(
-            await callDaemonRpc('connect.remove', {
+            await rpc('connect.remove', {
               connection_id: connId,
               purge_secret: getBoolFlag(parsed, '--purge-secret'),
             }),
@@ -720,7 +827,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           const action = rest[0] ?? 'list';
           if (action === 'list') {
             emitOutput(
-              await callDaemonRpc('connect.grants.list', {
+              await rpc('connect.grants.list', {
                 consumer_package_id: getStringFlag(parsed, '--package'),
                 connection_id: getStringFlag(parsed, '--connection-id'),
               }),
@@ -733,15 +840,15 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', `opl connect grants ${action} requires <id>.`);
           }
           if (action === 'approve') {
-            emitOutput(await callDaemonRpc('connect.approveRequest', { request_id: id }), parsed);
+            emitOutput(await rpc('connect.approveRequest', { request_id: id }), parsed);
             return 0;
           }
           if (action === 'deny') {
-            emitOutput(await callDaemonRpc('connect.denyRequest', { request_id: id }), parsed);
+            emitOutput(await rpc('connect.denyRequest', { request_id: id }), parsed);
             return 0;
           }
           if (action === 'revoke') {
-            emitOutput(await callDaemonRpc('connect.revoke', { grant_id: id }), parsed);
+            emitOutput(await rpc('connect.revoke', { grant_id: id }), parsed);
             return 0;
           }
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect grants action '${action}'.`);
@@ -749,7 +856,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         if (sub === 'channels') {
           const action = rest[0] ?? 'list';
           if (action === 'list') {
-            emitOutput(await callDaemonRpc('connect.channels.list', {}), parsed);
+            emitOutput(await rpc('connect.channels.list', {}), parsed);
             return 0;
           }
           if (action === 'action') {
@@ -762,10 +869,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
                 'opl connect channels action requires <packageId> <ref>.',
               );
             }
-            const inputRaw = getStringFlag(parsed, '--input');
-            const input = inputRaw ? (JSON.parse(inputRaw) as Record<string, unknown>) : {};
+            const input = (parseJsonFlag(parsed, '--input') as Record<string, unknown> | undefined) ?? {};
             emitOutput(
-              await callDaemonRpc('connect.channels.action', {
+              await rpc('connect.channels.action', {
                 package_id: pkgId,
                 ref,
                 input,
@@ -795,7 +901,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               'opl runway start requires --workspace, --title, and --goal.',
             );
           }
-          const created = (await callDaemonRpc('runway.task.create', {
+          const created = (await rpc('runway.task.create', {
             workspace_id: wsId,
             agent_id: agentId,
             title,
@@ -807,7 +913,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'list') {
           emitOutput(
-            await callDaemonRpc('runway.task.list', {
+            await rpc('runway.task.list', {
               workspace_id: getStringFlag(parsed, '--workspace'),
               status: getStringFlag(parsed, '--status'),
             }),
@@ -820,7 +926,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!taskId) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl runway status requires <taskId>.');
           }
-          const res = (await callDaemonRpc('runway.task.get', { task_id: taskId })) as Record<string, unknown>;
+          const res = (await rpc('runway.task.get', { task_id: taskId })) as Record<string, unknown>;
           emitOutput(res, parsed);
           return isTaskPausedOrHumanGate(res) ? 4 : 0;
         }
@@ -830,8 +936,8 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl runway logs requires <taskId>.');
           }
           const [taskRes, tlRes] = await Promise.all([
-            callDaemonRpc('runway.task.get', { task_id: taskId }),
-            callDaemonRpc('ledger.timeline', { task_id: taskId }),
+            rpc('runway.task.get', { task_id: taskId }),
+            rpc('ledger.timeline', { task_id: taskId }),
           ]);
           emitOutput({ task: taskRes, timeline: tlRes }, parsed);
           return 0;
@@ -842,7 +948,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', `opl runway ${sub} requires <taskId>.`);
           }
           emitOutput(
-            await callDaemonRpc(`runway.task.${sub}`, {
+            await rpc(`runway.task.${sub}`, {
               task_id: taskId,
               reason: getStringFlag(parsed, '--reason'),
             }),
@@ -856,10 +962,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!srId || !decision) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl runway decide requires <stageRunId> --decision.');
           }
-          const expRevRaw = getStringFlag(parsed, '--expected-revision');
-          const expectedRevision = expRevRaw !== undefined ? Number(expRevRaw) : undefined;
+          const expectedRevision = parseIntegerFlag(parsed, '--expected-revision', { min: 0 });
           emitOutput(
-            await callDaemonRpc('runway.humanGate.resolve', {
+            await rpc('runway.humanGate.resolve', {
               stage_run_id: srId,
               decision,
               ...(expectedRevision !== undefined ? { expected_revision: expectedRevision } : {}),
@@ -871,14 +976,14 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'executors') {
           const method = rest[0] === 'health' ? 'runway.executors.health' : 'runway.executors.list';
-          emitOutput(await callDaemonRpc(method, {}), parsed);
+          emitOutput(await rpc(method, {}), parsed);
           return 0;
         }
         if (sub === 'schedules') {
           const action = rest[0] ?? 'list';
           if (action === 'list') {
             emitOutput(
-              await callDaemonRpc('runway.schedule.list', {
+              await rpc('runway.schedule.list', {
                 workspace_id: getStringFlag(parsed, '--workspace'),
               }),
               parsed,
@@ -896,7 +1001,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               );
             }
             emitOutput(
-              await callDaemonRpc('runway.schedule.create', {
+              await rpc('runway.schedule.create', {
                 workspace_id: wsId,
                 agent_id: getStringFlag(parsed, '--agent'),
                 cron_expr: cron,
@@ -921,7 +1026,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
               );
             }
             emitOutput(
-              await callDaemonRpc('runway.schedule.toggle', {
+              await rpc('runway.schedule.toggle', {
                 schedule_id: schedId,
                 enabled: enabledRaw === 'true',
               }),
@@ -934,7 +1039,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             if (!schedId) {
               throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl runway schedules delete requires <scheduleId>.');
             }
-            emitOutput(await callDaemonRpc('runway.schedules.delete', { schedule_id: schedId }), parsed);
+            emitOutput(await rpc('runway.schedules.delete', { schedule_id: schedId }), parsed);
             return 0;
           }
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown runway schedules action '${action}'.`);
@@ -951,28 +1056,28 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `opl ledger ${sub} requires <taskId>.`);
         }
         if (sub === 'timeline') {
-          const limitRaw = getStringFlag(parsed, '--limit');
+          const limit = parseIntegerFlag(parsed, '--limit', { min: 1 });
           emitOutput(
-            await callDaemonRpc('ledger.timeline', {
+            await rpc('ledger.timeline', {
               task_id: taskId,
               entry_kind: getStringFlag(parsed, '--kind'),
-              ...(limitRaw !== undefined ? { limit: Number(limitRaw) } : {}),
+              ...(limit !== undefined ? { limit } : {}),
             }),
             parsed,
           );
           return 0;
         }
         if (sub === 'artifacts') {
-          emitOutput(await callDaemonRpc('ledger.artifacts', { task_id: taskId }), parsed);
+          emitOutput(await rpc('ledger.artifacts', { task_id: taskId }), parsed);
           return 0;
         }
         if (sub === 'receipts') {
-          emitOutput(await callDaemonRpc('ledger.receipts', { task_id: taskId }), parsed);
+          emitOutput(await rpc('ledger.receipts', { task_id: taskId }), parsed);
           return 0;
         }
         if (sub === 'debts') {
           emitOutput(
-            await callDaemonRpc('ledger.debts', {
+            await rpc('ledger.debts', {
               task_id: taskId,
               unresolved_only: getBoolFlag(parsed, '--unresolved'),
             }),
@@ -991,7 +1096,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             );
           }
           emitOutput(
-            await callDaemonRpc('ledger.review.record', {
+            await rpc('ledger.review.record', {
               task_id: taskId,
               verdict,
               owner_id: ownerId,
@@ -1002,7 +1107,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           return 0;
         }
         if (sub === 'verify') {
-          const res = (await callDaemonRpc('ledger.verify', {
+          const res = (await rpc('ledger.verify', {
             task_id: taskId,
             check_file_hashes: true,
           })) as { ok?: boolean };
@@ -1014,7 +1119,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
 
       default: {
         // Dynamic CLI extensions lookup (only enabled installed packages)
-        const extensions = await discoverCliExtensions();
+        const extensions = await discoverCliExtensions(stateDir);
         const match = extensions.find((e) => e.namespace === ns);
         if (!match) {
           throw new DaemonRpcError(
@@ -1040,13 +1145,8 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             `Extension '${match.namespace}' requires a command (${match.commands.join(', ')}).`,
           );
         }
-        const opts: Record<string, unknown> = {
-          ...(parsed.help ? { help: true } : {}),
-        };
-        for (const [k, v] of parsed.flags.entries()) {
-          opts[k.replace(/^--/, '')] = v;
-        }
-        const out = await invokeCliExtension(match, sub, rest, opts);
+        const extParsed = extractExtensionArgsAndOpts(argv, ns!, sub, parsed.help);
+        const out = await invokeCliExtension(match, sub, extParsed.args, extParsed.opts);
         if (
           parsed.help
           && !parsed.json

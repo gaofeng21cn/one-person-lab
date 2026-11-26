@@ -129,15 +129,15 @@ function normalizeDotRelative(relPath: string): string {
   return `./${clean}`;
 }
 
-function resolveMcpPathArg(installPath: string, value: string): string {
+function resolveMcpPathArg(installPath: string, value: string, allowSymlinks = true): string {
   if (value.startsWith('${PLUGIN_ROOT}/')) {
-    return path.resolve(installPath, value.slice('${PLUGIN_ROOT}/'.length));
+    return resolveSafePackagePath(installPath, value.slice('${PLUGIN_ROOT}/'.length), { allowSymlinks });
   }
   if (value === '${PLUGIN_ROOT}') {
     return installPath;
   }
   if (value.startsWith('./') || value.startsWith('../')) {
-    return path.resolve(installPath, value);
+    return resolveSafePackagePath(installPath, value, { allowSymlinks });
   }
   return value;
 }
@@ -186,6 +186,7 @@ export function buildCodexPluginJson(manifest: OplPackageManifestV2): Record<str
 export function buildCodexMcpJson(
   manifest: OplPackageManifestV2,
   installPath: string,
+  allowSymlinks = true,
 ): Record<string, unknown> | null {
   const servers = manifest.provides?.mcp_servers;
   if (!servers || servers.length === 0) return null;
@@ -195,8 +196,8 @@ export function buildCodexMcpJson(
     if (server.transport === 'stdio') {
       mcpServers[server.id] = {
         type: 'stdio',
-        command: resolveMcpPathArg(realInstall, server.command ?? ''),
-        args: (server.args ?? []).map((arg) => resolveMcpPathArg(realInstall, arg)),
+        command: resolveMcpPathArg(realInstall, server.command ?? '', allowSymlinks),
+        args: (server.args ?? []).map((arg) => resolveMcpPathArg(realInstall, arg, allowSymlinks)),
         cwd: realInstall,
         ...(server.env_refs?.length ? { envRefs: [...server.env_refs] } : {}),
       };
@@ -288,17 +289,34 @@ export function projectPackageToCodexMarketplace(input: {
   const paths = getCodexMarketplacePaths(input.marketplaceRoot);
   const pluginDir = resolveSafePluginTargetDir(paths.plugins_dir, pluginName);
 
-  fs.rmSync(pluginDir, { recursive: true, force: true });
-  fs.mkdirSync(path.join(pluginDir, '.codex-plugin'), { recursive: true });
+  const existingMarketplace = readMarketplaceDoc(paths.agents_marketplace_json);
+  const colliding = existingMarketplace.plugins.find(
+    (p) => p.name === pluginName && p.opl_package_id !== input.manifest.identity.id,
+  );
+  if (colliding) {
+    throw new PackError(
+      'PACK_CODEX_SYNC_FAILED',
+      `Codex plugin_name '${pluginName}' is already registered by package '${colliding.opl_package_id}'.`,
+      {
+        reason: 'plugin_name_collision',
+        plugin_name: pluginName,
+        existing_package_id: colliding.opl_package_id,
+        package_id: input.manifest.identity.id,
+      },
+    );
+  }
 
   const pluginJson = buildCodexPluginJson(input.manifest);
+  const mcpJson = buildCodexMcpJson(input.manifest, realInstall, allowSymlinks);
+
+  fs.rmSync(pluginDir, { recursive: true, force: true });
+  fs.mkdirSync(path.join(pluginDir, '.codex-plugin'), { recursive: true });
   fs.writeFileSync(
     path.join(pluginDir, '.codex-plugin', 'plugin.json'),
     `${JSON.stringify(pluginJson, null, 2)}\n`,
     'utf8',
   );
 
-  const mcpJson = buildCodexMcpJson(input.manifest, realInstall);
   if (mcpJson) {
     fs.writeFileSync(
       path.join(pluginDir, 'mcp.json'),
@@ -344,8 +362,12 @@ export function projectPackageToCodexMarketplace(input: {
 
   // Zero-copy assets / icon symlink(s)
   const rootAssetsDir = path.join(realInstall, 'assets');
-  if (fs.existsSync(rootAssetsDir) && fs.statSync(rootAssetsDir).isDirectory()) {
-    createZeroCopySymlink(rootAssetsDir, path.join(pluginDir, 'assets'), 'dir');
+  const assetsLstat = fs.lstatSync(rootAssetsDir, { throwIfNoEntry: false });
+  if (assetsLstat) {
+    const resolvedAssets = resolveSafePackagePath(realInstall, 'assets', { allowSymlinks });
+    if (fs.statSync(resolvedAssets).isDirectory()) {
+      createZeroCopySymlink(resolvedAssets, path.join(pluginDir, 'assets'), 'dir');
+    }
   }
 
   if (input.manifest.identity.icon) {

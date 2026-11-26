@@ -38,23 +38,35 @@ export class ScheduleRunner {
       computeNextCronTime,
     );
 
+    const callbackErrors: unknown[] = [];
     for (const outcome of outcomes) {
       const cancelledIds =
         outcome.cancelled_task_ids
         ?? (outcome.cancelled_task_id ? [outcome.cancelled_task_id] : []);
       if (this.#onCancelTask) {
         for (const cancelledId of cancelledIds) {
-          await this.#onCancelTask(
-            cancelledId,
-            `cancelled_by_schedule_overlap:${outcome.schedule_id}`,
-          );
+          try {
+            await this.#onCancelTask(
+              cancelledId,
+              `cancelled_by_schedule_overlap:${outcome.schedule_id}`,
+            );
+          } catch (error) {
+            callbackErrors.push(error);
+          }
         }
       }
       if (outcome.created_task_id && this.#onTaskLaunched) {
-        await this.#onTaskLaunched(outcome.created_task_id, outcome.schedule_id);
+        try {
+          await this.#onTaskLaunched(outcome.created_task_id, outcome.schedule_id);
+        } catch (error) {
+          callbackErrors.push(error);
+        }
       }
     }
 
+    if (callbackErrors.length > 0 && !this.#timer) {
+      throw callbackErrors[0];
+    }
     return outcomes;
   }
 
@@ -63,7 +75,7 @@ export class ScheduleRunner {
     this.#timer = setInterval(() => {
       if (this.#ticking) return;
       this.#ticking = true;
-      void this.tickOnce().finally(() => {
+      void this.tickOnce().catch(() => undefined).finally(() => {
         this.#ticking = false;
       });
     }, this.#tickIntervalMs);

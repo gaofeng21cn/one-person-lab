@@ -511,8 +511,11 @@ export class PackService {
       if (fs.existsSync(lockFileInStaged)) {
         fs.copyFileSync(lockFileInStaged, path.join(tmpDest, 'opl-release.lock.json'));
       }
-      fs.rmSync(destDir, { recursive: true, force: true });
-      fs.renameSync(tmpDest, destDir);
+      const backupDest = fs.existsSync(destDir) ? `${destDir}.bak-${opId}` : null;
+      if (backupDest) {
+        fs.rmSync(backupDest, { recursive: true, force: true });
+        fs.renameSync(destDir, backupDest);
+      }
 
       let codexSync: CodexSyncProjectionResult = {
         package_id: manifest.identity.id,
@@ -524,27 +527,46 @@ export class PackService {
         plugin_dir: null,
         verified_by_readback: false,
       };
-      if (input.syncCodex !== false) {
-        codexSync = await syncPackageToCodex({
-          manifest,
-          installPath: destDir,
-          enabled: true,
-          action: input.action,
-          marketplaceRoot: this.marketplaceRoot,
-          stateDir: this.stateDir,
-          runner: this.#codexRunner,
-        });
-      }
+      let installed: InstalledPackageRecord;
+      let movedToDest = false;
+      try {
+        fs.renameSync(tmpDest, destDir);
+        movedToDest = true;
+        if (input.syncCodex !== false) {
+          codexSync = await syncPackageToCodex({
+            manifest,
+            installPath: destDir,
+            enabled: true,
+            action: input.action,
+            marketplaceRoot: this.marketplaceRoot,
+            stateDir: this.stateDir,
+            runner: this.#codexRunner,
+          });
+        }
 
-      const installed = this.store.upsertInstalledPackage({
-        manifest,
-        origin: 'opl',
-        install_mode: 'release',
-        install_path: fs.realpathSync(destDir),
-        content_digest: digest,
-        enabled: true,
-        carrier_synced: codexSync.synced,
-      });
+        installed = this.store.upsertInstalledPackage({
+          manifest,
+          origin: 'opl',
+          install_mode: 'release',
+          install_path: fs.realpathSync(destDir),
+          content_digest: digest,
+          enabled: true,
+          carrier_synced: codexSync.synced,
+        });
+        if (backupDest) {
+          fs.rmSync(backupDest, { recursive: true, force: true });
+        }
+      } catch (postMoveError) {
+        if (movedToDest) {
+          fs.rmSync(destDir, { recursive: true, force: true });
+        } else {
+          fs.rmSync(tmpDest, { recursive: true, force: true });
+        }
+        if (backupDest && fs.existsSync(backupDest)) {
+          fs.renameSync(backupDest, destDir);
+        }
+        throw postMoveError;
+      }
 
       const reloadMode = classifyReloadMode(manifest, { action: input.action });
       const opRecord = this.store.transitionOperation(opId, {

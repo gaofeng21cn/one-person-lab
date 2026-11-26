@@ -268,8 +268,8 @@ export class AntigravityExecutorAdapter implements ExecutorAdapter {
           if (parsed.finalText !== undefined) {
             finalResultText = parsed.finalText;
           }
-          if (parsed.isError && parsed.errorMessage) {
-            streamError = parsed.errorMessage;
+          if (parsed.isError) {
+            streamError = parsed.errorMessage?.trim() || 'Antigravity execution failed';
           }
         });
 
@@ -400,8 +400,8 @@ export class AntigravityExecutorAdapter implements ExecutorAdapter {
       if (parsed.isResult && !parsed.isError) {
         seenSuccessResult = true;
       }
-      if (parsed.isError && parsed.errorMessage) {
-        seenError = parsed.errorMessage;
+      if (parsed.isError) {
+        seenError = parsed.errorMessage?.trim() || 'Antigravity execution failed';
       }
     }
 

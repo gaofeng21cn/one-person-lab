@@ -1027,13 +1027,13 @@ export class WorkspaceService {
             { proposal_id: proposal.proposal_id, status: proposal.status },
           );
         }
-        if (input.source_id && input.source_id !== proposal.source_id) {
+        if (input.source_id !== undefined && input.source_id !== proposal.source_id) {
           throw new WorkspaceError(
             'INVALID_INPUT',
             `commitWriteback source_id '${input.source_id}' does not match proposal source_id '${proposal.source_id}'.`,
           );
         }
-        if (input.target_path) {
+        if (input.target_path !== undefined) {
           const normalizedInputTarget = normalizePosixRelativeSegments(
             input.target_path,
             'PATH_OUTSIDE_SOURCE',

@@ -204,15 +204,43 @@ export class OpldSocketServer {
       this.#connections.delete(conn);
     });
 
+    const MAX_NDJSON_LINE_BYTES = 4 * 1024 * 1024;
     let buffer = '';
+    let overflowed = false;
     socket.on('data', (chunk: string) => {
+      if (overflowed) return;
       buffer += chunk;
       let nlIdx: number;
       while ((nlIdx = buffer.indexOf('\n')) >= 0) {
         const line = buffer.slice(0, nlIdx).trim();
         buffer = buffer.slice(nlIdx + 1);
+        if (Buffer.byteLength(line, 'utf8') > MAX_NDJSON_LINE_BYTES) {
+          overflowed = true;
+          buffer = '';
+          void this.writeFrame(conn.socket, {
+            jsonrpc: '2.0',
+            id: null,
+            error: { code: -32600, message: 'Invalid Request: NDJSON frame exceeds 4 MiB limit' },
+          }).finally(() => {
+            conn.socket.end();
+            setTimeout(() => conn.socket.destroy(), 50).unref?.();
+          });
+          return;
+        }
         if (!line) continue;
         void this.processLine(line, conn);
+      }
+      if (Buffer.byteLength(buffer, 'utf8') > MAX_NDJSON_LINE_BYTES) {
+        overflowed = true;
+        buffer = '';
+        void this.writeFrame(conn.socket, {
+          jsonrpc: '2.0',
+          id: null,
+          error: { code: -32600, message: 'Invalid Request: NDJSON frame exceeds 4 MiB limit' },
+        }).finally(() => {
+          conn.socket.end();
+          setTimeout(() => conn.socket.destroy(), 50).unref?.();
+        });
       }
     });
   }

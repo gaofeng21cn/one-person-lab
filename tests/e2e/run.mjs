@@ -19,7 +19,7 @@ function printUsage() {
       "Usage: node tests/e2e/run.mjs [options]",
       "",
       "Options:",
-      "  --tier <1|2|3|4>      Tier(s) to run (repeatable or comma-separated; default: 1,2,3,4)",
+      "  --tier <1|2|3|4|5>    Tier(s) to run (repeatable or comma-separated; default: 1,2,3,4)",
       "  --feature <F1..F15>   Feature filter (repeatable or comma-separated; case-insensitive)",
       "  --json                Emit single JSON summary to stdout; progress routes to stderr",
       "  --bail                Stop after first failing/skipping/crashing/leaking test file",
@@ -82,7 +82,7 @@ function parseCliArgs(argv) {
       if (flag === "--tier") {
         for (const part of val.split(",")) {
           const t = Number(part.trim());
-          if (!Number.isInteger(t) || t < 1 || t > 4) {
+          if (!Number.isInteger(t) || t < 1 || t > 5) {
             return failArg(`Invalid --tier value: ${part}`);
           }
           if (!tiers.includes(t)) tiers.push(t);

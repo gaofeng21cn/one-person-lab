@@ -175,6 +175,11 @@ function assertRelativeCommandTargetIfLocal(
   allowSymlinks: boolean,
 ): void {
   if (!arg) return;
+  if (arg === '${PLUGIN_ROOT}') return;
+  if (arg.startsWith('${PLUGIN_ROOT}/')) {
+    assertRegularFilePath(packageRoot, arg.slice('${PLUGIN_ROOT}/'.length), allowSymlinks);
+    return;
+  }
   if (arg.startsWith('./') || arg.startsWith('../')) {
     assertRegularFilePath(packageRoot, arg, allowSymlinks);
   }
@@ -239,6 +244,8 @@ export function verifyManifestPathsExist(
         for (const arg of mcp.args ?? []) {
           if (arg.startsWith('./') || arg.startsWith('../')) {
             assertRegularFilePath(packageRoot, arg, allowSymlinks);
+          } else if (arg.startsWith('${PLUGIN_ROOT}/')) {
+            resolveSafePackagePath(packageRoot, arg.slice('${PLUGIN_ROOT}/'.length), { allowSymlinks });
           }
         }
       }

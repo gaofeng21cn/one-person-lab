@@ -334,7 +334,7 @@ test('migrateV1Package avoids synthesizing missing ./bin/<id> for JS channel pac
     const builtCh = buildPackage(chRepo, { writeLock: true });
     assert.match(builtCh.digest, /^sha256:[0-9a-f]{64}$/);
 
-    // Case B: JS package with declarative views, no bin/, and no channels -> opl cli fallback
+    // Case B: JS package with declarative views, no bin/, and no channels -> omits dead opl app fallback with warning
     const uiRepo = path.join(tmpDir, 'js-ui-only');
     fs.mkdirSync(path.join(uiRepo, 'dist'), { recursive: true });
     fs.writeFileSync(path.join(uiRepo, 'dist', 'index.js'), 'export const ok = true;\n');
@@ -359,11 +359,12 @@ test('migrateV1Package avoids synthesizing missing ./bin/<id> for JS channel pac
     );
 
     const migUi = migrateV1Package({ repoDir: uiRepo, apply: true, clean: true });
-    assert.deepEqual(migUi.manifest.provides?.contribution_handler, {
-      kind: 'cli',
-      argv: ['opl', 'app', 'contribution', 'adapter', '--stdin'],
-      transport: 'stdin_json_stdout_json',
-    });
+    assert.equal(migUi.manifest.provides?.contribution_handler, undefined);
+    assert.equal(migUi.manifest.ui?.declarative, undefined);
+    assert.ok(
+      migUi.cleanup_report.warnings.some((w) => /Omitted ui\.declarative/i.test(w)),
+      `Expected warning about omitted ui.declarative, got ${JSON.stringify(migUi.cleanup_report.warnings)}`,
+    );
     const builtUi = buildPackage(uiRepo, { writeLock: true });
     assert.match(builtUi.digest, /^sha256:[0-9a-f]{64}$/);
 

@@ -22,8 +22,8 @@ interface RawInstalledPkg {
   readonly manifest_json?: string;
 }
 
-async function listInstalledEnabledPackages(): Promise<RawInstalledPkg[]> {
-  const paths = resolveStatePaths();
+async function listInstalledEnabledPackages(stateDir?: string): Promise<RawInstalledPkg[]> {
+  const paths = resolveStatePaths({ stateDir });
   if (fs.existsSync(paths.session_file)) {
     try {
       const sess = JSON.parse(fs.readFileSync(paths.session_file, 'utf8')) as { socket_path?: string };
@@ -31,7 +31,7 @@ async function listInstalledEnabledPackages(): Promise<RawInstalledPkg[]> {
         const res = (await callDaemonRpc(
           'pack.list',
           { enabled_only: true },
-          { autoStart: false },
+          { stateDir, autoStart: false },
         )) as { packages?: RawInstalledPkg[] };
         if (Array.isArray(res?.packages)) {
           return res.packages;
@@ -59,8 +59,11 @@ async function listInstalledEnabledPackages(): Promise<RawInstalledPkg[]> {
   }
 }
 
-export async function discoverCliExtensions(): Promise<CliExtensionDescriptor[]> {
-  const pkgs = await listInstalledEnabledPackages();
+export async function discoverCliExtensions(stateDir?: string): Promise<CliExtensionDescriptor[]> {
+  let pkgs = await listInstalledEnabledPackages(stateDir);
+  if (pkgs.length === 0 && stateDir) {
+    pkgs = await listInstalledEnabledPackages(undefined);
+  }
   const discovered: CliExtensionDescriptor[] = [];
 
   for (const pkg of pkgs) {

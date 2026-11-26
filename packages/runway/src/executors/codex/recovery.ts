@@ -124,6 +124,9 @@ export function analyzeCodexSessionJsonl(output: string): AnalyzedCodexSession {
 
     if (raw.type === 'event_msg' && isRecord(raw.payload)) {
       const pType = normalizeInlineText(raw.payload.type);
+      if (pType === 'turn_started' || pType === 'task_started') {
+        completed = false;
+      }
       if (pType === 'task_complete' || pType === 'turn_completed') {
         completed = true;
       }
@@ -137,7 +140,9 @@ export function analyzeCodexSessionJsonl(output: string): AnalyzedCodexSession {
 
     const ev = parseCodexExecEventFromLine(line, state);
     if (!ev) continue;
-    if (ev.type === 'turn.completed') {
+    if (ev.type === 'turn.started') {
+      completed = false;
+    } else if (ev.type === 'turn.completed') {
       completed = true;
       if (ev.usage) turnUsages.push(ev.usage);
     } else if (ev.type === 'agent_message') {

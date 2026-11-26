@@ -194,6 +194,14 @@ export class ConnectAuthorizationService {
         consumer_package_id: input.consumer_package_id,
       });
       consumerPackageId = claims.consumer_package_id;
+    } else if (
+      input.client_context
+      && (!isTrustedHost(input.client_context.client_kind) || !input.client_context.trusted_host)
+    ) {
+      throw new ConnectError(
+        'TRUSTED_HOST_REQUIRED',
+        `connect.requestAccess requires a valid consumerBindToken or trusted host; got client_kind='${input.client_context.client_kind}'.`,
+      );
     } else if (typeof input.consumer_package_id === 'string' && input.consumer_package_id.trim()) {
       consumerPackageId = input.consumer_package_id.trim();
     } else {

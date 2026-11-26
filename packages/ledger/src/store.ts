@@ -494,8 +494,9 @@ export function verifyTaskLineage(
         } catch {
           if (lstat.isSymbolicLink()) {
             try {
-              const linkDest = path.resolve(path.dirname(targetPath), fs.readlinkSync(targetPath));
-              if (isOutsideRoot(realRoot, linkDest)) {
+              const realParent = fs.realpathSync(path.dirname(targetPath));
+              const linkDest = path.resolve(realParent, fs.readlinkSync(targetPath));
+              if (isOutsideRoot(realRoot, realParent) || isOutsideRoot(realRoot, linkDest)) {
                 mismatches.push({
                   entry_id: artifact.entry_id,
                   path: artifact.payload.path,

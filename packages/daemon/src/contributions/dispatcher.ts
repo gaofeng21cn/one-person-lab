@@ -90,6 +90,27 @@ export class ContributionDispatcher {
       };
     }
 
+    if (req.explicitSessionId && req.explicitSessionId !== req.callerSessionId) {
+      throw new DaemonRpcError(
+        -32001,
+        'BIND_TOKEN_SESSION_MISMATCH',
+        'Provided session_id does not match authenticated socket session.',
+      );
+    }
+    if (!req.clientContext.trusted_host) {
+      if (!req.consumerBindToken) {
+        throw new DaemonRpcError(
+          -32003,
+          'TRUSTED_HOST_REQUIRED',
+          'app.contribution.read requires a trusted host or valid consumer_bind_token to invoke contribution_handler.',
+        );
+      }
+      await this.#connectService.verifyConsumerBindToken(req.consumerBindToken, {
+        session_id: req.callerSessionId,
+        consumer_package_id: pkg.package_id,
+      });
+    }
+
     const out = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
       schema_version: 'opl-package-app-contribution-request.v1',
       operation: 'read',
@@ -172,7 +193,20 @@ export class ContributionDispatcher {
     }
 
     const ws = this.#workspaceService.getWorkspace(workspaceId);
-    const realWsRoot = fs.realpathSync(ws.root_path);
+    let realWsRoot: string;
+    try {
+      realWsRoot = fs.realpathSync(ws.root_path);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException | null)?.code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') {
+        throw new DaemonRpcError(
+          -32004,
+          'WORKSPACE_ROOT_MISSING',
+          `Workspace '${workspaceId}' root path does not exist on disk: ${ws.root_path}`,
+        );
+      }
+      throw err;
+    }
     const candidate = path.resolve(realWsRoot, relPath);
     if (!isWithinDirectory(realWsRoot, candidate) || candidate === realWsRoot) {
       throw new DaemonRpcError(-32003, 'PATH_OUTSIDE_WORKSPACE', `Path '${relPath}' escapes workspace root.`);

@@ -118,7 +118,7 @@ function readLockJsonOrNull(filePath: string): Record<string, unknown> | null {
 function isStaleLockFile(filePath: string, staleAfterMs: number): boolean {
   if (staleAfterMs <= 0) return false;
   try {
-    const stat = fs.statSync(filePath);
+    const stat = fs.lstatSync(filePath);
     return Date.now() - stat.mtimeMs > staleAfterMs;
   } catch {
     return false;
@@ -126,6 +126,14 @@ function isStaleLockFile(filePath: string, staleAfterMs: number): boolean {
 }
 
 function isReclaimableLock(filePath: string, defaultStaleAfterMs: number): boolean {
+  const lstat = fs.lstatSync(filePath, { throwIfNoEntry: false });
+  if (lstat?.isSymbolicLink()) {
+    try {
+      fs.statSync(filePath);
+    } catch {
+      return defaultStaleAfterMs > 0 || isStaleLockFile(filePath, defaultStaleAfterMs);
+    }
+  }
   const lock = readLockJsonOrNull(filePath);
   if (!lock) {
     return isStaleLockFile(filePath, defaultStaleAfterMs);

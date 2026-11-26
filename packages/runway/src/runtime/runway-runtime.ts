@@ -51,6 +51,20 @@ import type {
 } from '../types.ts';
 import { LeaseManager } from './lease-manager.ts';
 
+const MAX_LEDGER_SUMMARY_LENGTH = 1_800;
+
+function sanitizeLedgerSummary(raw: string | undefined, fallback: string, maxLen = MAX_LEDGER_SUMMARY_LENGTH): string {
+  const redacted = (raw ?? '')
+    .replace(/data:[^;\s]+(?:;[^;\s]+)*;base64,[A-Za-z0-9+/=]*/gi, '[REDACTED_DATA_URI]')
+    .replace(/-----BEGIN [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----|$)/g, '[REDACTED_PRIVATE_KEY]')
+    .replace(/\b(?:sk-[A-Za-z0-9_-]{8,}|ghp_[A-Za-z0-9_]{8,}|Bearer\s+[A-Za-z0-9._+/=-]{8,})(?=\s|$|['",;}\])])/g, '[REDACTED_TOKEN]')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const base = redacted.length > 0 ? redacted : fallback;
+  if (base.length <= maxLen) return base;
+  return `${base.slice(0, Math.max(1, maxLen - 3))}...`;
+}
+
 export interface RunwayRuntimeOptions {
   readonly db: SqliteDb;
   readonly store: RunwayStore;
@@ -699,7 +713,7 @@ export class RunwayRuntime {
         payload: {
           decision: 'cancel',
           actor_id: 'opl.runway',
-          reason: outcome.error?.message ?? 'execution_cancelled',
+          reason: sanitizeLedgerSummary(outcome.error?.message, 'execution_cancelled'),
         },
         created_at: ts,
       });
@@ -707,10 +721,10 @@ export class RunwayRuntime {
       nextStageStatus = 'human_gate';
       attemptStatus = outcome.status === 'timed_out' ? 'timed_out' : 'failed';
       const errCode = outcome.error?.code ?? (outcome.status === 'timed_out' ? 'TIMED_OUT' : 'EXECUTOR_FAILED');
-      const errMsg = outcome.error?.message ?? 'Stage execution failed.';
+      const errMsg = sanitizeLedgerSummary(outcome.error?.message, 'Stage execution failed.');
       humanGateJson = JSON.stringify({
         kind: 'execution_blocker',
-        question: `${errCode}: ${errMsg}`,
+        question: sanitizeLedgerSummary(`${errCode}: ${errMsg}`, errCode),
         options: ['retry_stage', 'cancel'],
       });
       ledgerInputs.push({
@@ -1198,9 +1212,10 @@ export class RunwayRuntime {
       recState === 'failed'
         ? recOutcome?.error?.code ?? 'executor_failed_after_restart'
         : 'executor_lost_after_restart';
-    const blockerMsg =
-      recOutcome?.error?.message
-      ?? `Attempt '${ctx.attempt_id}' was ${recState} across daemon restart; inspect workspace before retrying.`;
+    const blockerMsg = sanitizeLedgerSummary(
+      recOutcome?.error?.message,
+      `Attempt '${ctx.attempt_id}' was ${recState} across daemon restart; inspect workspace before retrying.`,
+    );
     const humanGateJson = JSON.stringify({
       kind: 'restart_reconcile_blocker',
       attempt_id: ctx.attempt_id,

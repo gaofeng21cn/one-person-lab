@@ -61,7 +61,7 @@ export function buildAgyArgs(
   if (rawWsRoot && !rawWsRoot.includes('\0') && path.isAbsolute(rawWsRoot)) {
     addDirSet.add(path.resolve(rawWsRoot));
   }
-  for (const dir of req.knowledge_snapshot_refs) {
+  for (const dir of req.knowledge_snapshot_refs ?? []) {
     const trimmed = dir.trim();
     if (trimmed && !trimmed.includes('\0') && path.isAbsolute(trimmed)) {
       addDirSet.add(path.resolve(trimmed));
@@ -92,12 +92,14 @@ export function buildAgyArgs(
 export function buildAgyEphemeralSettingsPayload(
   req: StageExecutionRequest,
 ): Record<string, unknown> | null {
-  if (req.mcp_servers.length === 0 && req.skill_dirs.length === 0) {
+  const mcpList = req.mcp_servers ?? [];
+  const skillDirs = req.skill_dirs ?? [];
+  if (mcpList.length === 0 && skillDirs.length === 0) {
     return null;
   }
 
   const mcpServers: Record<string, unknown> = {};
-  for (const srv of req.mcp_servers) {
+  for (const srv of mcpList) {
     if (srv.transport === 'stdio' && srv.command) {
       mcpServers[srv.id] = {
         command: srv.command,

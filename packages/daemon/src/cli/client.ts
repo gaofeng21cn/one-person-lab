@@ -86,7 +86,7 @@ export async function spawnDetachedDaemon(paths: StatePaths): Promise<DaemonSess
   const daemonBin = resolveDaemonEntrypointPath();
   const child = spawn(daemonBin.command, daemonBin.args, {
     cwd: paths.state_dir,
-    env: process.env,
+    env: { ...process.env, OPL_STATE_DIR: paths.state_dir },
     detached: true,
     stdio: ['ignore', logFd, logFd],
   });
@@ -94,6 +94,7 @@ export async function spawnDetachedDaemon(paths: StatePaths): Promise<DaemonSess
   fs.closeSync(logFd);
 
   const deadline = Date.now() + 5_000;
+  let exitedGraceWindowUntil = 0;
   while (Date.now() < deadline) {
     const sess = readSessionFile(paths.session_file);
     if (sess && sess.pid > 0 && /^[0-9a-f]{64}$/i.test(sess.token)) {
@@ -102,11 +103,22 @@ export async function spawnDetachedDaemon(paths: StatePaths): Promise<DaemonSess
       }
     }
     if (child.exitCode !== null && child.exitCode !== 0) {
-      throw new DaemonRpcError(
-        -32000,
-        'DAEMON_START_FAILED',
-        `Detached opld exited early with code ${child.exitCode}.`,
-      );
+      if (exitedGraceWindowUntil === 0) {
+        exitedGraceWindowUntil = Math.min(deadline, Date.now() + 600);
+      }
+      if (Date.now() >= exitedGraceWindowUntil) {
+        const racedSess = readSessionFile(paths.session_file);
+        if (racedSess && racedSess.pid > 0 && /^[0-9a-f]{64}$/i.test(racedSess.token)) {
+          if (await probeSocket(racedSess.socket_path, 250)) {
+            return racedSess;
+          }
+        }
+        throw new DaemonRpcError(
+          -32000,
+          'DAEMON_START_FAILED',
+          `Detached opld exited early with code ${child.exitCode}.`,
+        );
+      }
     }
     await sleepMs(25);
   }

@@ -733,6 +733,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   });
 
   handlers.set('connect.requestAccess', async (params, conn) => {
+    const ctx = requireClientContext(conn);
     const sessionId = resolveSocketSessionId(conn, pickString(params, 'session_id', 'sessionId'));
     const connectionId = pickString(params, 'connection_id', 'connectionId') ?? '';
     const consumerPackageId = pickString(params, 'consumer_package_id', 'consumerPackageId');
@@ -746,6 +747,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       ...(consumerPackageId ? { consumer_package_id: consumerPackageId } : {}),
       ...(consumerBindToken ? { consumer_bind_token: consumerBindToken } : {}),
       session_id: sessionId,
+      client_context: ctx,
       connection_id: connectionId,
       capability_ids: capabilityIds,
       ...(expiresAt ? { expires_at: expiresAt } : {}),

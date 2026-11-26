@@ -165,12 +165,15 @@ export function parseAgyStreamJsonLine(line: string): ParsedAgyStreamLine | null
         : typeof parsed.text === 'string'
           ? parsed.text
           : undefined;
-    const errorMessage =
+    const rawErrorText =
       typeof parsed.error === 'string'
-        ? parsed.error
-        : isErr
-          ? finalText || 'Antigravity execution failed'
-          : undefined;
+        ? parsed.error.trim()
+        : isRecord(parsed.error) && typeof parsed.error.message === 'string'
+          ? parsed.error.message.trim()
+          : '';
+    const errorMessage = isErr
+      ? rawErrorText || finalText?.trim() || 'Antigravity execution failed'
+      : rawErrorText || undefined;
     if (usage) {
       events.push({ kind: 'usage', ...usage });
     }
@@ -186,17 +189,17 @@ export function parseAgyStreamJsonLine(line: string): ParsedAgyStreamLine | null
   }
 
   if (type === 'error') {
-    const msg =
+    const rawMsg =
       typeof parsed.message === 'string'
-        ? parsed.message
+        ? parsed.message.trim()
         : isRecord(parsed.error) && typeof parsed.error.message === 'string'
-          ? parsed.error.message
-          : 'Antigravity stream error';
+          ? parsed.error.message.trim()
+          : '';
     return {
       sessionRef,
       events,
       isError: true,
-      errorMessage: msg,
+      errorMessage: rawMsg || 'Antigravity stream error',
     };
   }
 

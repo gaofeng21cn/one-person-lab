@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { isRecord } from '@opl/core';
 import { PackError } from '../errors.ts';
@@ -241,6 +242,108 @@ function selectPrimaryPluginSubdir(repoRoot: string, pluginSubdirs: readonly str
   return best && best.score > 0 ? best.relDir : `plugins/${pluginSubdirs[0]}`;
 }
 
+function applyMigrationPlan(params: {
+  readonly repoRoot: string;
+  readonly rootManifestPath: string;
+  readonly manifestJsonText: string;
+  readonly relocations: readonly MigrateV1Relocation[];
+  readonly filesToDelete: ReadonlySet<string>;
+  readonly dirsToDelete: ReadonlySet<string>;
+  readonly apply: boolean;
+  readonly clean: boolean;
+}): { readonly applied: boolean; readonly cleaned: boolean } {
+  if (!params.apply) {
+    return { applied: false, cleaned: false };
+  }
+
+  const prevRootBytes = fs.existsSync(params.rootManifestPath)
+    ? fs.readFileSync(params.rootManifestPath)
+    : null;
+  const createdTargets: string[] = [];
+  let wroteRootManifest = false;
+  const backupDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-migrate-bak-'));
+  const backedUpCleanPaths: Array<{ readonly rel: string; readonly bakAbs: string }> = [];
+
+  try {
+    for (const reloc of params.relocations) {
+      const fromAbs = path.join(params.repoRoot, reloc.from);
+      const toAbs = path.join(params.repoRoot, reloc.to);
+      if (fs.existsSync(fromAbs) && !fs.existsSync(toAbs)) {
+        fs.mkdirSync(path.dirname(toAbs), { recursive: true });
+        createdTargets.push(toAbs);
+        fs.cpSync(fromAbs, toAbs, { recursive: true });
+      }
+    }
+    fs.writeFileSync(params.rootManifestPath, params.manifestJsonText, 'utf8');
+    wroteRootManifest = true;
+
+    let cleaned = false;
+    if (params.clean) {
+      let idx = 0;
+      for (const relFile of params.filesToDelete) {
+        const abs = path.join(params.repoRoot, relFile);
+        if (fs.existsSync(abs)) {
+          const bakAbs = path.join(backupDir, `f_${idx++}`);
+          fs.cpSync(abs, bakAbs, { recursive: true });
+          backedUpCleanPaths.push({ rel: relFile, bakAbs });
+          fs.rmSync(abs, { force: true });
+        }
+      }
+      for (const relDir of params.dirsToDelete) {
+        const abs = path.join(params.repoRoot, relDir);
+        if (fs.existsSync(abs)) {
+          const bakAbs = path.join(backupDir, `d_${idx++}`);
+          fs.cpSync(abs, bakAbs, { recursive: true });
+          backedUpCleanPaths.push({ rel: relDir, bakAbs });
+          fs.rmSync(abs, { recursive: true, force: true });
+        }
+      }
+      const pluginsDir = path.join(params.repoRoot, 'plugins');
+      if (fs.existsSync(pluginsDir) && fs.readdirSync(pluginsDir).length === 0) {
+        fs.rmdirSync(pluginsDir);
+      }
+      const codexDir = path.join(params.repoRoot, '.codex-plugin');
+      if (fs.existsSync(codexDir) && fs.readdirSync(codexDir).length === 0) {
+        fs.rmdirSync(codexDir);
+      }
+      cleaned = true;
+    }
+    return { applied: true, cleaned };
+  } catch (error) {
+    for (let i = backedUpCleanPaths.length - 1; i >= 0; i -= 1) {
+      const entry = backedUpCleanPaths[i]!;
+      const origAbs = path.join(params.repoRoot, entry.rel);
+      try {
+        fs.mkdirSync(path.dirname(origAbs), { recursive: true });
+        fs.cpSync(entry.bakAbs, origAbs, { recursive: true });
+      } catch {
+        // best-effort restore
+      }
+    }
+    if (wroteRootManifest) {
+      try {
+        if (prevRootBytes !== null) {
+          fs.writeFileSync(params.rootManifestPath, prevRootBytes);
+        } else {
+          fs.rmSync(params.rootManifestPath, { force: true });
+        }
+      } catch {
+        // best-effort restore
+      }
+    }
+    for (let i = createdTargets.length - 1; i >= 0; i -= 1) {
+      try {
+        fs.rmSync(createdTargets[i]!, { recursive: true, force: true });
+      } catch {
+        // best-effort cleanup
+      }
+    }
+    throw error;
+  } finally {
+    fs.rmSync(backupDir, { recursive: true, force: true });
+  }
+}
+
 export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
   if (!fs.existsSync(options.repoDir) || !fs.statSync(options.repoDir).isDirectory()) {
     throw new PackError('PACK_NOT_FOUND', `Repository directory not found: ${options.repoDir}`);
@@ -293,23 +396,83 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
     throw new PackError('PACK_MIGRATION_FAILED', `Failed to parse v1 manifest at ${sourceManifestPath}.`);
   }
 
-  // Already v2? Validate and return cleanly
+  // Already v2? Relocate & clean if discovered under nested plugins/<name>/, otherwise return idempotently
   if (old.schema_version === 'opl.package.v2') {
     const validated = parsePackageManifestV2(old);
+    if (!nestedLayoutDetected || !nestedPluginRelDir || sourceManifestPath === rootManifestPath) {
+      return {
+        manifest: validated,
+        source_manifest_path: sourceManifestPath,
+        target_manifest_path: rootManifestPath,
+        nested_layout_detected: nestedLayoutDetected,
+        nested_plugin_dir: nestedPluginRelDir,
+        extra_entrypoints: [],
+        applied: false,
+        cleaned: false,
+        cleanup_report: {
+          files_to_delete: [],
+          dirs_to_delete: [],
+          relocations: [],
+          warnings: ['Manifest is already opl.package.v2.'],
+        },
+      };
+    }
+
+    const v2Relocations: MigrateV1Relocation[] = [];
+    const v2DirsToDelete = new Set<string>(pluginSubdirs.map((s) => `plugins/${s}`));
+    const v2FilesToDelete = new Set<string>();
+    const relocKeys = new Set<string>();
+    const addV2Reloc = (subRel: string, kind: 'file' | 'directory') => {
+      const cleanSub = stripLeadingDotSlash(subRel);
+      if (!cleanSub || !isSafeRelativePosixPath(cleanSub)) return;
+      const fromRel = `${nestedPluginRelDir}/${cleanSub}`;
+      const fromAbs = path.join(repoRoot, fromRel);
+      const toAbs = path.join(repoRoot, cleanSub);
+      const key = `${fromRel}=>${cleanSub}`;
+      if (relocKeys.has(key)) return;
+      if (fs.existsSync(fromAbs) && !fs.existsSync(toAbs)) {
+        const stat = fs.statSync(fromAbs);
+        if ((kind === 'directory' && stat.isDirectory()) || (kind === 'file' && stat.isFile())) {
+          v2Relocations.push({ from: fromRel, to: cleanSub, kind });
+          relocKeys.add(key);
+        }
+      }
+    };
+    for (const stdDir of ['skills', 'assets', 'bin', 'workbench', 'runtime', 'scripts', 'openclaw']) {
+      addV2Reloc(stdDir, 'directory');
+    }
+    if (validated.identity.icon) {
+      addV2Reloc(validated.identity.icon, 'file');
+    }
+    for (const sk of validated.provides?.skills ?? []) {
+      addV2Reloc(sk.path, 'directory');
+    }
+
+    const execRes = applyMigrationPlan({
+      repoRoot,
+      rootManifestPath,
+      manifestJsonText: `${JSON.stringify(validated, null, 2)}\n`,
+      relocations: v2Relocations,
+      filesToDelete: v2FilesToDelete,
+      dirsToDelete: v2DirsToDelete,
+      apply: Boolean(options.apply),
+      clean: Boolean(options.clean),
+    });
+
     return {
       manifest: validated,
       source_manifest_path: sourceManifestPath,
       target_manifest_path: rootManifestPath,
-      nested_layout_detected: nestedLayoutDetected,
+      nested_layout_detected: true,
       nested_plugin_dir: nestedPluginRelDir,
       extra_entrypoints: [],
-      applied: false,
-      cleaned: false,
+      applied: execRes.applied,
+      cleaned: execRes.cleaned,
       cleanup_report: {
         files_to_delete: [],
-        dirs_to_delete: [],
-        relocations: [],
-        warnings: ['Manifest is already opl.package.v2.'],
+        dirs_to_delete: [...v2DirsToDelete].sort(),
+        relocations: v2Relocations,
+        warnings: ['Relocated nested opl.package.v2 manifest from plugins/ to package root.'],
       },
     };
   }
@@ -807,6 +970,31 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
       argv: adapterDoc.argv.filter((a): a is string => typeof a === 'string' && a.length > 0),
       transport: 'stdin_json_stdout_json',
     };
+  } else if (adapterDoc && typeof adapterDoc.command === 'string' && adapterDoc.command.trim()) {
+    const parts = adapterDoc.command.trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 0) {
+      const candidateArgv = parts.map((p, i) =>
+        i > 0 && isSafeRelativePosixPath(p) && !p.startsWith('./') ? `./${p}` : p,
+      );
+      const missingRel = candidateArgv.find((arg, i) => {
+        if (!arg.startsWith('./') && !(i === 0 && arg.includes('/'))) return false;
+        const rel = stripLeadingDotSlash(arg);
+        const absRoot = path.join(repoRoot, rel);
+        const absNested = nestedPluginRelDir ? path.join(repoRoot, nestedPluginRelDir, rel) : null;
+        return !fs.existsSync(absRoot) && (!absNested || !fs.existsSync(absNested));
+      });
+      if (!missingRel) {
+        contributionHandler = {
+          kind: 'cli',
+          argv: candidateArgv,
+          transport: 'stdin_json_stdout_json',
+        };
+      } else {
+        warnings.push(
+          `Skipped app-contribution-adapter.json command because '${missingRel}' does not exist on disk.`,
+        );
+      }
+    }
   }
 
   // 7. Declarative UI + Tier 3 MCP Apps
@@ -982,26 +1170,84 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
       );
     };
 
+    const hasAppContribPy =
+      hasRegularFile('runtime/app_contribution.py')
+      || (nestedPluginRelDir !== null && hasRegularFile(`${nestedPluginRelDir}/runtime/app_contribution.py`));
+    const declaredCliBin =
+      [...cliBinMap.values()].find(
+        (b) => hasRegularFile(b.path) || (nestedPluginRelDir !== null && hasRegularFile(`${nestedPluginRelDir}/${b.path}`)),
+      ) ?? [...cliBinMap.values()][0];
+    const discoveredBinRel = (() => {
+      for (const baseRel of ['bin', ...(nestedPluginRelDir ? [`${nestedPluginRelDir}/bin`] : [])]) {
+        const binDir = path.join(repoRoot, baseRel);
+        if (!fs.existsSync(binDir) || !fs.statSync(binDir).isDirectory()) continue;
+        const first = fs
+          .readdirSync(binDir, { withFileTypes: true })
+          .filter((e) => e.isFile())
+          .map((e) => e.name)
+          .sort()[0];
+        if (first) return `./bin/${first}`;
+      }
+      return null;
+    })();
+
     if (hasBinEntry) {
       contributionHandler = {
         kind: 'cli',
         argv: [`./bin/${id}`, '--json', 'app-contribution'],
         transport: 'stdin_json_stdout_json',
       };
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler for declarative UI views (${views.length}).`,
+      );
     } else if (isUsableEsmEntrypoint(channels[0]?.entrypoint)) {
       contributionHandler = { ...channels[0].entrypoint };
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler for declarative UI views (${views.length}).`,
+      );
     } else if (isUsableEsmEntrypoint(remoteCompanions[0]?.entrypoint)) {
       contributionHandler = { ...remoteCompanions[0].entrypoint };
-    } else {
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler for declarative UI views (${views.length}).`,
+      );
+    } else if (hasAppContribPy) {
       contributionHandler = {
         kind: 'cli',
-        argv: ['opl', 'app', 'contribution', 'adapter', '--stdin'],
+        argv: ['python3', './runtime/app_contribution.py'],
         transport: 'stdin_json_stdout_json',
       };
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler from runtime/app_contribution.py for declarative UI views (${views.length}).`,
+      );
+    } else if (declaredCliBin) {
+      const binRelPath = declaredCliBin.path.startsWith('./')
+        ? declaredCliBin.path
+        : `./${declaredCliBin.path}`;
+      contributionHandler = {
+        kind: 'cli',
+        argv: [binRelPath, '--json', 'app-contribution'],
+        transport: 'stdin_json_stdout_json',
+      };
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler from cli_bin '${declaredCliBin.name}' for declarative UI views (${views.length}).`,
+      );
+    } else if (discoveredBinRel) {
+      contributionHandler = {
+        kind: 'cli',
+        argv: [discoveredBinRel, '--json', 'app-contribution'],
+        transport: 'stdin_json_stdout_json',
+      };
+      warnings.push(
+        `Synthesized fallback provides.contribution_handler from '${discoveredBinRel}' for declarative UI views (${views.length}).`,
+      );
+    } else {
+      views.length = 0;
+      settingsForms.length = 0;
+      navItems.length = 0;
+      warnings.push(
+        'Omitted ui.declarative because no valid provides.contribution_handler entrypoint exists on disk.',
+      );
     }
-    warnings.push(
-      `Synthesized fallback provides.contribution_handler for declarative UI views (${views.length}).`,
-    );
   }
 
   // MiniApp -> ui.mcp_apps
@@ -1226,39 +1472,18 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
     }
   }
 
-  let applied = false;
-  let cleaned = false;
-
-  if (options.apply) {
-    for (const reloc of relocations) {
-      const fromAbs = path.join(repoRoot, reloc.from);
-      const toAbs = path.join(repoRoot, reloc.to);
-      if (fs.existsSync(fromAbs) && !fs.existsSync(toAbs)) {
-        fs.mkdirSync(path.dirname(toAbs), { recursive: true });
-        fs.cpSync(fromAbs, toAbs, { recursive: true });
-      }
-    }
-    fs.writeFileSync(rootManifestPath, `${JSON.stringify(validated, null, 2)}\n`, 'utf8');
-    applied = true;
-
-    if (options.clean) {
-      for (const relFile of filesToDelete) {
-        fs.rmSync(path.join(repoRoot, relFile), { force: true });
-      }
-      for (const relDir of dirsToDelete) {
-        fs.rmSync(path.join(repoRoot, relDir), { recursive: true, force: true });
-      }
-      const pluginsDir = path.join(repoRoot, 'plugins');
-      if (fs.existsSync(pluginsDir) && fs.readdirSync(pluginsDir).length === 0) {
-        fs.rmdirSync(pluginsDir);
-      }
-      const codexDir = path.join(repoRoot, '.codex-plugin');
-      if (fs.existsSync(codexDir) && fs.readdirSync(codexDir).length === 0) {
-        fs.rmdirSync(codexDir);
-      }
-      cleaned = true;
-    }
-  }
+  const execRes = applyMigrationPlan({
+    repoRoot,
+    rootManifestPath,
+    manifestJsonText: `${JSON.stringify(validated, null, 2)}\n`,
+    relocations,
+    filesToDelete,
+    dirsToDelete,
+    apply: Boolean(options.apply),
+    clean: Boolean(options.clean),
+  });
+  const applied = execRes.applied;
+  const cleaned = execRes.cleaned;
 
   return {
     manifest: validated,
