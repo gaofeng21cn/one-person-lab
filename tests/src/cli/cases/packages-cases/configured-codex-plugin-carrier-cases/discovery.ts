@@ -273,10 +273,13 @@ process.stdout.write(JSON.stringify({ installed: [], available: [] }));
       })
       .sort();
     const entries = result.opl_agent_packages.directory.entries;
-    assert.deepEqual(entries.map((entry: any) => entry.package_id).sort(), expectedPackageIds);
+    const legacyWeixin = entries.find((entry: any) => entry.package_id === 'opl-channel-weixin');
+    assert.ok(legacyWeixin, 'Frozen App profiles can still request their legacy channel');
+    assert.equal(legacyWeixin.installability.installable, true);
+    assert.equal(legacyWeixin.recommended_action_ref.action_id, 'agent_package_install');
+    assert.deepEqual(entries.filter((entry: any) => entry !== legacyWeixin).map((entry: any) => entry.package_id).sort(), expectedPackageIds);
     assert.equal(entries.some((entry: any) => entry.package_id === 'mas-scholar-skills'), false);
     assert.ok(entries.some((entry: any) => entry.package_id === 'opl-fleet-agent'));
-    assert.ok(!entries.some((entry: any) => entry.package_id === 'opl-channel-weixin'));
     assert.equal(result.opl_agent_packages.installed_package_count, 0);
     assert.equal(result.opl_agent_packages.directory.installable_package_count,
       entries.filter((entry: any) => entry.installability.installable).length);

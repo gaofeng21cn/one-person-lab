@@ -7,13 +7,20 @@ import path from 'node:path';
 import { catalogFixtureManifestPath } from './helpers/catalog-fixture.ts';
 
 import {
+  listCurrentPackageProjections,
   loadStandardAgentRegistry,
   matchesStandardDomainAgentCatalogEntry,
   normalizeStandardDomainAgentId,
+  resolveProjectedManifestPath,
   standardDomainAgentFamilyProjection,
   STANDARD_AGENT_REGISTRY,
   STANDARD_AGENT_SERIES_MEMBERSHIP,
 } from '../../src/kernel/standard-agent-registry.ts';
+import {
+  DEFAULT_OPL_CATALOG_INDEX_URL,
+  OFFICIAL_OPL_CATALOG_ID,
+  softwareCatalogSourceDir,
+} from '../../src/kernel/software-catalog-cache-paths.ts';
 import { OFFICIAL_KNOWLEDGE_DELIVERABLE_QUALITY_PROFILE } from '../../src/authority/packages/standard-agent-stage-manifest.ts';
 import {
   canonicalAgentPackageId,
@@ -98,6 +105,68 @@ function writeUnknownAgentProjection(packageDirectory: string, fixture = unknown
     `${JSON.stringify(fixture, null, 2)}\n`,
   );
 }
+
+test('the official seed and cache retain precedence while the process refreshes its Agent identities', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-catalog-agent-refresh-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const previousProjection = process.env.OPL_PACKAGE_PROJECTION_DIR;
+  const previousCatalog = process.env.OPL_CATALOG_ROOT;
+  const previousState = process.env.OPL_STATE_DIR;
+  const previousSeed = process.env.OPL_CATALOG_SEED_DIR;
+  t.after(() => {
+    for (const [key, value] of Object.entries({
+      OPL_PACKAGE_PROJECTION_DIR: previousProjection,
+      OPL_CATALOG_ROOT: previousCatalog,
+      OPL_STATE_DIR: previousState,
+      OPL_CATALOG_SEED_DIR: previousSeed,
+    })) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+  delete process.env.OPL_PACKAGE_PROJECTION_DIR;
+  delete process.env.OPL_CATALOG_ROOT;
+  process.env.OPL_STATE_DIR = path.join(root, 'state');
+  process.env.OPL_CATALOG_SEED_DIR = path.join(root, 'seed');
+  const seedAgents = path.join(process.env.OPL_CATALOG_SEED_DIR, 'packages', 'agents');
+  fs.mkdirSync(seedAgents, { recursive: true });
+  writeUnknownAgentProjection(seedAgents);
+
+  const externalId = 'catalog:team';
+  const externalUrl = 'https://example.test/catalog.json';
+  fs.mkdirSync(process.env.OPL_STATE_DIR);
+  fs.writeFileSync(path.join(process.env.OPL_STATE_DIR, 'software-sources.json'), JSON.stringify({
+    surface_kind: 'opl_software_sources_store.v1',
+    sources: [{ source_id: externalId, source_ref: externalUrl, enabled: true }],
+  }));
+  const external = softwareCatalogSourceDir(externalId)!;
+  const externalAgents = path.join(external, 'packages', 'agents');
+  fs.mkdirSync(externalAgents, { recursive: true });
+  fs.writeFileSync(path.join(external, 'meta.json'), JSON.stringify({
+    schema_version: 'opl_software_catalog_cache_meta.v1', source_id: externalId, source_ref: externalUrl,
+  }));
+  writeUnknownAgentProjection(externalAgents, { ...unknownAgentProjection(), display_name: 'Other Agent' });
+
+  const officialRef = 'catalog://public-registry:opl/packages/agents/future-agent.json';
+  assert.equal(resolveProjectedManifestPath(officialRef), path.join(seedAgents, 'future-agent.json'));
+  assert.equal(listCurrentPackageProjections().find(({ payload }) => payload.package_id === 'future-agent')?.source_id, OFFICIAL_OPL_CATALOG_ID);
+  assert.equal(canonicalAgentPackageId('future-runtime'), 'future-agent');
+  assert.equal(resolveOplDomainModuleSpec('future-runtime').module_id, 'futureagent');
+
+  const official = softwareCatalogSourceDir(OFFICIAL_OPL_CATALOG_ID)!;
+  const officialAgents = path.join(official, 'packages', 'agents');
+  fs.mkdirSync(officialAgents, { recursive: true });
+  fs.writeFileSync(path.join(official, 'meta.json'), JSON.stringify({
+    schema_version: 'opl_software_catalog_cache_meta.v1',
+    source_id: OFFICIAL_OPL_CATALOG_ID,
+    source_ref: DEFAULT_OPL_CATALOG_INDEX_URL,
+  }));
+  fs.copyFileSync(catalogFixtureManifestPath('mas'), path.join(officialAgents, 'mas.json'));
+  assert.equal(canonicalAgentPackageId('future-runtime'), 'future-runtime');
+  assert.equal(canonicalAgentPackageId('med-autoscience'), 'mas');
+  assert.equal(resolveOplDomainModuleSpec('med-autoscience').module_id, 'medautoscience');
+  assert.equal(listCurrentPackageProjections().find(({ payload }) => payload.package_id === 'future-agent')?.source_id, externalId);
+});
 
 test('native helper owner split declares the registry projection without a duplicated owner list', () => {
   const contract = nativeHelperContract();
