@@ -378,6 +378,9 @@ export function createSandbox(options = {}) {
   const cleanEnv = { ...process.env };
   delete cleanEnv.NODE_TEST_CONTEXT;
   delete cleanEnv.OPL_REPO_TEMP_ENV_ACTIVE;
+  delete cleanEnv.OPL_CODEX_BIN;
+  delete cleanEnv.OPL_AGY_BIN;
+  delete cleanEnv.ANTIGRAVITY_SOURCE_METADATA;
   for (const key of Object.keys(cleanEnv)) {
     if (key.startsWith("OPL_DAEMON_") || key.startsWith("OPL_SESSION_")) {
       delete cleanEnv[key];

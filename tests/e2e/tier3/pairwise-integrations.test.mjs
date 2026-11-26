@@ -866,7 +866,8 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     assert.equal(codexExecs.length, 1, "Must not spawn duplicate codex execution on reconcile");
 
     const liveProcs = sb.findLiveProcesses();
-    const daemonProcs = liveProcs.filter((p) => !/\bstubs\/bin\/(?:codex|agy)\b/.test(p.command));
+    const isStubCmd = (cmd) => !/\bbin-opld\b/.test(cmd) && /(?:^|[\s/])stubs\/bin\/(?:codex|agy)(?:\s|$)/.test(cmd);
+    const daemonProcs = liveProcs.filter((p) => !isStubCmd(String(p.command || "")));
     const procAudit = auditProcessHygiene({
       psRows: IS_PRE_M4 ? liveProcs : undefined,
       sandboxLiveProcs: daemonProcs,
@@ -1188,7 +1189,10 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     assert.equal(procAudit.opldCount, 1);
     assert.equal(procAudit.temporalProcesses.length, 0);
     assert.equal(
-      liveProcs.some((p) => /stubs\/bin\/(?:codex|agy)/.test(String(p.command || ""))),
+      liveProcs.some((p) => {
+        const cmd = String(p.command || "");
+        return !/\bbin-opld\b/.test(cmd) && /(?:^|[\s/])stubs\/bin\/(?:codex|agy)(?:\s|$)/.test(cmd);
+      }),
       false,
       `Expected zero lingering executor stub processes after 3-stage relay: ${JSON.stringify(liveProcs)}`
     );
