@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { parse } from 'yaml';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const scriptsDir = path.join(root, 'scripts', 'macos-sparkle-release');
@@ -27,6 +28,11 @@ test('shared macOS Sparkle release workflow and scripts keep required contracts'
   assert.match(workflowText, /verify-macos-release\.sh/);
   assert.match(workflowText, /dist\/appcast\.xml/);
   assert.match(workflowText, /security delete-keychain/);
+
+  const preflight = parse(workflowText).jobs.macos.steps.find(
+    (step) => step.env?.PREFLIGHT_COMMAND === '${{ inputs.preflight_command }}',
+  );
+  assert.equal(preflight?.env.RELEASE_TAG, '${{ inputs.release_tag }}');
 
   for (const name of requiredScripts) {
     const scriptPath = path.join(scriptsDir, name);

@@ -50,7 +50,7 @@ Agent tool 与必要 UI 是同一领域能力的两个入口。Framework 的共�
 | --- | --- | --- |
 | 通用规则与机器合同 | 本仓 `contracts/opl-framework/`；人读入口为 `docs/README.md` | 标准与接口在唯一主题 owner 维护，各仓链接、声明依赖；契约变更同步真实 caller |
 | 通用运行代码与组件 | 本仓 `src/`、`python/opl_framework/`；共享 UI 为 `src/mcp-app/` | 使用 `package.json` 的公开 export、`opl` CLI 或 `python/opl_framework`；领域仓不复制 Framework runtime |
-| 软件源与发布制品 | 公开目录声明位于本仓 `contracts/opl-framework/packages/`，公开载体位于 [Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab)，制品位于 descriptor 指定的 OCI/GHCR 或其他 native source | 私有 metadata 与制品由受权限保护的源提供；Framework 统一 identity 与状态投影，权限、凭证和安装事实保留各自 owner；完整入口见 [Package Directory](./specs/package-directory.md#软件源的物理入口) |
+| 软件源与发布制品 | 官方目录由 [opl-catalog](https://github.com/gaofeng21cn/opl-catalog) 维护，原生软件可通过 [Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab) 交付，Package 制品由 descriptor 指定的 OCI/GHCR 或其他 native source 交付 | Framework 统一 identity 与状态投影，权限、凭证和安装事实分别由实际 owner 维护。完整入口见 [Package Directory](./specs/package-directory.md#软件源的物理入口) |
 | 已安装的可执行基座 | 当前 carrier 选择的 Framework 安装；managed locator 入口为 `~/.opl/one-person-lab` | `opl framework locate --json` 回读本次调用的实际 root、bin、contracts 和 state；开发 checkout、CLI 安装与 App 所带安装可位于不同位置，各宿主按自己的安装合同选择 |
 | 本机运行状态与连接授权 | `OPL_STATE_DIR` 指定位置；默认 `~/Library/Application Support/OPL/state`；使用 `OPL_DATA_DIR` 时为其下 `opl/state` | Framework 管理连接引用、grant、任务投影等状态；凭证由 provider、Account & Access 或原生 carrier 保管，消费者只使用公开执行入口 |
 | 私人知识控制信息 | Profile/Workspace 的私有来源 registry，以及 `<workspace>/shared/memory/knowledge-bindings.json` | 多个获授权工作区引用同一来源，Framework 核对范围与接受版本；具体文件布局由[知识来源接口](./specs/knowledge-sources.md)定义 |

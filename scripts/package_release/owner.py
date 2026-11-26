@@ -192,15 +192,57 @@ def execute_commands(root, settings, field):
         run(command, cwd=root)
 
 
+def _carrier_source_paths(root, allowlist, commit):
+    if not allowlist.get('carrier_projection_ref'):
+        return None
+    resolver = Path(__file__).resolve().parents[1] / 'package-carrier-source-paths.mjs'
+    if not resolver.is_file():
+        raise ReleaseError('Missing package-carrier-source-paths resolver')
+    script = (
+        "import { spawnSync } from 'node:child_process';"
+        "const { packageCarrierSourcePaths } = await import(process.argv[1]);"
+        "const allowlist = JSON.parse(process.argv[2]);"
+        "const sourceCommit = process.argv[3];"
+        "const readGit = (args) => {"
+        "  const res = spawnSync('git', args, { cwd: process.cwd(), stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });"
+        "  if (res.status !== 0) throw new Error(res.stderr?.toString('utf8') || 'git failed');"
+        "  return res.stdout;"
+        "};"
+        "const projected = packageCarrierSourcePaths({ allowlist, sourceCommit, readGit });"
+        "process.stdout.write(JSON.stringify(projected ? Object.fromEntries(projected) : null));"
+    )
+    output = run(
+        ['node', '--experimental-strip-types', '-e', script, str(resolver), json.dumps(allowlist), commit],
+        cwd=root,
+    ).stdout
+    return json.loads(output)
+
+
 def content_changed(root, previous_commit, projection, allowlist, settings=None):
     carrier = safe_path(root, allowlist['source_root'])
     descriptor = read(carrier / 'opl-package.json')
     paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
-    names = {str(Path(allowlist['source_root']) / p) for p in paths}
-    names.update(metadata_files(root, projection, allowlist))
+    source_root = allowlist['source_root']
+    head_commit = git(root, 'rev-parse', 'HEAD')
+    head_map = _carrier_source_paths(root, allowlist, head_commit)
+    prev_map = _carrier_source_paths(root, allowlist, previous_commit)
+    pairs = {}
+    all_paths = sorted(
+        set(paths)
+        | (set(head_map) if head_map is not None else set())
+        | (set(prev_map) if prev_map is not None else set())
+    )
+    for rel in all_paths:
+        cur_rel = head_map.get(rel, str(Path(source_root) / rel)) if head_map is not None else str(Path(source_root) / rel)
+        prev_rel = prev_map.get(rel, str(Path(source_root) / rel)) if prev_map is not None else str(Path(source_root) / rel)
+        pairs[cur_rel] = prev_rel
+    for meta in metadata_files(root, projection, allowlist):
+        pairs[meta] = meta
     settings = settings or {}
-    names.update(item['path'] for item in settings.get('version_files', []))
-    names.update(f'.github/workflows/{name}' for name in settings.get('release_workflows', []))
+    for item in settings.get('version_files', []):
+        pairs[item['path']] = item['path']
+    for name in settings.get('release_workflows', []):
+        pairs[f'.github/workflows/{name}'] = f'.github/workflows/{name}'
     release_paths = settings.get('release_paths', [])
     if release_paths:
         for name in release_paths:
@@ -210,12 +252,12 @@ def content_changed(root, previous_commit, projection, allowlist, settings=None)
             return True
         if difference.returncode:
             raise ReleaseError('Cannot compare the declared product release paths')
-    for name in sorted(names):
-        current = safe_path(root, name)
+    for cur_rel, prev_rel in sorted(pairs.items()):
+        current = safe_path(root, cur_rel)
         if not current.is_file():
             return True
-        old_hash = run(['git', 'rev-parse', f'{previous_commit}:{name}'], cwd=root, check=False).stdout.strip()
-        if old_hash != git(root, 'hash-object', name):
+        old_hash = run(['git', 'rev-parse', f'{previous_commit}:{prev_rel}'], cwd=root, check=False).stdout.strip()
+        if old_hash != git(root, 'hash-object', cur_rel):
             return True
     return False
 
@@ -313,20 +355,31 @@ def merge_release_changes(root, repo, base, package_id, version, *, delivery_kin
     wait_for_checks(repo, head)
     if gh(f'repos/{repo}/commits/main')['sha'] != base:
         raise ReleaseError('Owner main changed during release preparation; retry from the new source')
-    result = gh(f'repos/{repo}/pulls/{pull["number"]}/merge', method='PUT',
-                payload={'sha': head, 'merge_method': 'merge'})
-    if result.get('merged') is not True:
-        raise ReleaseError('Release PR was not merged')
-    git(root, 'fetch', 'origin', 'main', '--quiet')
+    merge_error = None
+    try:
+        result = gh(f'repos/{repo}/pulls/{pull["number"]}/merge', method='PUT',
+                    payload={'sha': head, 'merge_method': 'merge'})
+    except ReleaseError as exc:
+        result = None
+        merge_error = exc
+    if not result or result.get('merged') is not True:
+        # Recover if the merge API receipt was lost after GitHub already landed the PR on main.
+        git(root, 'fetch', 'origin', 'main', '--quiet')
+        if run(['git', 'merge-base', '--is-ancestor', head, 'origin/main'], cwd=root, check=False).returncode != 0:
+            if merge_error is not None:
+                raise merge_error
+            raise ReleaseError('Release PR was not merged')
+    else:
+        git(root, 'fetch', 'origin', 'main', '--quiet')
     git(root, 'reset', '--hard', 'origin/main')
     if git(root, 'rev-parse', 'HEAD^{tree}') != git(root, 'rev-parse', f'{head}^{{tree}}'):
         raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
     return git(root, 'rev-parse', 'HEAD')
 
-def prepare_owner(root, projection, allowlist, framework, repo, *, apply):
+def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None):
     base = git(root, 'rev-parse', 'HEAD')
-    payload = read(framework / 'contracts/opl-framework/packages' /
-                   projection['codex_surface']['plugin_payload_manifest_url'])
+    payload = read(payload_path or (framework / 'contracts/opl-framework/packages' /
+                                    projection['codex_surface']['plugin_payload_manifest_url']))
     settings = owner_settings(root)
     if settings.get('strategy') == 'manual':
         return {'status': 'owner_manual', 'owner_source_commit': base}

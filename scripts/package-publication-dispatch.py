@@ -21,10 +21,15 @@ def dispatch(plan, source_run):
     if plan['source_run_id'] != str(source_run):
         raise RuntimeError('Dispatch plan belongs to a different source run')
     outcomes = []
+    catalog_commit = plan.get('catalog_source_commit')
+    if catalog_commit is not None and not re.fullmatch(r'[a-f0-9]{40}', catalog_commit):
+        raise RuntimeError('Dispatch plan Catalog commit is invalid')
     for entry in plan['packages']:
         private = entry.get('visibility') == 'authorized_only'
         repo = entry['owner_repository'] if private else 'gaofeng21cn/one-person-lab'
         try:
+            if entry.get('expected_catalog_source_commit') != catalog_commit:
+                raise RuntimeError('Package entry belongs to a different Catalog revision')
             runs = gh(f'repos/{repo}/actions/workflows/publish-package.yml/runs?event=workflow_dispatch&per_page=100')['workflow_runs']
             if matching_publications(runs, entry):
                 outcomes.append({'package_id': entry['package_id'], 'status': 'already_dispatched'})
@@ -41,8 +46,14 @@ def dispatch(plan, source_run):
                 uses = re.findall(r'uses: gaofeng21cn/one-person-lab/\.github/workflows/publish-package.yml@([a-f0-9]{40})', text)
                 if pins != [plan['framework_source_commit']] or uses != pins:
                     raise RuntimeError('Private publisher pin needs synchronization to the selected projection')
+                if catalog_commit and not re.search(
+                    r'(?m)^      expected_catalog_source_commit: \$\{\{ inputs\.expected_catalog_source_commit \}\}$', text
+                ):
+                    raise RuntimeError('Private publisher does not accept the selected Catalog revision')
             else:
                 inputs.update(package_id=entry['package_id'], expected_framework_source_commit=plan['framework_source_commit'])
+            if catalog_commit:
+                inputs['expected_catalog_source_commit'] = catalog_commit
             gh(f'repos/{repo}/actions/workflows/publish-package.yml/dispatches', method='POST',
                payload={'ref': 'main', 'inputs': inputs})
             outcomes.append({'package_id': entry['package_id'], 'status': 'dispatched'})

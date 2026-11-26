@@ -62,34 +62,50 @@ jobs:
       - name: Prepare changed owner versions
         env:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          PACKAGE_RELEASE_APP_ID: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          PACKAGE_RELEASE_APP_PRIVATE_KEY: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          PACKAGE_RELEASE_APP_OWNER: ${{ github.repository_owner }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail
           gh repo clone gaofeng21cn/opl-flow "$RUNNER_TEMP/opl-flow" -- --depth=1 --quiet
+          gh repo clone gaofeng21cn/opl-catalog "$RUNNER_TEMP/opl-catalog" -- --depth=1 --quiet
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-daily-release.py \
             --flow-root "$RUNNER_TEMP/opl-flow" \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output "$RUNNER_TEMP/opl-package-preparation.json" \
             --apply "${args[@]}"
+      - name: Refresh scoped publication identity for downstream steps
+        id: sync-publisher-token
+        if: vars.PACKAGE_RELEASE_APP_ID != ''
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-contents: write
+          permission-workflows: write
       - name: Synchronize private owner publisher pins
-        if: steps.publisher-token.outputs.token != ''
+        if: steps.sync-publisher-token.outputs.token != ''
         env:
-          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+          GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 scripts/sync-private-package-publishers.py "${args[@]}"
+          python3 scripts/sync-private-package-publishers.py --catalog-root "$RUNNER_TEMP/opl-catalog" "${args[@]}"
       - name: Compare independent Package fingerprints
         env:
-          GH_TOKEN: ${{ steps.publisher-token.outputs.token || github.token }}
+          GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token || github.token }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-channel-detection.py \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output-root dist/opl-daily-packages \
             --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
           cp "$RUNNER_TEMP/opl-package-preparation.json" dist/opl-daily-packages/owner-preparation.json

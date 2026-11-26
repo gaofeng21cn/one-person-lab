@@ -23,7 +23,7 @@ OPL 软件源是用户认识“我们维护的软件”的统一入口。公开 
 | source ID | 类型 | 默认可见性 | 用途 |
 | --- | --- | --- | --- |
 | `homebrew:gaofeng21cn-one-person-lab` | Homebrew tap | `public` | OPL 宿主、CLI 和已声明的原生 carrier |
-| `public-registry:opl` | OPL 公共 Package 源 | `public` | 公开 Agent、Workflow 和 Capability |
+| `public-registry:opl` | [OPL 官方目录](https://github.com/gaofeng21cn/opl-catalog) | `public` | 智能体、应用、扩展、通道和依赖。展示已获准公开的需授权软件条目 |
 | `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
 
 Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl packages list --json` 及 `app_state.agent_packages.directory.entries`；Homebrew 原生软件使用 `opl sources list --json` 返回的 `software_sources.entries[].native_items`，并进入 App 的 OPL 软件目录和软件源详情。两处 UI 消费同一份投影。Homebrew tap 和 OCI/GHCR 仍由各自 owner 维护，App 不另建版本注册表。GitHub 保存开发源码与发布来源，开发 checkout 只通过显式开发覆盖接入，不作为普通安装或更新渠道。
@@ -63,6 +63,14 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 ```
 
 断开后，已安装的私有条目仍显示最小本地安装事实，并允许停用、修复本地 carrier 或卸载；需要远端 manifest、payload 或更新的动作会显示授权失效并保持不可用。重新 `configure` 后再 `check`，目录和可更新状态才恢复。
+
+## 刷新官方目录
+
+从官方源刷新目录版本。该动作刷新目录索引，安装和更新继续在各软件条目执行。
+
+```bash
+opl sources refresh --source-id public-registry:opl --json
+```
 
 ## Homebrew 原生软件
 
@@ -116,8 +124,8 @@ Homebrew 动作执行前重新读取该来源，核对固定 OPL tap、当前版
 
 私有条目使用 `visibility=authorized_only`。发现、下载和运行是三条独立授权链：
 
-1. 软件源检查决定当前身份能否看到 metadata 和版本；
-2. registry/provider 决定能否读取 manifest、payload、source archive 与 digest；
+1. 官方目录提供可公开的条目和版本。软件源检查决定当前身份能否读取受保护的详情。
+2. registry/provider 决定能否读取 manifest、payload、source archive 与 digest。
 3. Connect grant、知识来源 grant 和领域 owner 决定已安装 Agent 能否使用连接、Obsidian 知识或业务动作。
 
 安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest，`latest-stable` 只用于发现候选版本。公开源匿名回读与私有源授权回读分别验收。私有签名密钥、受保护发布流与 OCI namespace 归属校验机制由 [Artifact 与 Package Delivery 边界](../delivery/artifact-package-lifecycle-boundary.md) 持有；界面及状态展示规范由 [Package Directory 与统一安装管理](./package-directory.md#名称说明与状态展示) 持有。

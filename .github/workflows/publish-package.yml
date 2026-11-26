@@ -24,16 +24,21 @@ on:
         required: true
         type: string
       expected_package_version:
-        description: Exact stable SemVer selected by canonical Framework main
+        description: Exact stable SemVer selected by the official Package projection
         required: true
         type: string
       expected_owner_source_commit:
-        description: Exact owner commit selected by canonical Framework main
+        description: Exact owner commit selected by the official Package projection
         required: true
         type: string
       expected_framework_source_commit:
-        description: Exact Framework main commit that owns the Package projection
+        description: Exact Framework commit that supplies the publisher and verification tools
         required: true
+        type: string
+      expected_catalog_source_commit:
+        description: Exact official Catalog commit that supplies the Package projection
+        required: false
+        default: ''
         type: string
       expected_latest_stable_predecessor:
         description: Exact predecessor digest, verified none, or resolve-authenticated for a protected registry read
@@ -55,16 +60,21 @@ on:
         required: true
         type: string
       expected_package_version:
-        description: Exact stable SemVer selected by canonical Framework main
+        description: Exact stable SemVer selected by the official Package projection
         required: true
         type: string
       expected_owner_source_commit:
-        description: Exact owner commit selected by canonical Framework main
+        description: Exact owner commit selected by the official Package projection
         required: true
         type: string
       expected_framework_source_commit:
-        description: Exact Framework main commit that owns the Package projection
+        description: Exact Framework commit that supplies the publisher and verification tools
         required: true
+        type: string
+      expected_catalog_source_commit:
+        description: Exact official Catalog commit that supplies the Package projection
+        required: false
+        default: ''
         type: string
       expected_latest_stable_predecessor:
         description: Exact predecessor digest, verified none, or resolve-authenticated for a protected registry read
@@ -119,6 +129,7 @@ jobs:
       EXPECTED_PACKAGE_VERSION: ${{ inputs.expected_package_version }}
       EXPECTED_OWNER_SOURCE_COMMIT: ${{ inputs.expected_owner_source_commit }}
       EXPECTED_FRAMEWORK_SOURCE_COMMIT: ${{ inputs.expected_framework_source_commit }}
+      EXPECTED_CATALOG_SOURCE_COMMIT: ${{ inputs.expected_catalog_source_commit }}
       EXPECTED_LATEST_STABLE_PREDECESSOR: ${{ inputs.expected_latest_stable_predecessor }}
       PUBLICATION_REQUEST_ID: ${{ inputs.publication_request_id }}
       PACKAGES_OWNER: ${{ github.repository_owner }}
@@ -132,6 +143,15 @@ jobs:
           repository: gaofeng21cn/one-person-lab
           ref: ${{ inputs.expected_framework_source_commit }}
           fetch-depth: 1
+
+      - name: Checkout exact official Catalog projection
+        if: inputs.expected_catalog_source_commit != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/opl-catalog
+          ref: ${{ inputs.expected_catalog_source_commit }}
+          path: .opl-catalog
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -152,7 +172,25 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$PACKAGE_ID" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || { echo "::error::Invalid Package id"; exit 2; }
-          manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
+          packages_root="contracts/opl-framework/packages"
+          manifest="$packages_root/${PACKAGE_ID}.json"
+          if [ -n "${EXPECTED_CATALOG_SOURCE_COMMIT:-}" ]; then
+            [[ "$EXPECTED_CATALOG_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+            [ "$(git -C .opl-catalog rev-parse HEAD)" = "$EXPECTED_CATALOG_SOURCE_COMMIT" ]
+            node .opl-catalog/scripts/validate-catalog.mjs
+            packages_root=".opl-catalog/packages"
+            manifest="$(jq -er --arg id "$PACKAGE_ID" \
+              '[.packages[] | select(.package_id == $id) | .manifest_path] | select(length == 1) | .[0]' \
+              .opl-catalog/catalog-index.json)"
+            [[ "$manifest" =~ ^packages/(agents|applications|extensions|channels|dependencies)/ ]]
+            [ "${manifest##*/}" = "${PACKAGE_ID}.json" ]
+            manifest=".opl-catalog/$manifest"
+            echo "OPL_CATALOG_ROOT=$GITHUB_WORKSPACE/.opl-catalog" >> "$GITHUB_ENV"
+          fi
+          {
+            echo "PACKAGE_MANIFEST_PATH=$manifest"
+            echo "PACKAGE_PROJECTION_ROOT=$packages_root"
+          } >> "$GITHUB_ENV"
           visibility="$(jq -er '.visibility // "public" | select(. == "public" or . == "authorized_only")' "$manifest")"
           access_policy_ref="$(jq -r '.access_policy_ref // empty' "$manifest")"
           credential_provider="$(jq -r '.credential_provider // empty' "$manifest")"
@@ -261,7 +299,7 @@ jobs:
           [ "$(git rev-parse HEAD)" = "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" ]
           npm ci --ignore-scripts --no-audit --no-fund
 
-          manifest="contracts/opl-framework/packages/${PACKAGE_ID}.json"
+          manifest="$PACKAGE_MANIFEST_PATH"
           source_repo="$(jq -er .source_repo "$manifest")"
           if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
             repo_name="${BASH_REMATCH[2]}"
@@ -270,7 +308,8 @@ jobs:
             exit 2
           fi
           payload_ref="$(jq -er '.codex_surface.plugin_payload_manifest_url // .plugin_payload_manifest_url' "$manifest")"
-          payload="contracts/opl-framework/packages/${payload_ref}"
+          [ "$payload_ref" = "payloads/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.json" ]
+          payload="$PACKAGE_PROJECTION_ROOT/${payload_ref}"
           [ "$(jq -r .package_id "$manifest")" = "$PACKAGE_ID" ]
           [ "$(jq -r .version "$manifest")" = "$EXPECTED_PACKAGE_VERSION" ]
           [ "$(jq -r '.codex_surface.carrier_source_commit // .source_commit' "$manifest")" = "$EXPECTED_OWNER_SOURCE_COMMIT" ]
@@ -528,6 +567,7 @@ jobs:
             --arg version "$EXPECTED_PACKAGE_VERSION" \
             --arg owner_commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
             --arg framework_commit "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \
+            --arg catalog_commit "$EXPECTED_CATALOG_SOURCE_COMMIT" \
             --arg request_id "$PUBLICATION_REQUEST_ID" \
             --arg owner_source_url "$OWNER_SOURCE_URL" \
             --arg repository "$FRAMEWORK_REPOSITORY" \
@@ -535,12 +575,16 @@ jobs:
             --arg invocation_id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
             '{buildDefinition:{buildType:"https://onepersonlab.ai/buildtypes/opl-package-publication/v1",
               externalParameters:{package_id:$package_id,package_version:$version,
-                owner_source_commit:$owner_commit,framework_source_commit:$framework_commit},
+                owner_source_commit:$owner_commit,framework_source_commit:$framework_commit}
+                + (if $catalog_commit == "" then {} else {catalog_source_commit:$catalog_commit} end),
               internalParameters:{publication_request_id:$request_id},
               resolvedDependencies:[
                 {uri:$owner_source_url,digest:{gitCommit:$owner_commit}},
                 {uri:("https://github.com/"+$repository),digest:{gitCommit:$framework_commit}}]},
-              runDetails:{builder:{id:$workflow_ref},metadata:{invocationId:$invocation_id}}}' \
+              runDetails:{builder:{id:$workflow_ref},metadata:{invocationId:$invocation_id}}}
+              | if $catalog_commit == "" then . else
+                .buildDefinition.resolvedDependencies += [
+                  {uri:"https://github.com/gaofeng21cn/opl-catalog",digest:{gitCommit:$catalog_commit}}] end' \
             > "$provenance"
           jq -n \
             --arg package_id "$PACKAGE_ID" \
@@ -597,6 +641,7 @@ jobs:
             --arg version "$EXPECTED_PACKAGE_VERSION" \
             --arg owner_commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
             --arg framework_commit "$EXPECTED_FRAMEWORK_SOURCE_COMMIT" \
+            --arg catalog_commit "$EXPECTED_CATALOG_SOURCE_COMMIT" \
             --arg request_id "$PUBLICATION_REQUEST_ID" \
             --arg immutable_ref "$IMMUTABLE_REF" \
             --arg latest_ref "$LATEST_STABLE_REF" \
@@ -622,7 +667,8 @@ jobs:
             --arg run_attempt "$GITHUB_RUN_ATTEMPT" \
             '{surface_kind:"opl_package_publication_receipt.v1",status:"published_and_verified",
               publication_request_id:$request_id,package:{package_id:$package_id,version:$version,
-              owner_source_commit:$owner_commit,framework_source_commit:$framework_commit},
+              owner_source_commit:$owner_commit,framework_source_commit:$framework_commit}
+              + (if $catalog_commit == "" then {} else {catalog_source_commit:$catalog_commit} end),
               source:{owner_repository:$owner_source_url,oci_annotation:$oci_source_url},
               content:{source_archive_digest:$archive_digest,manifest_digest:$manifest_digest,
               payload_manifest_digest:$payload_digest,content_lock:($content_lock | if length > 0 then . else null end)},
