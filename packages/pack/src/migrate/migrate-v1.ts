@@ -87,6 +87,12 @@ function toScopedId(raw: string, fallback = 'item'): string {
   return cleaned || fallback;
 }
 
+function legacyScopedIds(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    .map((id) => toScopedId(id));
+}
+
 function normI18n(raw: unknown, fallbackEn: string, fallbackZh?: string): I18nText {
   if (isRecord(raw)) {
     const rawZh =
@@ -734,19 +740,18 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
       : undefined;
 
   // 4. Dependencies (string[] + object[] requires + required/bundled capability package ids + capability_dependencies)
-  const depMap = new Map<
-    string,
-    { id: string; version?: string; optional?: boolean; required_capabilities?: string[] }
-  >();
-  const addDep = (
-    pkgIdRaw: string,
-    opts: { version?: string; optional?: boolean; required_capabilities?: string[] } = {},
-  ) => {
+  type PackageDependency = NonNullable<NonNullable<OplPackageManifestV2['dependencies']>['packages']>[number];
+  const depMap = new Map<string, PackageDependency>();
+  const addDep = (pkgIdRaw: string, opts: Omit<PackageDependency, 'id'> = {}) => {
     const depId = toKebabId(pkgIdRaw);
     const existing = depMap.get(depId);
     const mergedCaps = new Set<string>([
       ...(existing?.required_capabilities ?? []),
       ...(opts.required_capabilities ?? []),
+    ]);
+    const mergedModules = new Set([
+      ...(existing?.required_module_ids ?? []),
+      ...(opts.required_module_ids ?? []),
     ]);
     depMap.set(depId, {
       id: depId,
@@ -756,6 +761,7 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
           ? Boolean(existing.optional && (opts.optional ?? false))
           : Boolean(opts.optional),
       ...(mergedCaps.size > 0 ? { required_capabilities: [...mergedCaps] } : {}),
+      ...(mergedModules.size > 0 ? { required_module_ids: [...mergedModules] } : {}),
     });
   };
 
@@ -787,11 +793,6 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
   if (Array.isArray(old.capability_dependencies)) {
     for (const cd of old.capability_dependencies) {
       if (!isRecord(cd) || typeof cd.package_id !== 'string' || !cd.package_id.trim()) continue;
-      const reqCaps = Array.isArray(cd.required_export_ids)
-        ? cd.required_export_ids
-            .filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
-            .map((x) => toScopedId(x))
-        : undefined;
       addDep(cd.package_id, {
         version:
           typeof cd.version_requirement === 'string' && cd.version_requirement.trim()
@@ -800,7 +801,8 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
               ? cd.version.trim()
               : undefined,
         optional: cd.required === false,
-        required_capabilities: reqCaps,
+        required_capabilities: legacyScopedIds(cd.required_export_ids),
+        required_module_ids: legacyScopedIds(cd.required_module_ids),
       });
     }
   }
@@ -1373,10 +1375,16 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
           : undefined
       : undefined;
 
+  const capabilityProvider = isRecord(old.capability_provider) ? old.capability_provider : null;
+  const moduleIds = new Set([
+    ...legacyScopedIds(exportsObj?.core_module_ids),
+    ...legacyScopedIds(capabilityProvider?.module_export_ids),
+  ]);
   const providesObj: OplPackageManifestV2['provides'] = {
     ...(stagesRef ? { agent: { stages_ref: stagesRef } } : {}),
     ...(cliBinMap.size > 0 ? { cli_bin: [...cliBinMap.values()] } : {}),
     ...(skills.length > 0 ? { skills } : {}),
+    ...(moduleIds.size > 0 ? { module_ids: [...moduleIds] } : {}),
     ...(mcpServers.length > 0 ? { mcp_servers: mcpServers } : {}),
     ...(channels.length > 0 ? { channels } : {}),
     ...(remoteCompanions.length > 0 ? { remote_companion_connectors: remoteCompanions } : {}),

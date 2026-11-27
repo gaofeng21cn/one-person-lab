@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,6 +7,7 @@ import test from 'node:test';
 import {
   officialPackageInstallSource,
   readOfficialPackageCatalog,
+  readOfficialV2Source,
   type OfficialPackageCatalogEntry,
 } from '../src/distribution/official-package-catalog.ts';
 
@@ -73,4 +75,32 @@ test('Full selects a commit-bound module offline and supports old capability see
   assert.throws(resolve, /differs from its frozen catalog source/);
   select(commit, 'modules/../other');
   assert.throws(resolve, /Invalid Full Package path/);
+});
+
+test('selects a numbered v2 OCI tag and pins the archive using the immutable payload bytes', async () => {
+  const version = '2.4.0';
+  const archiveDigest = 'sha256:' + 'd'.repeat(64);
+  const contentDigest = 'sha256:' + 'c'.repeat(64);
+  const payload = {
+    package_format: 'v2', package_id: packageId, package_version: version, source_commit: commit,
+    source_repo: repository, archive_sha256: archiveDigest, content_lock: { digest: contentDigest },
+  };
+  const bytes = JSON.stringify(payload, null, 2) + '\n';
+  const facet = {
+    version, source_commit: commit, payload_manifest_ref: `payloads/${packageId}-${version}.json`,
+    payload_sha256: 'sha256:' + createHash('sha256').update(bytes).digest('hex'),
+  };
+  const candidate = { ...entry, manifest: { ...entry.manifest, v2_release: facet } };
+  const fetchImpl = async (url: RequestInfo | URL) => {
+    assert.equal(url, 'https://raw.githubusercontent.com/gaofeng21cn/opl-catalog/main/packages/' + facet.payload_manifest_ref);
+    return new Response(bytes);
+  };
+  assert.equal(officialPackageInstallSource(candidate, null).version, version);
+  assert.deepEqual(await readOfficialV2Source(candidate, fetchImpl), { version, commit, archiveDigest, contentDigest });
+  await assert.rejects(readOfficialV2Source(candidate, async () => Response.json(payload)), /payload bytes differ/);
+  const mismatched = { ...candidate, manifest: { ...candidate.manifest, v2_release: { ...facet, source_commit: 'b'.repeat(40) } } };
+  await assert.rejects(readOfficialV2Source(mismatched, fetchImpl), /does not match the selected release/);
+  assert.throws(() => officialPackageInstallSource({
+    ...candidate, manifest: { ...candidate.manifest, v2_release: { ...facet, payload_manifest_ref: '../../different.json' } },
+  }, null), /Invalid Catalog v2 release/);
 });

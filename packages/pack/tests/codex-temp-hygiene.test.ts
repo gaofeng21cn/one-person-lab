@@ -226,6 +226,14 @@ if (cmd === 'plugin list --json') {
     const req = JSON.parse(line);
     if (req.method === 'initialize') {
       console.log(JSON.stringify({ id: req.id, result: { userAgent: 'fixture' } }));
+    } else if (req.method === 'skills/list') {
+      if (mode === 'bad-skills') {
+        console.log(JSON.stringify({ id: req.id, result: { unexpected: [] } }));
+        return;
+      }
+      const skill = { path: '/sample/SKILL.md', enabled: false, pluginId: 'example@opl-local' };
+      const skills = [skill, { ...skill, pluginId: 'example@other', path: '/other/SKILL.md' }];
+      console.log(JSON.stringify({ id: req.id, result: { data: [{ cwd: '.', skills, errors: [] }] } }));
     } else if (req.method === 'plugin/list') {
       if (mode === 'stall') return;
       console.log(JSON.stringify({ id: req.id, result: { marketplaces: [], marketplaceLoadErrors: [] } }));
@@ -256,6 +264,9 @@ if (cmd === 'plugin list --json') {
     assert.equal(cliTimeout.status, null);
     assert.equal(fs.existsSync(path.join(tmpRoot, 'git-CLITIMEOUT')), false);
     assert.equal(fs.existsSync(path.join(tmpRoot, '.staging', 'marketplace-macos-CLITIMEOUT')), false);
+
+    assert.deepEqual(await runner.readInstalledSkillPaths!('example@opl-local', env), ['/sample/SKILL.md']);
+    await assert.rejects(runner.readInstalledSkillPaths!('example@opl-local', { ...env, FIXTURE_MODE: 'bad-skills' }), /skills.list response/);
 
     const listOk = await runner.listPlugins({ marketplaceKinds: ['local'] }, { ...env, FIXTURE_MODE: 'ok' });
     assert.deepEqual(listOk.marketplaces, []);

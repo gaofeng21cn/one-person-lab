@@ -100,7 +100,7 @@ Users only need four stable product concepts:
 
 | Product | User understanding | Internal authority |
 | --- | --- | --- |
-| **OPL Base** | The runtime foundation that makes long work runnable, recoverable, and auditable. | `one-person-lab` implements OPL Framework and owns the only Cordis Host for Framework runtime, Package graph, and App projection. |
+| **OPL Base** | The runtime foundation that makes long work runnable, recoverable, and auditable. | `one-person-lab` runs the local Framework daemon, which manages Packages, execution and App projections. |
 | **OPL App** | The local workbench for choosing work, watching progress, opening files, and acting on blockers. | `one-person-lab-app` owns the product, GUI ABI, selected Shell, and release. |
 | **OPL Packages** | Installable Agents, Skills, Tools, Plugins, and Workflows that add professional capability. | Each Package owner owns identity and publication; Framework discovers and projects installed capabilities. |
 | **OPL Cloud** | Online Workspace, account governance, hosted resources, collaboration, and Agent services. | `one-person-lab-cloud` owns Cloud products and services; the product is in active implementation and delivery. |
@@ -112,13 +112,9 @@ Framework plugins by definition.
 
 The App-selected [`opl-studio`](https://github.com/gaofeng21cn/opl-studio)
 implementation provides the current Desktop, WebUI, and Docker build sources.
-It runs a separate DeepSeek Harness/Cordis
-Application Host for its profile, plugin lifecycle, native Codex backend, and
-delivery transports. It consumes Framework/App public contracts and does not
-create another OPL runtime, Package registry/currentness authority, App
-state/action owner, or product/release authority. The scoped Host boundary is
-machine-readable in
-[`cordis-architecture-profile.json`](./contracts/opl-framework/cordis-architecture-profile.json).
+Its DSH/Cordis Application Host manages Studio plugins, native Codex sessions
+and delivery transports. It uses the local Framework daemon for Package state,
+tasks and projected actions. [Host responsibilities](./docs/architecture.md#host-scope-boundary)
 
 Users do not need to understand the repository split. For developers:
 `one-person-lab` maintains Base/Framework, `one-person-lab-app` maintains the App
@@ -171,32 +167,29 @@ concrete implementation gaps belong to [current gaps](./docs/active/current-stat
 
 ### Common Commands
 
-Source development entry:
+Use Node.js 26 for a source checkout.
 
 Before proposing a contribution, read [CONTRIBUTING.md](./CONTRIBUTING.md) for the Issue and PR intake rules.
 
 ```bash
 git clone https://github.com/gaofeng21cn/one-person-lab.git
 cd one-person-lab
-npm install
-npm link
+npm ci
 ```
 
-Common framework commands:
+Check the checkout’s CLI and local daemon, then read its installed Packages, workspaces, tasks and connections.
 
 ```bash
-opl help --text
-opl app state --profile fast --json
-opl packages status --json
-opl connect modules
-opl connect sync-skills
-opl family-runtime status
-opl family-runtime repair
-opl family-runtime provider repair --provider temporal
-opl family-runtime attempt list
+./bin/opl --version --json
+./bin/opl --help
+./bin/opl daemon doctor --include-first-run --json
+./bin/opl pack list --json
+./bin/opl workspace list --json
+./bin/opl runway list --json
+./bin/opl connect list --json
 ```
 
-Automation should prefer `opl help --json`, machine-readable contracts under `contracts/`, and projection data exported by the domain agents.
+For automation, use the JSON output of the relevant subcommand. The App reads `app.state.get` over local JSON-RPC. The Python SDK provides the same transport for domain integrations. [Python client](./sdks/python-client/)
 
 Framework source owns generic runtime, Package discovery and App projections. Domain owners retain professional facts and verdicts; App owns GUI and release truth. See [architecture](./docs/architecture.md) for ownership and [runtime](./docs/runtime/README.md) for execution semantics.
 

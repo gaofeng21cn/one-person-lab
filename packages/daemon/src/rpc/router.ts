@@ -10,6 +10,8 @@ import {
 } from '@opl/ledger';
 import {
   buildPackage,
+  createOfficialPackageResolver,
+  ensurePackage,
   migrateV1Package,
   readPackageManifestFromDir,
   verifyReleaseLock,
@@ -18,6 +20,7 @@ import {
   type PackageOrigin,
 } from '@opl/pack';
 import { RunwayError, type AttemptRole, type ExecuteStageOptions, type SandboxMode } from '@opl/runway';
+import { connectionActions, executeConnectionAction } from './connection-actions.ts';
 import { DaemonRpcError } from '../errors.ts';
 import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.ts';
 import { configureCodexApiKey } from './configure-codex-api-key.ts';
@@ -25,6 +28,7 @@ import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts'
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { executeAppPackageAction } from './app-package-actions.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
+import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
 import {
   coerceInstallSourceSpec,
@@ -135,6 +139,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     return runtime.appStateCache.getState(profile, conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
   });
 
+  handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
+
   handlers.set('app.initialize.get', (_params, conn) => {
     const doc = runtime.doctor(true);
     const state = runtime.appStateCache.getState('fast', conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
@@ -223,6 +229,12 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.contribution.execute', handleContributionExecute);
   handlers.set('app.action.execute', async (params, conn) => {
     const actionId = pickString(params, 'action_id', 'actionId') ?? '';
+    const connectionAction = connectionActions.find(entry => entry.action_id === actionId);
+    if (connectionAction) {
+      const context = requireTrustedHost(conn, actionId);
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeConnectionAction(connectionAction, pickRecord(params, 'payload', 'input') ?? {}, dryRun, runtime.connectService, context);
+    }
     if (actionId === 'work_item_visibility_set') {
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
       if (!dryRun) requireTrustedHost(conn, 'app.action.execute');
@@ -433,6 +445,35 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       manifest: installed.manifest,
       installed: toProjectedPackageSummary(installed),
     };
+  });
+
+  handlers.set('pack.ensure', async (params, conn) => {
+    const ctx = requireTrustedHost(conn, 'pack.ensure');
+    const packageId = pickString(params, 'package_id', 'packageId');
+    if (!packageId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(packageId) || packageId.length > 128) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires a valid Package ID.');
+    }
+    const runtimeRoot = params.runtime_root;
+    if (runtimeRoot != null && (typeof runtimeRoot !== 'string' || !path.isAbsolute(runtimeRoot))) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires an absolute Full runtime directory.');
+    }
+    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
+    try {
+      return await ensurePackage(runtime.packService, {
+        packageId,
+        dryRun,
+        clientContext: ctx,
+        resolveSource: createOfficialPackageResolver({ runtimeRoot }),
+        installSource: (input) => runtime.installPackage(input),
+      });
+    } finally {
+      // A dependency may have been enabled even if a later Package failed.
+      if (!dryRun) {
+        runtime.syncDeclaredProviders();
+        await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
+        runtime.appStateCache.invalidate();
+      }
+    }
   });
 
   handlers.set('pack.build', (params) => {

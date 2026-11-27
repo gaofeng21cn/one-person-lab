@@ -21,8 +21,8 @@ Framework 持有：
 
 - Stage、Attempt、Workspace 和 session continuity 的通用模型；
 - Package descriptor 发现、required/optional presence、callability 和 native carrier 聚合；
-- Cordis Host composition、受控 profile 和 Client contribution projection；
-- Temporal 等 provider 的薄 adapter、运行状态和可恢复控制面；
+- 本地 opld、Package 状态和 App contribution 投影；
+- Runway 的执行器适配、SQLite 运行状态和任务恢复；
 - refs-only evidence、operator read model 和明确的 action routing；
 - 通用 contract、schema、CLI 和跨仓边界。
 

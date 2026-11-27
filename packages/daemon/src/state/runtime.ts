@@ -33,6 +33,7 @@ import {
 import { LedgerStore, verifyTaskLineage } from '@opl/ledger';
 import {
   createPackService,
+  createOfficialPackageResolver,
   createProcessCodexRunner,
   discoverExternalCodexPlugins,
   OPL_LOCAL_MARKETPLACE_NAME,
@@ -176,7 +177,11 @@ export class DaemonRuntime {
 
     // Omit codexRunner on PackService so link/install/update/uninstall/toggle perform
     // deterministic filesystem projection without invoking external `codex plugin add`.
+    const officialUpdateSource = {
+      resolveOfficialUpdate: (id: string) => createOfficialPackageResolver({ runtimeRoot: null })(id),
+    };
     this.packService = createPackService({
+      ...officialUpdateSource,
       db: this.db,
       stateDir: this.paths.state_dir,
       marketplaceRoot: this.marketplaceRoot,
@@ -989,7 +994,7 @@ export class DaemonRuntime {
     return res;
   }
 
-  async installPackage(input: Parameters<PackService['install']>[0]): Promise<ReturnType<PackService['install']>> {
+  async installPackage(input: Parameters<PackService['install']>[0]): ReturnType<PackService['install']> {
     const res = await this.packService.install(input);
     try {
       await this.probeCliExtensions(res.package.install_path, res.package.manifest);

@@ -19,7 +19,10 @@ function officialArchiveRoot(extractRoot: string): string {
 }
 
 /** Prepare the exact source selected by the official catalog or offline seed. */
-export async function stageOfficialPackageSource(source: InstallSourceSpec) {
+export async function stageOfficialPackageSource(
+  source: InstallSourceSpec,
+  release?: { version: string; commit: string; contentDigest: string } | null,
+) {
   if (!source.package_id) throw new PackError('INVALID_INPUT', 'Official package source requires its catalog identity.');
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-official-pkg-'));
   const dispose = () => fs.rmSync(tmpRoot, { recursive: true, force: true });
@@ -41,7 +44,12 @@ export async function stageOfficialPackageSource(source: InstallSourceSpec) {
       throw new PackError('INVALID_MANIFEST', `Expected official package '${source.package_id}', got '${manifest.identity.id}'.`);
     }
     verifyManifestPathsExist(pkgRoot, manifest, { allowSymlinks: false });
-    if (fs.existsSync(path.join(pkgRoot, 'opl-release.lock.json'))) verifyReleaseLock(pkgRoot);
+    if (release || fs.existsSync(path.join(pkgRoot, 'opl-release.lock.json'))) {
+      const { lock } = verifyReleaseLock(pkgRoot);
+      if (release && (lock.version !== release.version || lock.git_commit !== release.commit || lock.digest !== release.contentDigest)) {
+        throw new PackError('PACK_LOCK_MISMATCH', `Packaged release lock differs from the Catalog release for '${source.package_id}'.`);
+      }
+    }
     const localSource: InstallSourceSpec = { kind: 'local_dir', path: pkgRoot, package_id: source.package_id };
     return { manifest, source: localSource, dispose };
   } catch (error) {

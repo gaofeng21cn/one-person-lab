@@ -4,6 +4,7 @@ import {
   officialPackageInstallSource,
   officialPackageRuntimeRoot,
   readOfficialPackageCatalog,
+  readOfficialV2Source,
   type OfficialPackageCatalogOptions,
 } from './official-package-catalog.ts';
 import { stageOfficialPackageSource } from './stage-official-source.ts';
@@ -16,6 +17,8 @@ export function createOfficialPackageResolver(options: OfficialPackageCatalogOpt
     catalog ??= readOfficialPackageCatalog({ ...options, runtimeRoot });
     const entry = (await catalog).get(packageId);
     if (!entry) throw new PackError('PACK_NOT_FOUND', `Official catalog has no Package '${packageId}'.`);
-    return stageOfficialPackageSource(officialPackageInstallSource(entry, runtimeRoot));
+    const source = officialPackageInstallSource(entry, runtimeRoot);
+    const release = runtimeRoot ? null : await readOfficialV2Source(entry, options.fetchImpl);
+    return stageOfficialPackageSource(release ? { ...source, expected_digest: release.archiveDigest } : source, release);
   };
 }

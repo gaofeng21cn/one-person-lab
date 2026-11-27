@@ -79,8 +79,10 @@ test('migrateV1Package handles all E2E-M2 cases: string[] requires, blank extra_
         version: '0.5.0a2',
         requires: ['dep-alpha', { package_id: 'dep-beta', presence: 'optional' }],
         capability_dependencies: [
-          { package_id: 'dep-gamma', required: true, required_export_ids: ['cap.one'] },
+          { package_id: 'dep-gamma', required: true, required_export_ids: ['cap.one'], required_module_ids: ['gamma.core'] },
+          { package_id: 'dep-gamma', required: false, required_module_ids: ['gamma.core', 'gamma.review'] },
         ],
+        capability_provider: { module_export_ids: ['agent.tools'] },
         permissions: [
           { permission_id: 'artifact_mutation', scope: 'workspace', access: 'read_write' },
         ],
@@ -133,6 +135,10 @@ test('migrateV1Package handles all E2E-M2 cases: string[] requires, blank extra_
       preview.manifest.dependencies?.packages?.map((p) => p.id),
       ['dep-alpha', 'dep-beta', 'dep-gamma'],
     );
+    assert.deepEqual(preview.manifest.dependencies?.packages?.find((dep) => dep.id === 'dep-gamma'), {
+      id: 'dep-gamma', optional: false, required_capabilities: ['cap.one'], required_module_ids: ['gamma.core', 'gamma.review'],
+    });
+    assert.deepEqual(preview.manifest.provides?.module_ids, ['agent.tools']);
     assert.equal(preview.manifest.provides?.cli_bin?.[0]?.path, 'scripts/tool.py');
     assert.equal(preview.manifest.provides?.skills?.[0]?.path, './skills/synthetic-repo');
     assert.equal(preview.manifest.provides?.mcp_servers?.[0]?.id, 'syn-mcp');
@@ -173,6 +179,7 @@ test('capability migration preserves exported specialties and the provider mater
       version: '1.0.0',
       exports: {
         core_skill_ids: ['router', 'editing'],
+        core_module_ids: ['provider.search', 'provider.review'],
         specialty_skill_ids: ['specialty'],
         all_skill_ids: allSkills,
         default_materialization_policy: 'core_skills_only',
@@ -186,6 +193,7 @@ test('capability migration preserves exported specialties and the provider mater
       id, path: `./skills/${id}`, exposure: id === 'router' ? 'default' : 'opt_in',
     })));
     assert.equal(migrated.host_hints?.codex?.sync_enabled, false);
+    assert.deepEqual(migrated.provides?.module_ids, ['provider.search', 'provider.review']);
 
     manifest.exports.default_materialized_skill_ids = [];
     fs.writeFileSync(manifestPath, JSON.stringify(manifest));

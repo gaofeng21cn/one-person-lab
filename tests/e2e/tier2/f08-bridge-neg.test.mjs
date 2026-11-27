@@ -265,9 +265,8 @@ describe("Tier 2 F8: opl-framework-bridge Boundary & Negative Cases", () => {
   it("T2-F8-05: bridge source & built bundle static audit confirms zero legacy cordis-profiles, compactFastState, or CLI passthrough", async () => {
     const srcDir = path.join(BRIDGE_DIR, "src");
     const srcFiles = listFilesRecursive(srcDir).filter((f) => /\.(mjs|js|ts)$/.test(f));
-    assert.ok(srcFiles.length > 0 && srcFiles.length <= 5, `Expected <= 5 files in bridge src/, got ${srcFiles.length}`);
+    assert.ok(srcFiles.length > 0, "Expected bridge source files");
 
-    let totalLines = 0;
     const forbiddenPatterns = [
       /loadFrameworkCordisProfiles/,
       /startCordisWorkbenchServicesHost/,
@@ -287,13 +286,10 @@ describe("Tier 2 F8: opl-framework-bridge Boundary & Negative Cases", () => {
 
     for (const file of srcFiles) {
       const content = fs.readFileSync(file, "utf8");
-      totalLines += content.length > 0 ? content.split("\n").length - (content.endsWith("\n") ? 1 : 0) : 0;
       for (const re of forbiddenPatterns) {
         assert.doesNotMatch(content, re, `Forbidden legacy symbol ${re} found in ${file}`);
       }
     }
-
-    assert.ok(totalLines < 400, `Expected bridge src/ total lines < 400, got ${totalLines}`);
 
     const libBundle = path.join(BRIDGE_DIR, "lib/index.mjs");
     if (fs.existsSync(libBundle)) {

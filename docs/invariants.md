@@ -14,29 +14,29 @@
 5. Package 是唯一安装单元；Skill、Tool、Plugin、MCP、workflow 和 entrypoint 是 descriptor 能力。
 6. Framework 从 installed descriptor 动态发现 Package 和 Agent，不新增固定成员 registry。
 7. Package identity、native carrier、executor route、Cordis contribution 和 publication identity 必须分离。
-8. native carrier 持有物理安装、启停和 currentness；Framework 只做薄 adapter、presence/callability 和聚合。
-9. required dependency 只表达 presence 与 callable entrypoint；不得恢复中央 SemVer resolver、ABI resolver、installed lock、payload lock、LKG 或第二 updater。
+8. Pack 持有自身管理的安装与启停状态；通过原生载体接入的能力由对应载体回读，投影须标明来源。
+9. required dependency 只表达 presence 与 callable entrypoint；由 Pack 校验所选制品的内容锁。
 10. App starter profile 只用于首次安装或显式恢复，不能成为成员资格和 maintenance authority。
 11. 独立 repo 和独立 publication 必须由真实 owner、consumer、release cadence 或隔离需求证明，不能为未来假设提前建立。
 
 ## Runtime
 
 12. Stage 定义目标、输入、产物和责任边界；AI/executor 决定阶段内方法，不由静态路由器替代专业判断。
-13. provider 持有 durable execution history；Framework 持有 Attempt projection；两者都不能声明 domain ready。
+13. Runway 在本地 SQLite 中持久化 StageRun 和 Attempt，executor 提供实际执行结果。领域负责人或人工评审决定专业完成度。
 14. owner receipt、typed blocker 和 artifact ref 必须来源可回读，不能由 operator 或 provider 合成。
 15. provider healthy、workflow completed、gate passed 或 evidence count 为零都不等于质量、交付或生产就绪。
 16. 普通可恢复失败优先返回可执行 repair route；安全、权限、数据完整性和不可逆动作必须 fail closed。
 
-## Cordis
+## Studio 的 Cordis 宿主
 
-17. 正式进程内 composition runtime 是 `@deepseek-ai/cordis`，不建立平行 service locator、event bus、effect 或 lifecycle。
+17. Studio 的进程内组合使用 `@deepseek-ai/cordis`，不建立平行 service locator、event bus、effect 或 lifecycle。
 18. Cordis 只管理进程内依赖、event、effect 和 teardown；不持有 durable workflow、Package installed truth、领域事实或 App product truth。
 19. composition profile 必须显式、可回读；运行中的 attempt 不热换 composition identity。
 20. Cordis plugin 身份不等于安全沙箱或独立 Package。
 
 ## Source
 
-21. `contracts/opl-framework/source-module-map.json` 定义源码 owner 和依赖方向；目录对称、品牌名称和文件数量不能替代 responsibility boundary。
+21. 源码 owner 按[现行包结构](./architecture.md#source-topology)划分；包导入方向通过 `npm run v2:guard` 检查。
 22. 跨 source unit 通过公开 entrypoint 调用；禁止恢复退役 root、兼容 barrel、无 caller facade 或第二 registry。
 23. 新抽象、新状态和新依赖必须有当前 caller、合同或已观察故障付账。
 24. active caller 切换后，旧 writer、reader、schema、fixture、alias 和测试一起删除，不保留永久 dual path。
