@@ -38,6 +38,13 @@ def settings(root):
         raise ReleaseError('Source check workflows must be unique owner workflow filenames')
     if value['strategy'] == 'owner_schedule':
         return value
+    observed = value.get('observed_publishers', [])
+    if not isinstance(observed, list) or any(
+            not isinstance(item, dict) or
+            not re.fullmatch(r'[a-z0-9][a-z0-9-]*', item.get('lane', '')) or
+            not re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', item.get('workflow', ''))
+            for item in observed):
+        raise ReleaseError('Observed publisher lanes are invalid')
     paths = value.get('release_paths')
     if not isinstance(paths, list) or not paths or not all(isinstance(p, str) and p for p in paths):
         raise ReleaseError('Product must declare delivery paths')
@@ -138,17 +145,28 @@ def plan(root, config, channel):
         current = f'{a}.{b}.{c + 1}'
 
 
-def publisher_status(config, tag, source):
-    runs = gh(f"repos/{config['repository']}/actions/workflows/{config['publisher_workflow']}/runs?head_sha={source}&per_page=100")['workflow_runs']
+def _publisher_run(config, workflow, source, tag):
+    runs = gh(f"repos/{config['repository']}/actions/workflows/{workflow}/runs?head_sha={source}&per_page=100")['workflow_runs']
     matches = [r for r in runs if r['head_sha'] == source and r['head_branch'] == tag and r['event'] in ('push', 'workflow_dispatch')]
     if not matches:
-        return {'status': 'tag_submitted'}
+        return None
     item = max(matches, key=lambda row: row['id'])
     status = 'publisher_' + (item['conclusion'] if item['status'] == 'completed' else item['status'])
-    if status == 'publisher_success' and config.get('publication_stage') == 'candidate_until_device_qualification':
-        status = 'qualification_pending'
-    return {'status': status,
-            'run_id': item['id'], 'run_url': item['html_url']}
+    return {'status': status, 'run_id': item['id'], 'run_url': item['html_url']}
+
+
+def publisher_status(config, tag, source):
+    primary = _publisher_run(config, config['publisher_workflow'], source, tag)
+    result = primary or {'status': 'tag_submitted'}
+    if result['status'] == 'publisher_success' and config.get('publication_stage') == 'candidate_until_device_qualification':
+        result['status'] = 'qualification_pending'
+    lanes = []
+    for lane in config.get('observed_publishers', []):
+        observed = _publisher_run(config, lane['workflow'], source, tag)
+        lanes.append({'lane': lane['lane'], **(observed or {'status': 'not_observed'})})
+    if lanes:
+        result['lanes'] = lanes
+    return result
 
 
 def prepare(root, config, *, apply):
@@ -213,9 +231,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--owner-root', type=Path, required=True)
     parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--cohort-id', default='')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     report = {'schema_version': 'opl.product-release-result.v1', 'applied': args.apply}
+    if args.cohort_id:
+        if not re.fullmatch(r'opl-daily-[1-9][0-9]*', args.cohort_id):
+            raise SystemExit('Invalid release cohort id')
+        report['cohort_id'] = args.cohort_id
     try:
         config = settings(args.owner_root)
         report.update(product_id=config['product_id'], repository=config['repository'])

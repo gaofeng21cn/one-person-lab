@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       products: ${{ steps.inventory.outputs.products }}
+      cohort_id: ${{ steps.inventory.outputs.cohort_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -39,6 +40,7 @@ jobs:
                   raise SystemExit('Unknown product selection')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
               stream.write('products=' + json.dumps(products) + '\n')
+              stream.write('cohort_id=opl-daily-' + os.environ['GITHUB_RUN_ID'] + '\n')
           PY
   release:
     needs: inventory
@@ -89,9 +91,11 @@ jobs:
           GH_TOKEN: ${{ steps.publisher.outputs.token }}
           EXPECTED_PRODUCT: ${{ matrix.product.product_id }}
           EXPECTED_REPOSITORY: ${{ matrix.product.repository }}
+          RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
         run: |
           python3 controller/scripts/product-daily-release.py \
             --owner-root "$GITHUB_WORKSPACE/owner" --apply \
+            --cohort-id "$RELEASE_COHORT_ID" \
             --output "$RUNNER_TEMP/product-release-result.json"
       - name: Retain the independent product result
         if: always()
@@ -100,3 +104,37 @@ jobs:
           name: opl-product-release-${{ matrix.product.product_id }}-${{ github.run_id }}
           path: ${{ runner.temp }}/product-release-result.json
           if-no-files-found: warn
+  cohort:
+    name: Reconcile release cohort
+    if: always()
+    needs: [inventory, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout release controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Download product results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: opl-product-release-*-${{ github.run_id }}
+          path: results
+          merge-multiple: true
+          github-token: ${{ github.token }}
+      - name: Write cohort matrix
+        env:
+          RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
+        run: |
+          python3 controller/scripts/product-release-cohort.py \
+            --cohort-id "$RELEASE_COHORT_ID" \
+            --results-root results \
+            --output "$RUNNER_TEMP/product-release-cohort.json"
+      - name: Retain cohort matrix
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: opl-product-release-cohort-${{ github.run_id }}
+          path: ${{ runner.temp }}/product-release-cohort.json
+          if-no-files-found: error

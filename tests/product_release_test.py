@@ -61,6 +61,31 @@ class PackagePublisherCheckoutTests(unittest.TestCase):
 
 
 class ProductReleaseTests(unittest.TestCase):
+    def test_cohort_reconciles_owner_results_without_promoting_partial_release(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'netfleet').mkdir()
+            (root / 'cloud').mkdir()
+            cohort = 'opl-daily-123'
+            for directory, product, status in [('netfleet', 'opl-netfleet', 'publisher_success'),
+                                                ('cloud', 'opl-cloud', 'qualification_pending')]:
+                (root / directory / 'result.json').write_text(json.dumps({
+                    'schema_version': 'opl.product-release-result.v1',
+                    'cohort_id': cohort, 'product_id': product, 'repository': f'gaofeng21cn/{product}',
+                    'status': status,
+                }))
+            output = root / 'cohort.json'
+            cohort_spec = importlib.util.spec_from_file_location(
+                'product_release_cohort', ROOT / 'scripts/product-release-cohort.py')
+            cohort_module = importlib.util.module_from_spec(cohort_spec)
+            cohort_spec.loader.exec_module(cohort_module)
+            with patch('sys.argv', ['product-release-cohort.py', '--cohort-id', cohort,
+                                    '--results-root', str(root), '--output', str(output)]):
+                self.assertEqual(cohort_module.main(), 0)
+            report = json.loads(output.read_text())
+            self.assertEqual(report['terminal_status'], 'in_progress')
+            self.assertEqual([row['product_id'] for row in report['products']], ['opl-cloud', 'opl-netfleet'])
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
