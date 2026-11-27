@@ -195,6 +195,8 @@ export {
   type ReloadModeContext,
 } from './lifecycle/reload-mode.ts';
 
+export { assertRequiredPackageDependency } from './lifecycle/dependency.ts';
+
 export {
   PackStore,
   type PackStoreOptions,

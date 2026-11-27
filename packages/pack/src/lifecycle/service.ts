@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import semver from 'semver';
 import {
   assertTrustedHost,
   newId,
@@ -49,6 +48,7 @@ import type {
   PackageOrigin,
   ReloadMode,
 } from '../types.ts';
+import { assertRequiredPackageDependency } from './dependency.ts';
 import { PackStore } from './pack-store.ts';
 import { classifyReloadMode, combineReloadModes } from './reload-mode.ts';
 
@@ -286,32 +286,8 @@ export class PackService {
 
   private assertDependenciesSatisfied(manifest: OplPackageManifestV2): void {
     for (const dep of manifest.dependencies?.packages ?? []) {
-      const isOptional = dep.optional === true || dep.presence === 'optional';
       const installed = this.store.getInstalledPackage(dep.id);
-      if (!installed || !installed.enabled) {
-        if (isOptional) continue;
-        throw new PackError(
-          'PACK_DEPENDENCY_MISSING',
-          `Required dependency package '${dep.id}' for '${manifest.identity.id}' is not installed or disabled.`,
-          { package_id: manifest.identity.id, missing_dependency: dep.id },
-        );
-      }
-      if (dep.version) {
-        const validRange = semver.validRange(dep.version);
-        if (!validRange || !semver.satisfies(installed.version, validRange)) {
-          if (isOptional) continue;
-          throw new PackError(
-            'PACK_DEPENDENCY_MISSING',
-            `Installed dependency '${dep.id}@${installed.version}' does not satisfy required version '${dep.version}' for '${manifest.identity.id}'.`,
-            {
-              package_id: manifest.identity.id,
-              dependency: dep.id,
-              installed_version: installed.version,
-              required_version: dep.version,
-            },
-          );
-        }
-      }
+      assertRequiredPackageDependency(manifest.identity.id, dep, installed?.enabled ? installed.manifest : null);
     }
   }
 

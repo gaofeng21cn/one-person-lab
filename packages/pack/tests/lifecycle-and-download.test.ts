@@ -68,6 +68,47 @@ function writeSamplePkg(
   fs.writeFileSync(path.join(dir, 'opl-package.json'), JSON.stringify(manifest, null, 2));
 }
 
+test('Pack validates declared capability exports when a required provider is installed', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-exports-'));
+  const db = openSqliteStore(path.join(root, 'opl.db'));
+  t.after(() => {
+    db.close();
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const pack = createPackService({ db, stateDir: root });
+  const provider = path.join(root, 'provider-src');
+  const consumer = path.join(root, 'consumer-src');
+  writeSamplePkg(provider, {
+    id: 'provider',
+    providesExtra: {
+      skills: [{ id: 'specialty', path: './skills/provider', exposure: 'opt_in' }],
+    },
+  });
+  writeSamplePkg(consumer, { id: 'consumer' });
+  const manifestPath = path.join(consumer, 'opl-package.json');
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const requirements = [
+    { id: 'provider', required_capabilities: ['specialty', 'missing-skill'] },
+    { id: 'optional', presence: 'optional', required_capabilities: ['unused'] },
+  ];
+  const writeRequirements = () => fs.writeFileSync(manifestPath, JSON.stringify({
+    ...manifest, dependencies: { packages: requirements },
+  }));
+  const installConsumer = () => pack.install({ source: { kind: 'local_dir', path: consumer }, syncCodex: false });
+  await pack.install({ source: { kind: 'local_dir', path: provider }, syncCodex: false });
+  writeRequirements();
+  await assert.rejects(installConsumer, (error: unknown) => {
+    assert.ok(error instanceof PackError);
+    assert.equal(error.code, 'PACK_DEPENDENCY_MISSING');
+    assert.deepEqual(error.details.missing_capabilities, ['missing-skill']);
+    return true;
+  });
+  assert.equal(pack.inspect('consumer'), null);
+  requirements[0]!.required_capabilities = ['specialty'];
+  writeRequirements();
+  assert.equal((await installConsumer()).package.enabled, true);
+});
+
 test('normalizes PEP440 versions and classifies reload_mode accurately', () => {
   assert.equal(normalizeDistributionVersion('0.3.2a1'), '0.3.2-alpha.1');
   assert.equal(normalizeDistributionVersion('1.0.0b2'), '1.0.0-beta.2');
