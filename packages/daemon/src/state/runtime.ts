@@ -69,6 +69,7 @@ import { ContributionDispatcher } from '../contributions/dispatcher.ts';
 import { DaemonRpcError } from '../errors.ts';
 import { runCliEntrypoint, runEsmEntrypoint, runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
 import { AppStateCache } from './app-state-cache.ts';
+import { initializeAppPackagePreferences, isAppPackageEnabled } from './app-package-preferences.ts';
 
 export interface DaemonRuntimeOptions {
   readonly stateDir?: string;
@@ -455,6 +456,7 @@ export class DaemonRuntime {
       },
     });
 
+    initializeAppPackagePreferences(this.db, this.paths.state_dir);
     this.appStateCache = new AppStateCache({
       db: this.db,
       packService: this.packService,
@@ -463,6 +465,7 @@ export class DaemonRuntime {
     });
 
     this.contributionDispatcher = new ContributionDispatcher({
+      isAppPackageEnabled: (packageId: string) => isAppPackageEnabled(this.db, packageId),
       packService: this.packService,
       connectService: this.connectService,
       workspaceService: this.workspaceService,
