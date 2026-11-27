@@ -14,10 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.owner import _carrier_source_paths, _ordered_content_digest, merge_release_changes, prepare_owner, refresh_locks, wait_for_checks
 from package_release.common import ReleaseError
-from package_release.product_status import nightly_publication
-spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
-product = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(product)
 spec = importlib.util.spec_from_file_location('package_daily_release', ROOT / 'scripts/package-daily-release.py')
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
@@ -63,31 +59,6 @@ class PackagePublisherCheckoutTests(unittest.TestCase):
 
 
 class ProductReleaseTests(unittest.TestCase):
-    def test_cohort_reconciles_owner_results_without_promoting_partial_release(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            (root / 'netfleet').mkdir()
-            (root / 'cloud').mkdir()
-            cohort = 'opl-daily-123'
-            for directory, product, status in [('netfleet', 'opl-netfleet', 'publisher_success'),
-                                                ('cloud', 'opl-cloud', 'qualification_pending')]:
-                (root / directory / 'product-release-result.json').write_text(json.dumps({
-                    'schema_version': 'opl.product-release-result.v1',
-                    'cohort_id': cohort, 'product_id': product, 'repository': f'gaofeng21cn/{product}',
-                    'status': status,
-                }))
-            output = root / 'cohort.json'
-            cohort_spec = importlib.util.spec_from_file_location(
-                'product_release_cohort', ROOT / 'scripts/product-release-cohort.py')
-            cohort_module = importlib.util.module_from_spec(cohort_spec)
-            cohort_spec.loader.exec_module(cohort_module)
-            with patch('sys.argv', ['product-release-cohort.py', '--cohort-id', cohort,
-                                    '--results-root', str(root), '--output', str(output)]):
-                self.assertEqual(cohort_module.main(), 0)
-            report = json.loads(output.read_text())
-            self.assertEqual(report['terminal_status'], 'pending')
-            self.assertEqual([row['product_id'] for row in report['products']], ['opl-cloud', 'opl-netfleet'])
-
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -271,77 +242,6 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual(result['status'], 'needs_release')
         self.assertEqual(result['version'], '1.2.4')
 
-    def test_publisher_success_requires_exact_public_readback(self):
-        config = {**self.config, 'strategy': 'daily_patch', 'publisher_workflow': 'publish.yml',
-                  'channel': {'kind': 'github_release'}}
-        prepared = {'status': 'publisher_success', 'source_commit': self.first, 'tag': 'v1.2.4',
-                    'published_channel': {'source_commit': self.first, 'tag': 'v1.2.3'}}
-        self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_pending')
-        prepared['published_channel']['tag'] = prepared['tag']
-        self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_verified')
-
-    def test_cancelled_tag_qualification_is_reported_with_older_public_release(self):
-        config = {**self.config, 'product_id': 'opl-netfleet', 'strategy': 'daily_patch',
-                  'publisher_workflow': 'release.yml', 'publisher_title_from_tag': 'OpenWrt release {tag}',
-                  'channel': {'kind': 'github_release'}, 'observed_publishers': []}
-        prepared = {'status': 'needs_release', 'tag': 'v1.2.6', 'source_commit': self.first,
-                    'previous_candidate': {'tag': 'v1.2.5', 'source_commit': 'c' * 40},
-                    'published_channel': {'tag': 'v1.2.4', 'version': '1.2.4',
-                                          'source_commit': self.first}}
-        candidate = {'id': 30, 'head_sha': 'b' * 40, 'head_branch': 'main', 'event': 'workflow_dispatch',
-                     'display_title': 'OpenWrt release v1.2.5', 'status': 'completed',
-                     'conclusion': 'failure', 'html_url': 'candidate-url'}
-        public = {'id': 20, 'head_sha': self.first, 'head_branch': 'v1.2.4', 'event': 'push',
-                  'status': 'completed', 'conclusion': 'cancelled', 'html_url': 'public-url'}
-
-        def api(path):
-            if 'release.yml/runs' in path and 'head_sha=' in path:
-                return {'workflow_runs': [public]} if 'head_sha=' + self.first in path else {'workflow_runs': []}
-            return {'workflow_runs': [candidate]}
-
-        with patch('package_release.product_status.gh', side_effect=api), \
-                patch('package_release.product_status.workflow_runs', return_value=[candidate]):
-            lanes = product.observe_lanes(config, prepared)
-        self.assertEqual(lanes[0]['status'], 'needs_release')
-        self.assertEqual(lanes[0]['published_channel']['tag'], 'v1.2.4')
-        self.assertEqual(lanes[0]['observed_publication_run']['status'], 'publisher_failure')
-        self.assertEqual(lanes[0]['public_tag_publisher']['status'], 'publisher_cancelled')
-
-    def test_preceding_frozen_candidate_survives_newer_release_version(self):
-        self.git('tag', '-a', 'v1.2.4', '-m', 'candidate')
-        next_config = {**self.config, 'strategy': 'daily_patch', 'version_file': self.config['version_file']}
-        self.assertEqual(product.preceding_candidate(self.root, next_config, self.channel, '1.2.5'),
-                         {'tag': 'v1.2.4', 'source_commit': self.first})
-
-    def test_nightly_publication_receipt_binds_release_to_exact_action_attempt(self):
-        run = {'id': 40, 'run_attempt': 1, 'head_sha': self.first, 'status': 'completed',
-               'conclusion': 'success', 'html_url': 'run-url'}
-        readback = {'source_commit': self.first, 'tag': 'v26.11.27-nightly', 'url': 'release-url'}
-        receipt = {'schema': 'opl_standard_nightly_publication_receipt.v1', 'status': 'published',
-                   'tag': readback['tag'], 'repository': 'gaofeng21cn/one-person-lab-app',
-                   'cohort': {'app_sha': self.first}, 'actions': {'run_id': '40', 'run_attempt': '1'},
-                   'github_release': {'url': 'release-url'}}
-        with patch('package_release.product_status.workflow_runs', return_value=[run]), \
-                patch('package_release.product_status.run_artifact', return_value=receipt):
-            observed = nightly_publication('gaofeng21cn/one-person-lab-app', 'release-nightly.yml',
-                                           readback, None)
-        self.assertEqual(observed['status'], 'publication_verified')
-        self.assertEqual(observed['tag'], readback['tag'])
-
-    def test_nightly_publication_rejects_stale_or_unbound_receipt(self):
-        run = {'id': 40, 'run_attempt': 1, 'head_sha': self.first, 'status': 'completed',
-               'conclusion': 'success', 'html_url': 'run-url'}
-        readback = {'source_commit': self.first, 'tag': 'v26.11.27-nightly', 'url': 'release-url'}
-        receipt = {'schema': 'opl_standard_nightly_publication_receipt.v1', 'status': 'published',
-                   'tag': readback['tag'], 'repository': 'gaofeng21cn/one-person-lab-app',
-                   'cohort': {'app_sha': self.first}, 'actions': {'run_id': '39', 'run_attempt': '1'},
-                   'github_release': {'url': 'release-url'}}
-        with patch('package_release.product_status.workflow_runs', return_value=[run]), \
-                patch('package_release.product_status.run_artifact', return_value=receipt):
-            observed = nightly_publication('gaofeng21cn/one-person-lab-app', 'release-nightly.yml',
-                                           readback, None)
-        self.assertIsNone(observed)
-
     def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
         source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}
         controller = {'name': 'daily controller', 'check_suite': {'id': 20}, 'status': 'in_progress'}
@@ -398,7 +298,7 @@ class ProductReleaseTests(unittest.TestCase):
         with patch('package_release.owner.gh', side_effect=api):
             wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0,
                             source_workflows=['ci.yml', 'verify.yml'])
-            runs[:] = [dict(latest, path='.github/workflows/daily-product-channel.yml')]
+            runs[:] = [dict(latest, path='.github/workflows/other-workflow.yml')]
             with self.assertRaisesRegex(ReleaseError, 'not completed'):
                 wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0,
                                 source_workflows=['ci.yml', 'verify.yml'])
@@ -412,55 +312,6 @@ class ProductReleaseTests(unittest.TestCase):
         with patch('package_release.owner.gh', side_effect=api):
             with self.assertRaisesRegex(ReleaseError, 'Source statuses failed: external-required'):
                 wait_for_checks('gaofeng21cn/fixture', self.first, timeout=0, source_workflows=['ci.yml'])
-
-    def test_product_contract_validates_source_workflow_filenames(self):
-        config = {**self.config, 'schema_version': 'opl.product-release.v1', 'strategy': 'daily_patch',
-                  'trigger': 'tag', 'publisher_workflow': 'publish.yml', 'source_check_workflows': ['ci.yml', 'verify.yml']}
-        path = self.root / 'product-release.json'
-        path.write_text(json.dumps(config))
-        self.assertEqual(product.settings(self.root)['source_check_workflows'], ['ci.yml', 'verify.yml'])
-        for invalid in [[], 'ci.yml', ['ci.yml', 'ci.yml'], ['../ci.yml'], [1]]:
-            path.write_text(json.dumps({**config, 'source_check_workflows': invalid}))
-            with self.assertRaisesRegex(ReleaseError, 'Source check workflows'):
-                product.settings(self.root)
-
-    def test_docs_only_main_does_not_allocate_a_version(self):
-        (self.root / 'README.md').write_text('documentation change')
-        self.commit()
-        self.assertEqual(product.plan(self.root, self.config, self.channel)['status'], 'unchanged')
-
-    def test_native_change_bumps_one_product_version(self):
-        (self.root / 'app/main').write_text('new shipped bytes')
-        self.commit()
-        plan = product.plan(self.root, self.config, self.channel)
-        self.assertEqual((plan['version'], plan['tag'], plan['status']), ('1.2.4', 'v1.2.4', 'needs_release'))
-
-    def test_interrupted_release_resumes_frozen_source_despite_later_docs(self):
-        (self.root / 'app/main').write_text('new shipped bytes')
-        (self.root / 'product-version.json').write_text('{"version":"1.2.4"}')
-        self.commit()
-        frozen = self.git('rev-parse', 'HEAD')
-        self.git('tag', '-a', 'v1.2.4', '-m', 'fixture')
-        (self.root / 'README.md').write_text('later documentation')
-        self.commit()
-        plan = product.plan(self.root, self.config, self.channel)
-        self.assertEqual((plan['status'], plan['source_commit']), ('resume', frozen))
-        (self.root / 'app/main').write_text('different new product bytes')
-        self.commit()
-        next_plan = product.plan(self.root, self.config, self.channel)
-        self.assertEqual(next_plan['tag'], 'v1.2.5')
-        self.assertEqual(next_plan['previous_candidate'], {'tag': 'v1.2.4', 'source_commit': frozen})
-        self.assertEqual(self.git('rev-parse', 'v1.2.4^{commit}'), frozen)
-
-    def test_deleted_delivery_file_is_a_change(self):
-        (self.root / 'app/main').unlink()
-        self.git('add', '-A')
-        self.git('commit', '-m', 'delete shipped file')
-        self.assertEqual(product.plan(self.root, self.config, self.channel)['version'], '1.2.4')
-
-    def test_divergent_published_source_is_refused(self):
-        with self.assertRaises(ReleaseError):
-            product.plan(self.root, self.config, {**self.channel, 'source_commit': '1' * 40})
 
     def test_ordered_content_digest_matches_opl_pack_and_detects_tamper(self):
         with tempfile.TemporaryDirectory() as pkg_tmp:
@@ -546,10 +397,18 @@ class ProductReleaseTests(unittest.TestCase):
             self.assertEqual(actual, 'sha256:d43a765c28ccbcd60bee4f0602ca11e5945162edd79de8e8ac07a0e7fc267e06')
 
     def test_framework_release_paths_exclude_cross_repo_orchestration_and_dead_v1(self):
-        config = product.settings(ROOT)
+        config = json.loads((ROOT / 'product-release.json').read_text())
         release_paths = config['release_paths']
         for disallowed in ('src', 'python', 'scripts', 'contracts'):
             self.assertNotIn(disallowed, release_paths)
+        for retired in (
+            '.github/workflows/daily-product-channel.yml',
+            '.github/workflows/reusable-macos-sparkle-release.yml',
+            'contracts/opl-framework/product-release-owners.json',
+            'scripts/product-daily-release.py',
+            'scripts/package_release/product_status.py',
+        ):
+            self.assertFalse((ROOT / retired).exists(), f'Retired cross-repo release file still present: {retired}')
         for rel in release_paths:
             self.assertTrue((ROOT / rel).exists(), f'Missing Framework release path: {rel}')
         package_files = json.loads((ROOT / 'package.json').read_text())['files']
@@ -566,7 +425,7 @@ class ProductReleaseTests(unittest.TestCase):
             subprocess.run(['git', 'init', '--quiet'], cwd=repo, check=True)
             subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo, check=True)
             subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=repo, check=True)
-            for rel in ('scripts/package_release/product_status.py', 'contracts/opl-framework/product-release-owners.json', 'extensions/foundry/mod.js', 'sdks/python-client/src/cli.py'):
+            for rel in ('scripts/package_release/owner.py', 'contracts/opl-framework/keys/private-package-signing.pub', 'extensions/foundry/mod.js', 'sdks/python-client/src/cli.py'):
                 target = repo / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text('v1\n')
@@ -574,16 +433,22 @@ class ProductReleaseTests(unittest.TestCase):
             subprocess.run(['git', 'commit', '--quiet', '-m', 'base'], cwd=repo, check=True)
             base = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
 
-            (repo / 'scripts/package_release/product_status.py').write_text('v2\n')
-            (repo / 'contracts/opl-framework/product-release-owners.json').write_text('{"products":[]}\n')
+            (repo / 'scripts/package_release/owner.py').write_text('v2\n')
+            (repo / 'contracts/opl-framework/keys/private-package-signing.pub').write_text('k2\n')
             subprocess.run(['git', 'add', '--all'], cwd=repo, check=True)
             subprocess.run(['git', 'commit', '--quiet', '-m', 'orchestration only'], cwd=repo, check=True)
-            self.assertFalse(product.delivery_changed(repo, base, config))
+            self.assertEqual(
+                subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', *release_paths], cwd=repo).returncode,
+                0,
+            )
 
             (repo / 'extensions/foundry/mod.js').write_text('v2\n')
             subprocess.run(['git', 'add', '--all'], cwd=repo, check=True)
             subprocess.run(['git', 'commit', '--quiet', '-m', 'runtime extension change'], cwd=repo, check=True)
-            self.assertTrue(product.delivery_changed(repo, base, config))
+            self.assertEqual(
+                subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', *release_paths], cwd=repo).returncode,
+                1,
+            )
 
 
 if __name__ == '__main__':
