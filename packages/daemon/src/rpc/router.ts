@@ -149,7 +149,14 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     await runtime.waitForInitialPackageDiscovery();
     const rawProfile = pickString(params, 'profile') ?? 'fast';
     const profile = rawProfile === 'full' ? 'full' : 'fast';
-    return appState(profile, conn);
+    const state = appState(profile, conn);
+    if (!conn.clientContext?.trusted_host || !pickBoolean(params, 'include_setup', 'includeSetup')) return state;
+    const model = state.app_state.settings_control_center?.app_settings_read_model.codex_model_policy;
+    if (!model) return state;
+    return {
+      ...state,
+      app_state: { ...state.app_state, system_initialize: readSystemInitialize(runtime.paths.state_dir, model.model_access_ready) },
+    };
   });
 
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
