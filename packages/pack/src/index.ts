@@ -232,6 +232,8 @@ export {
 } from './lifecycle/service.ts';
 
 export {
+  officialPackageInstallSource,
+  officialPackageRuntimeRoot,
   readOfficialPackageCatalog,
   type OfficialPackageCatalogEntry,
   type OfficialPackageCatalogOptions,
