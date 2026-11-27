@@ -233,7 +233,7 @@ function terminateProcessGroup(child: ChildProcess, signal: NodeJS.Signals): voi
 }
 
 export function createProcessCodexRunner(
-  options: { readonly binary?: string; readonly timeoutMs?: number } = {},
+  options: { readonly binary?: string; readonly timeoutMs?: number; readonly readbackSignal?: AbortSignal } = {},
 ): CodexCarrierRunner {
   const binary = options.binary ?? process.env.OPL_CODEX_BIN?.trim() ?? 'codex';
   const timeoutMs = options.timeoutMs ?? 8_000;
@@ -244,6 +244,8 @@ export function createProcessCodexRunner(
     parse: (result: unknown) => T,
     env: NodeJS.ProcessEnv,
   ): Promise<T> {
+    const signal = options.readbackSignal;
+    signal?.throwIfAborted();
     const codexHome = resolveConfiguredCodexHome(env);
     const snapshot = captureCodexCarrierTmpSnapshot(codexHome);
     return new Promise<T>((resolve, reject) => {
@@ -277,7 +279,10 @@ export function createProcessCodexRunner(
         if (closed) settleNow();
       };
 
+      const onAbort = () => finishError(new PackError('PACK_OPERATION_CANCELLED', `Codex ${method} was cancelled.`));
+
       const settleNow = () => {
+        signal?.removeEventListener('abort', onAbort);
         clearTimeout(deadline);
         if (shutdownTimer) clearTimeout(shutdownTimer);
         if (killTimer) clearTimeout(killTimer);
@@ -368,6 +373,7 @@ export function createProcessCodexRunner(
         settleNow();
       });
 
+      signal?.addEventListener('abort', onAbort, { once: true });
       send({
         id: 1,
         method: 'initialize',

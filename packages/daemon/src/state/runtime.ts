@@ -129,6 +129,7 @@ export class DaemonRuntime {
   readonly #activeTaskLoops = new Map<string, Promise<void>>();
   readonly #pendingTaskLoops = new Set<string>();
   readonly #launchingTaskStages = new Map<string, { readonly stageRunId: string; readonly promise: Promise<void> }>();
+  readonly #discoveryAbort = new AbortController();
   #initialPackageDiscovery: Promise<void> = Promise.resolve();
   #initializedAsync = false;
   #closed = false;
@@ -554,7 +555,7 @@ export class DaemonRuntime {
     if (carrierHomes.some((home) => fs.existsSync(path.join(home, 'config.toml')))) {
       // Socket startup and unrelated RPCs may proceed while the native carrier answers.
       this.#initialPackageDiscovery = this.packService
-        .refreshExternalCodexPackages(createProcessCodexRunner({ timeoutMs: 3000 }))
+        .refreshExternalCodexPackages(createProcessCodexRunner({ timeoutMs: 3000, readbackSignal: this.#discoveryAbort.signal }))
         .then(() => { this.appStateCache.invalidate(); })
         .catch(() => {
           // Keep the last inventory. An explicit pack sync can retry and report the carrier error.
@@ -1185,6 +1186,7 @@ export class DaemonRuntime {
   async shutdown(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
+    this.#discoveryAbort.abort();
 
     try {
       this.scheduleRunner.stop();

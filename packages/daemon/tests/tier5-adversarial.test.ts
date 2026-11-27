@@ -41,6 +41,31 @@ test('T5-DAEMON-01 (G2-01 / Bug 1): spawnDetachedDaemon propagates OPL_STATE_DIR
   }
 });
 
+test('shutdown cancels a stalled startup Package discovery and exits cleanly', async (t) => {
+  const sb = createDaemonSandbox();
+  t.after(() => sb.cleanup());
+  fs.writeFileSync(path.join(sb.codexHome, 'config.toml'), '');
+  const daemon = await sb.spawnDaemonProcess({
+    OPL_STUB_CODEX_APP_SERVER_FAULT: 'stall',
+    OPL_STUB_IGNORE_SIGTERM: '1',
+  });
+  const log = path.join(sb.stubLogDir, 'codex.jsonl');
+  const deadline = Date.now() + 4000;
+  while (!fs.existsSync(log) && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  const entries = fs.readFileSync(log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  const readback = entries.find(row => row.subcommand === 'app_server' && row.fault === 'stall');
+  assert.ok(readback && isProcessAlive(readback.pid), 'the native Package discovery must be running');
+  sb.trackPid(readback.pid);
+
+  const stop = await stopDaemonGracefully(sb.stateDir);
+  assert.equal(stop.stopped, true);
+  assert.equal(await daemon.waitForExit(), 0);
+  assert.equal(isProcessAlive(readback.pid), false);
+  for (const file of [sb.sessionPath, sb.lockPath, sb.sockPath]) assert.equal(fs.existsSync(file), false);
+});
+
 test('T5-DAEMON-02 (G2-05, G2-06 / Bug 4, Bug 9): contribution_handler auth gate and workspace.read edge boundaries', async (t) => {
   const sb = createDaemonSandbox();
   t.after(() => sb.cleanup());
