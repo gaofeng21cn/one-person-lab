@@ -133,3 +133,42 @@ test('listWorkspaces, inspectWorkspace, and updateWorkspaceRevision CAS enforce 
     fx.cleanup();
   }
 });
+
+test('upgrade imports physical v1 workspaces, joins shared roots and preserves existing v2 identities on restart', () => {
+  const fx = setupWorkspaceFixture();
+  try {
+    const root = fs.mkdtempSync(path.join(fx.tmpDir, 'legacy-'));
+    const existing = fx.service.initWorkspace({ root_path: path.join(fx.tmpDir, 'v2'), name: 'Current', metadata: { local: true } });
+    const binding = (id: string, workspacePath: string, status: string) => ({
+      binding_id: id, workspace_path: workspacePath, project_id: id + '-domain', project_scope_id: id + '-scope',
+      status, label: id + '-name', created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-02T00:00:00Z',
+    });
+    const missing = path.join(fx.tmpDir, 'disconnected');
+    const archived = fs.mkdtempSync(path.join(fx.tmpDir, 'archived-'));
+    const registry = JSON.stringify({ version: 'g2', bindings: [
+      binding('secondary', root, 'inactive'), binding('primary', root, 'active'),
+      binding('on-v2', existing.root_path, 'inactive'), binding('archived', archived, 'archived'),
+      binding('disconnected', missing, 'active'),
+    ] });
+    const registryPath = path.join(fx.tmpDir, 'workspace-registry.json');
+    fs.writeFileSync(registryPath, registry);
+    const start = () => createWorkspaceService({ db: fx.db, stateDir: fx.tmpDir });
+    const service = start();
+    const imported = service.getWorkspace('primary');
+    assert.equal(imported.root_path, fs.realpathSync(root));
+    assert.equal(imported.name, 'primary-name');
+    assert.equal(imported.created_at, '2026-10-01T00:00:00Z');
+    assert.deepEqual(JSON.parse(imported.metadata_json).legacy_workspace_bindings.map((b: { binding_id: string }) => b.binding_id), ['secondary', 'primary']);
+    assert.equal(service.listWorkspaces().length, 2);
+    assert.equal(service.getWorkspace(existing.workspace_id).name, 'Current');
+    assert.equal(JSON.parse(service.getWorkspace(existing.workspace_id).metadata_json).local, true);
+    assert.equal(fs.existsSync(missing), false);
+    const firstRead = service.listWorkspaces();
+    assert.deepEqual(start().listWorkspaces(), firstRead);
+    fs.mkdirSync(missing);
+    assert.equal(start().getWorkspace('disconnected').workspace_id, 'disconnected');
+    assert.equal(fs.readFileSync(registryPath, 'utf8'), registry);
+  } finally {
+    fx.cleanup();
+  }
+});

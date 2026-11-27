@@ -12,6 +12,7 @@ import {
 import { appendEntryWithDb } from '@opl/ledger';
 
 import { WorkspaceError } from './errors.ts';
+import { importLegacyWorkspaceBindings } from './legacy-bindings.ts';
 import { ensureWorkspaceSchema } from './migrations.ts';
 import {
   atomicWriteFile,
@@ -1321,5 +1322,6 @@ export function createWorkspaceService(
   options: WorkspaceServiceOptions,
 ): WorkspaceService {
   ensureWorkspaceSchema(options.db);
+  if (options.stateDir) importLegacyWorkspaceBindings(options.db, options.stateDir);
   return new WorkspaceService(options);
 }

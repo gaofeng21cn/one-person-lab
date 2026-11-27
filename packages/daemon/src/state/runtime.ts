@@ -401,6 +401,7 @@ export class DaemonRuntime {
 
     this.workspaceService = createWorkspaceService({
       db: this.db,
+      stateDir: this.paths.state_dir,
       onMutate: () => {
         this.appStateCache.invalidate();
       },
