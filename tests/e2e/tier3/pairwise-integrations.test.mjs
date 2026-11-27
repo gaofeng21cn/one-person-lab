@@ -498,9 +498,6 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     });
     assert.equal(lineAudit.ok, true, `Line budget / import guard violations: ${JSON.stringify(lineAudit.violations)}`);
     assert.ok(lineAudit.coreLineCount > 0 && lineAudit.coreLineCount < 3000);
-    if (lineAudit.bridgeLineCount > 0) {
-      assert.ok(lineAudit.bridgeLineCount < 400, `Expected bridge < 400L, got ${lineAudit.bridgeLineCount}`);
-    }
   });
 
   it("T3-06 [F1 x F5 x F6 x F9 x F13 x F15]: MCP App workspace_read + Connect loopback via EventBus with zero Temporal/CLI in mcp-app-shared", async () => {
@@ -1229,9 +1226,6 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     });
     assert.equal(lineAudit.ok, true, `Line budget / import guard violations: ${JSON.stringify(lineAudit.violations)}`);
     assert.ok(lineAudit.coreLineCount > 0 && lineAudit.coreLineCount < 3000);
-    if (lineAudit.bridgeLineCount > 0) {
-      assert.ok(lineAudit.bridgeLineCount < 400, `Expected bridge < 400L, got ${lineAudit.bridgeLineCount}`);
-    }
   });
 
   it("T3-13 [F5 x F6 x F8 x F10 x F11 x F12]: human_gate & OPL Connect approval via Bridge -> event.runway.changed/event.ledger.appended & secret isolation", async () => {

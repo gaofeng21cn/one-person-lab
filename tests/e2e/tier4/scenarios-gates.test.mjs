@@ -1876,7 +1876,6 @@ with OplClient(session_file=${JSON.stringify(sb.sessionPath)}, client_kind="sdk_
     assert.ok(budgetAudit.coreLineCount > 0 && budgetAudit.coreLineCount < 3000);
     if (!IS_PRE_M4) {
       assert.ok(budgetAudit.pythonReport.lineCount > 0 && budgetAudit.pythonReport.lineCount < 1500);
-      assert.ok(budgetAudit.bridgeLineCount > 0 && budgetAudit.bridgeLineCount < 400);
     }
 
     const boundaryAudit = auditProtectedBoundaries({

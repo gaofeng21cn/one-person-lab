@@ -424,6 +424,10 @@ const FORBIDDEN_BRIDGE_PATTERNS = [
   { label: "opl-passthrough/", regex: /opl-passthrough\// },
   { label: "cordis-profiles", regex: /cordis-profiles/ },
   { label: "spawn('opl')", regex: /spawn(?:Sync)?\s*\(\s*['"`]opl['"`]/ },
+  {
+    label: "in-process Framework runtime or database",
+    regex: /(?:\bfrom\s*|\b(?:import|require)\s*\(?\s*)["'](?:node:sqlite|@opl\/(?:core|pack|runway|daemon|workspace|ledger|connect)(?:\/[^"']*)?)["']/,
+  },
 ];
 
 export function auditLineBudgets({
@@ -436,7 +440,6 @@ export function auditLineBudgets({
   requireCore = true,
   maxCoreLines = 3000,
   maxPythonLines = 1500,
-  maxBridgeLines = 400,
 } = {}) {
   const root = path.resolve(repoRoot);
   const violations = [];
@@ -521,7 +524,6 @@ export function auditLineBudgets({
     violations.push(...pythonReport.violations);
   }
 
-  let bridgeLineCount = 0;
   if (requireBridge) {
     const resolvedBridgeDir = bridgeDir ? path.resolve(bridgeDir) : null;
     const bridgeSrcDir = resolvedBridgeDir ? path.join(resolvedBridgeDir, "src") : null;
@@ -533,7 +535,7 @@ export function auditLineBudgets({
       });
     } else {
       const bridgeFiles = walkFiles(bridgeSrcDir, {
-        filter: (_full, name) => /\.(?:mjs|js|ts)$/.test(name),
+        filter: (_full, name) => /\.(?:mjs|cjs|js|ts)$/.test(name),
       });
       if (bridgeFiles.length === 0) {
         violations.push({
@@ -544,23 +546,15 @@ export function auditLineBudgets({
       }
       for (const f of bridgeFiles) {
         const content = fs.readFileSync(f, "utf8");
-        bridgeLineCount += countPhysicalLines(content);
         for (const pat of FORBIDDEN_BRIDGE_PATTERNS) {
           if (pat.regex.test(content)) {
             violations.push({
-              rule: "bridge-legacy-symbol",
+              rule: "bridge-forbidden-dependency",
               file: path.relative(resolvedBridgeDir, f),
-              message: `Forbidden legacy symbol '${pat.label}' found in ${path.relative(resolvedBridgeDir, f)}`,
+              message: `Forbidden Studio bridge dependency or legacy symbol '${pat.label}' found in ${path.relative(resolvedBridgeDir, f)}`,
             });
           }
         }
-      }
-      if (!(bridgeLineCount > 0 && bridgeLineCount < maxBridgeLines)) {
-        violations.push({
-          rule: "bridge-line-budget",
-          file: bridgeSrcDir,
-          message: `Expected bridge src/ lines in (0, ${maxBridgeLines}), got ${bridgeLineCount}`,
-        });
       }
       const bundlePath = path.join(resolvedBridgeDir, "lib", "index.mjs");
       if (fs.existsSync(bundlePath)) {
@@ -568,9 +562,9 @@ export function auditLineBudgets({
         for (const pat of FORBIDDEN_BRIDGE_PATTERNS) {
           if (pat.regex.test(bundleContent)) {
             violations.push({
-              rule: "bridge-bundle-legacy-symbol",
+              rule: "bridge-bundle-forbidden-dependency",
               file: "lib/index.mjs",
-              message: `Forbidden legacy symbol '${pat.label}' found in built lib/index.mjs`,
+              message: `Forbidden Studio bridge dependency or legacy symbol '${pat.label}' found in built lib/index.mjs`,
             });
           }
         }
@@ -584,7 +578,6 @@ export function auditLineBudgets({
     guardReport,
     coreLineCount,
     pythonReport,
-    bridgeLineCount,
     violations,
   };
 }

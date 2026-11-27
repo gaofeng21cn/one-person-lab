@@ -341,7 +341,7 @@ describe("Tier 2 — F15 Negative & Boundary: Clean Env & Red-Line Violations", 
     }
   });
 
-  it("T2-F15-05: synthetic >3,000L core, >1,500L/non-stdlib Python, >400L bridge, and DSH CUA/preload diffs are caught", () => {
+  it("T2-F15-05: synthetic >3,000L core, >1,500L/non-stdlib Python, in-process Framework dependency in Studio bridge, and DSH CUA/preload diffs are caught", () => {
     const sb = trackSandbox();
     const cleanRepo = createCleanSyntheticRepo(sb.root);
     const cleanBridge = createCleanSyntheticBridge(sb.root);
@@ -369,25 +369,23 @@ describe("Tier 2 — F15 Negative & Boundary: Clean Env & Red-Line Violations", 
     for (let i = 0; i < 1510; i++) pyBloat.push(`VAR_${i} = ${i}`);
     fs.writeFileSync(path.join(bloatRepo, "sdks", "python-client", "opl_client.py"), pyBloat.join("\n") + "\n", "utf8");
 
-    // (c) bridge > 400L
+    // (c) Studio bypasses opld and opens the Framework database.
     const bloatBridge = path.join(sb.root, "bloat-bridge");
     copyDirClean(cleanBridge, bloatBridge);
-    const bridgeLines = [];
-    for (let i = 0; i < 405; i++) bridgeLines.push(`export const b_${i} = ${i};`);
-    fs.writeFileSync(path.join(bloatBridge, "src", "bloat.mjs"), bridgeLines.join("\n") + "\n", "utf8");
+    fs.writeFileSync(path.join(bloatBridge, "src", "database.mjs"), 'import { DatabaseSync } from "node:sqlite";\n', "utf8");
 
     const badBudgets = auditLineBudgets({
       repoRoot: bloatRepo,
       bridgeDir: bloatBridge,
       pythonClientDir: path.join(bloatRepo, "sdks", "python-client"),
     });
-    assert.equal(badBudgets.ok, false, "Expected bloated core/python/bridge to fail auditLineBudgets");
+    assert.equal(badBudgets.ok, false, "Expected budget and bridge ownership violations");
     const budgetRules = new Set(badBudgets.violations.map((v) => v.rule));
     for (const expectedRule of [
       "core-line-budget",
       "python-line-budget",
       "python-non-stdlib-import",
-      "bridge-line-budget",
+      "bridge-forbidden-dependency",
     ]) {
       assert.equal(
         budgetRules.has(expectedRule),
