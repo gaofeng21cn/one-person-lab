@@ -1,3 +1,4 @@
+import { executeWorkspaceRootAction } from '../state/workspace-root.ts';
 import { readDomainTaskDetail } from '../state/domain-task-detail.ts';
 import { setTaskVisibility } from '../state/task-visibility.ts';
 import fs from 'node:fs';
@@ -251,6 +252,15 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
         : restoreCodexUserInstructions(runtime.packService, runtime.paths.state_dir, payload, dryRun);
       const execution = { action_id: actionId, dry_run: dryRun, status: dryRun ? 'preview' : 'executed', result };
       return { ...execution, app_action_execution: execution };
+    }
+    if (actionId === 'workspace_root_set') {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId') || pickString(payload, 'package_id')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Workspace setup does not accept a Package target.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeWorkspaceRootAction(runtime.paths.state_dir, payload, dryRun);
     }
     const connectionAction = connectionActions.find(entry => entry.action_id === actionId);
     if (connectionAction) {
