@@ -28,12 +28,12 @@
 
 | 需求 | 接入方式 | 验证重点 |
 | --- | --- | --- |
-| 复用外部服务账号 | 可信服务启动时通过 `opl-framework/connection-authorization-host` 的 `activateInstalledPackageConnectionContext` 绑定自己的 installed Package；消费注入的 `connect` port | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
-| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口；图片 API 回退使用 `opl-framework/domain-task-runtime` 的 `runDomainImageGeneration`，详见[接口](../specs/domain-image-generation.md) | 领域保留 built-in 优先和专业质量判断；选定账号由公共 owner 解析，缺失不换账号，未知结果不自动重试 |
-| 读取个人或主题知识 | 已知知识 ID 使用 `opl knowledge read-source`，派生摘要使用 `verify-dependencies`，按获授权 workspace/domain/project 取用 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
-| 固定一轮任务的知识依据 | 使用 `prepare`、`read-context` 和行动前 `revalidate --for-action`；托管 StageRun 使用自动绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
-| 修改或退役已登记的知识 | `propose/review/apply`，或原处编辑后 `inspect-source/review-source`；需移出正文时使用经审阅的 `retire` 与 `inspect-retirement` | 正文、接受版本与派生摘要一致；退役保留稳定 ID 和恢复字节，退出召回；冲突不覆盖 |
-| 复用工作与成果 | 短操作返回原 owner 结果；长操作使用已有 Task/StageRun 或领域任务身份 | 同一对象查询和恢复；领域业务库与产物权威保留在原处 |
+| 复用外部服务账号 | 通过 `@opl/connect` 与 `opld` `connect.*` 校验已安装的 Package 授权并调用绑定的连接 | 已有 grant 可用；撤权、连接修订或载体变化阻止后续调用；业务结果回到 provider |
+| 复用模型能力 | 调用既有模型/provider owner 的公开执行入口，详见[接口](../specs/domain-image-generation.md) | 领域保留 built-in 优先和专业质量判断；选定账号由公共 owner 解析，缺失不换账号，未知结果不自动重试 |
+| 读取个人或主题知识 | 通过 `opl workspace sources` / `opld` 工作区来源接口按获授权 workspace/domain 读取 | 真实来源及接受版本可读；撤权、过期或原文改变时排除旧内容 |
+| 固定一轮任务的知识依据 | 使用 `opl workspace snapshot` 与托管 StageRun 绑定 | 真实上下文消费、依赖版本和缺口可回读；只有空 catalog 或命令存在不算接入 |
+| 修改或退役已登记的知识 | 通过 `opl workspace writeback propose/commit` 或原处来源审阅更新修订 | 正文、接受版本与派生摘要一致；冲突不覆盖 |
+| 复用工作与成果 | 短操作返回原 owner 结果；长操作使用 `opl runway` Task/StageRun 身份 | 同一对象查询和恢复；领域业务库与产物权威保留在原处 |
 
 连接工厂只用于可信 Host/服务启动，安装根来自自身模块位置，Package 身份由启动代码固定。它不会安装、授权或根据页面选项切换消费者。完整约定见[Connect 接口](../specs/connection-authorization.md)。非 Package 的直接用户工具沿用既有 owner 入口，不能借用其他 Package 的身份。
 
@@ -54,10 +54,7 @@
 
 产品入口与 MiniApp surface 采用两个层级：一个 Package 在 `catalog.products` 中只有一个产品入口，入口下面可以挂多个共享 internal view；只有 MCP catalog 中独立的 `server + resourceUri` 才计为一个 MiniApp。Package manifest 的 `presentation.miniapp` 声明入口形式和默认 view。产品卡不会自动启动独立 App，启动仍由 Studio 的 MiniApp 工作台显式执行。
 
-自有 MiniApp 直接复用 App 选定的官方 DSH 视觉来源。共享页的 `src/mcp-app/dsh-theme.css`
-复用选定的 DSH 官方语义视觉 token 与控件样式，与 Relay、MAC 保持一致，构建嵌入主题、
-控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、
-字号或控件尺度。领域 CSS 负责布局和官方语义 token 的角色映射，主题和字体仍走标准 MCP Apps context。
+自有 MiniApp 直接复用 App 选定的官方 DSH 视觉来源。共享页复用 [`@opl/mcp-app-shared`](../../packages/mcp-app-shared/src/index.ts)（构建资产位于 `packages/mcp-app-shared/assets/`）提供的 DSH 官方语义视觉 token 与控件样式，与 Relay、MAC 保持一致，构建嵌入主题、控件样式和 MIT 许可。只适配 CSS Module 选择器，不维护 Framework 自有调色板、字号或控件尺度。领域 CSS 负责布局和官方语义 token 的角色映射，主题和字体仍走标准 MCP Apps context。
 
 产品与功能的设置项在 App 内有唯一功能归位：通道与伴侣连接归“连接与凭证”，服务状态与可选诊断归“运行与维护”；业务列表、时间线、审阅看板和产物继续归共享 OPL Apps、专用标准 MCP App 或上下文任务工作台，避免将业务视图混作通用设置表单。软件目录与 MCP catalog 从同一个 installed descriptor 派生操作入口，不新增第二个 UI 注册表或生命周期。
 
@@ -110,7 +107,7 @@ owner 执行结果可附已有贡献引用形式的 `readback: { data_ref, input
 
 ## 人工审阅后继续原任务
 
-共享视图的 `human_gate` 记录人工决定引用。后续阶段沿用既有领域 action 或 `opl family-runtime attempt create`，保留原 `--task`、execution scope 和 workspace locator，以新的稳定 `--stage-run-invocation-id` 创建同任务的后续 StageRun。`--human-gate-ref` 同时通过 `--input-artifact-ref` 与 `--input-artifact-sha256` 绑定精确决定字节；决定进入不可变输入和 checkpoint，producer 与 reviewer 保留原 Task 身份。
+共享视图的 `human_gate` 记录人工决定引用。后续阶段沿用既有领域 action 或 `opl runway`（`decide` / `runway.stage.start`），保留原 task 与 workspace 上下文创建后续 StageRun。决定与输入产物绑定进入不可变记录，producer 与 reviewer 保留原 Task 身份。
 
 相同 invocation 的重开查询既有运行；改变决定、输入或目标必须使用新 invocation，旧摘要不能读取新字节。决定记录、阶段执行完成和领域质量接受分别回读；这条路径不解除 quality Attempt 的通用 resume 禁令，也不把人的批注当作专业质量批准。
 

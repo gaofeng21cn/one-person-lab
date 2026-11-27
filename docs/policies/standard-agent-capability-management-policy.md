@@ -71,4 +71,4 @@ capability callable 只证明入口可用。专业质量、artifact acceptance�
 
 ## Verification
 
-至少验证 owner descriptor、capability map、真实 caller、entrypoint callability、required dependencies 和受影响 consumer。动态 installed 状态使用 `opl packages status --json`，不写入本政策。
+至少验证 owner descriptor、capability map、真实 caller、entrypoint callability、required dependencies 和受影响 consumer。动态 installed 状态使用 `opl pack list --json`，不写入本政策。

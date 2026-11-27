@@ -18,7 +18,7 @@ Agent 负责发现、调用和编排；人在需要选择、授权、确认、�
 | 凭证与连接 | Connect、系统钥匙串和原生 provider | 复用 provider 的授权、轮换和回读 | 只保存 opaque reference、scope、revision 和状态，不复制秘密 |
 | 知识与记忆 | Framework knowledge source + Obsidian | Obsidian Markdown 是正文 authority；复用 Profile/Workspace 绑定和接受 revision | 只管理来源、范围、快照和写回 receipt，不复制第二份正文 |
 | 任务与工作流 | Framework Task/StageRun 或领域 owner | 复用既有 durable execution、receipt 和 artifact ref | 只补领域所需的输入输出映射 |
-| 外部工具 | 工具自身 owner（Temporal、Codex、Python、uv、Node 等） | 使用官方 CLI/API/SDK 和其升级路径 | 只做参数、身份、revision、结果和错误的薄适配 |
+| 外部工具 | 工具自身 owner（Codex、Antigravity、Python、uv、Node 等） | 使用官方 CLI/API/SDK 和其升级路径 | 只做参数、身份、revision、结果和错误的薄适配 |
 | 领域逻辑 | 具体 Agent/App owner | 保持在领域仓，不塞进 Framework | 维护业务判断、质量、结果与专业数据 |
 
 ## 什么时候抽取 OPL 公共模块
@@ -33,7 +33,7 @@ Agent 负责发现、调用和编排；人在需要选择、授权、确认、�
 
 ## 软件中心与共用基座的关系
 
-软件中心统一管理 OPL 自有的本机 Package 和原生产品。它通过 `product_id` 合并公开/私有 OCI、Homebrew Formula/Cask 和其他已接通的原生 carrier；Homebrew 与公共 Package 目录是两个 carrier、一个语义目录。Codex 官方插件、第三方 Skills 和 PDF/Documents 等外部扩展单列并由其原生管理器负责。
+软件中心统一管理 OPL 自有的本机 Package，并只读展示 `opl_base` 当前版本。它合并公开目录、授权私有 OCI 和已接入的原生 carrier。Codex 官方插件、第三方 Skills 和 PDF/Documents 等外部扩展单列并由其原生管理器负责。
 
 云端、移动端和设备端产品拥有独立生命周期，不作为本机安装软件进入主目录。OPL App 可以提供部署向导、环境检查、远端状态和跳转；它们的部署动作和版本真相仍归 Cloud、iOS、设备或远端产品 owner。
 
@@ -62,8 +62,8 @@ Agent 负责发现、调用和编排；人在需要选择、授权、确认、�
 | 插件组合、设置与面板 | Studio 的官方 DSH/Cordis 依赖和 slots | App 的产品路由与 Framework 状态适配 |
 | 模型执行与对话 | Codex CLI / App Server | Package 与消费者身份、调用范围 |
 | MCP 工具和协作界面 | 官方 `@modelcontextprotocol/sdk` / `ext-apps` | 同一业务 owner 的 refs、revision、权限映射 |
-| 持久工作流 | Temporal 官方 SDK / 服务 | 领域 Task、StageRun 与产物引用，不另造工作流引擎 |
-| 安装与制品 | Homebrew、Codex 原生管理器、OCI/GHCR、ORAS、Cosign | 软件身份合并、精确来源与安装回读 |
+| 持久任务编排 | Framework Runway（SQLite `opl.db`） | Task、StageRun、Attempt 与产物引用，不另建外部队列数据库 |
+| 安装与制品 | Codex 原生管理器、OCI/GHCR、ORAS、Cosign | 软件身份合并、精确来源与安装回读 |
 | 个人知识 | Obsidian/Markdown 原文 | 按消费者授权、接受版本、来源快照和写回协议 |
 | 账号与凭证 | 系统钥匙串、原生 OAuth/credential provider | Connect handle 与独立消费者授权 |
 

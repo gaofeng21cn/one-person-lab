@@ -1,6 +1,6 @@
 # 知识来源与记忆政策
 
-本文是 OPL Agent、Agent 原生 App 与个人工作流共用的知识归属、正文来源和记忆生命周期政策 SSOT，适用于标准智能体和其他获授权消费者。机器字段与校验由 [知识生命周期合同](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)、[知识条目 schema](../../contracts/opl-framework/durable-knowledge-item.schema.json) 和实际运行接口持有；具体物理位置与命令见[知识来源接口](../specs/knowledge-sources.md)，当前实现与验证边界见[状态](../status.md#长期知识与记忆)。
+本文是 OPL Agent、Agent 原生 App 与个人工作流共用的知识归属、正文来源和记忆生命周期政策 SSOT，适用于标准智能体和其他获授权消费者。机器字段与校验由 [`packages/workspace/src/`](../../packages/workspace/src/index.ts) 和实际运行接口持有；具体物理位置与命令见[知识来源接口](../specs/knowledge-sources.md)，当前实现与验证边界见[状态](../status.md#工作区与知识)。
 
 **用户和业务负责人拥有知识，项目组织工作，智能体按授权范围使用，运行时记录实际消费的版本。** 用户已有 Obsidian 或其他 Markdown 资料库时，原库继续承载正文；没有独立资料库时，普通业务工作目录承担同样职责。存储位置不改变知识归属，也不要求每个智能体建立一套个人知识库。
 

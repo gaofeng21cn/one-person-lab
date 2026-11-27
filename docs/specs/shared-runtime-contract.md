@@ -1,6 +1,6 @@
 # Shared Runtime Contract
 
-本文解释 OPL Family 共享的 runtime 行为。machine shape 由 `contracts/family-orchestration/*.schema.json` 和 `contracts/opl-framework/*runtime*.json` 持有。
+本文解释 OPL Family 共享的 runtime 行为。machine shape 由 [`packages/runway/src/types.ts`](../../packages/runway/src/types.ts) 和 [`packages/runway/src/runtime/`](../../packages/runway/src/runtime/runway-runtime.ts) 持有。
 
 ## Owner split
 
@@ -51,7 +51,7 @@ human gate 必须有明确 owner、reason、所需输入和恢复动作。没有
 
 ## 常用状态读法
 
-以下仅解释常见状态；完整枚举由 [`family-runtime-attempt-contract.json`](../../contracts/opl-framework/family-runtime-attempt-contract.json) 的 `attempt_states` 持有，包括领取、重试、human gate 和 dead-letter 状态。
+以下仅解释常见状态；完整枚举由 [`packages/runway/src/types.ts`](../../packages/runway/src/types.ts) 的 Stage/Attempt 状态类型持有，包括领取、重试、human gate 和失败状态。
 
 - `queued`：等待 provider 消费；
 - `running`：Attempt 正在执行；

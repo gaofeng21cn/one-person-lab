@@ -52,7 +52,7 @@ OPL 自行维护的软件在同一个 OPL 软件目录管理，产品类型仅�
 | 安装、发现与可调用性 | native carrier、installed descriptor、Framework Package discovery | 声明现有 Package identity、实际入口与所需能力 |
 | 操作与业务数据 | 领域服务及其公开 CLI/API/MCP | 实现领域逻辑、输入/结果 schema、权限和质量判断 |
 | 工作与产物 | Framework Task/StageRun/Workspace 或既有领域任务；owner artifact | 返回可重开的身份、当前状态、产物和可用操作 |
-| 通用协作 UI | Framework `src/mcp-app/`、贡献 ABI；官方 MCP Apps SDK | 声明 data/action refs，复用已有 renderer；领域编辑由专用 UI 持有 |
+| 通用协作 UI | Framework [`@opl/mcp-app-shared`](../../packages/mcp-app-shared/src/index.ts)、贡献 ABI；官方 MCP Apps SDK | 声明 data/action refs，复用已有 renderer；领域编辑由专用 UI 持有 |
 | 宿主与生命周期 | Studio 的 DSH/Cordis、Codex/其他 MCP Apps Host | 消费主题、语言、尺寸和连接；声明并验证所需 Host 能力 |
 | 连接与授权 | Framework Connect；实际 provider 保管和续期凭证 | 声明所需 capability，经可信安装身份消费授权连接 |
 | 知识与上下文 | Framework 知识来源、冻结、回执与写回；用户/领域 owner 持有正文和判断 | 声明知识需求、适用范围与必要性，复用来源，回读本次使用版本 |
@@ -70,7 +70,7 @@ OPL 自行维护的软件在同一个 OPL 软件目录管理，产品类型仅�
 
 ## 统一连接与凭证管理
 
-产品提供统一的账号连接、授权、撤销和失效修复体验。机器分工以[连接授权合同](../specs/connection-authorization.md)及其 [machine contract](../../contracts/opl-framework/connection-authorization-contract.json)为准：Connect 管连接引用、消费者授权和调用路由；provider 或原生 carrier 管凭证存储、OAuth 续期及外部业务语义。
+产品提供统一的账号连接、授权、撤销和失效修复体验。机器分工以[连接授权合同](../specs/connection-authorization.md)与 [`packages/connect/src/`](../../packages/connect/src/index.ts) 为准：Connect 管连接引用、消费者授权和调用路由；provider 或原生 carrier 管凭证存储、OAuth 续期及外部业务语义。
 
 统一体验覆盖多个现有负责人：外部服务连接使用 Connect；Gateway 模型账号继续归 Account & Access；设备或宿主登录继续由对应 provider 管理。领域消费者通过 owner 的公开能力调用，不各自解释宿主凭据文件。缺少可复用入口时，明确所缺 provider 或调用能力及其负责人；不能将设计目标写成当前已支持所有账号，也不把不同生命周期的凭证集中为一个新密钥库。
 
@@ -82,7 +82,7 @@ OPL 自行维护的软件在同一个 OPL 软件目录管理，产品类型仅�
 
 用户拥有知识，项目组织工作，Agent 按需使用，运行时记录当次使用的版本。已有 Obsidian 或普通资料目录可以承载唯一可编辑正文；没有独立资料库时使用现有工作目录。允许不同主题采用不同位置，不要求迁移整库或复制到每个 Agent。
 
-应用的知识需求区分产品方法、用户/团队、长期主题与具体项目；知识的性质、事实日期、复核期限和来源可信度是独立维度。归属与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)持有，机器字段见[知识生命周期](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)，实际绑定、召回、冻结和写回见[知识来源接口](../specs/knowledge-sources.md)。MiniApp 声明需要什么、用于什么任务，直接消费这些公开接口。
+应用的知识需求区分产品方法、用户/团队、长期主题与具体项目；知识的性质、事实日期、复核期限和来源可信度是独立维度。归属与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)持有，机器接口由 [`packages/workspace/src/`](../../packages/workspace/src/index.ts) 持有，实际绑定、召回、冻结和写回见[知识来源接口](../specs/knowledge-sources.md)。MiniApp 声明需要什么、用于什么任务，直接消费这些公开接口。
 
 Profile/Workspace 绑定获准来源；运行时选择适用内容并冻结所用版本，供生产、审阅和修复共享。UI 可显示用了哪些来源、缺少什么、哪些已过期及其修复入口。默认不注入整库，个人通用信息也不意味着任何应用可自动取得所有个人事实或跨项目数据。
 

@@ -33,7 +33,7 @@ Framework可以验证结构、投影和恢复；只有domain owner能promotion�
 
 Package owner持有descriptor、runtime bytes、version和publication。native carrier持有安装/启停/currentness。Framework只下载/验证/hand off owner bytes或调用carrier，并聚合installed/callable。
 
-`ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 `src/kernel/package-content-lock.ts` 与 `python/opl_framework/package_content_lock.py` 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。具有独立分发载体的 Python 消费方通过 `opl pack project-carrier` 与自身 `carrier_projection.json` 保持内容一致；路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
+`ordered_path_length_file_length_bytes` 的字节编码由 Framework 的 [`content-lock.ts`](../../packages/pack/src/build/content-lock.ts) 持有，并以 UTF-8、二进制内容和路径顺序的同一向量验证一致性。具有独立分发载体的调用方可通过 `opl pack build` / `verifyReleaseLock` 与内容锁保持一致；路径选择、identity 和 canonicalization 校验仍由实际调用方负责。
 
 依赖发布解析由 `scripts/resolve-dependency-releases.mjs` 消费 `contracts/opl-framework/dependency-release-sources.json`（需构建源码的依赖绑定 tag commit 或 npm `gitHead`）。`OPL_DEPENDENCY_ARCHIVE_CACHE_DIR` 仅缓存经精确 SHA-256/npm SRI 核验的工具原始归档；Hosted Package source 的归档解包基于 PAX/GNU 元数据校验成员路径与根目录包含性。
 
@@ -74,7 +74,7 @@ digest，接口发现与 Hosted action 使用同一个父级源码根，不创�
 版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
 `hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
 显式选择 installed/managed 来源后，邻近开发仓和旧 module 镜像不覆盖该选择；显式环境路径仍作为开发覆盖。分离的开发运行根与安装 carrier 必须具有相同 owner 身份、版本、插件选择器、publication 和领域描述入口。启动前检查与实际调用共用身份读取与比较规则，不匹配时返回 `hosted_agent_runtime_identity_mismatch` 并关闭 launch。
-这些检查证明源码与入口文件可用；Temporal、实际 StageRun 和领域业务验收分别回读。
+这些检查证明源码与入口文件可用；Runway、实际 StageRun 和领域业务验收分别回读。
 发布前可运行 `node scripts/verify-package-source-artifacts.ts --package-id <id>`（可重复参数），
 在独立临时目录复用同一下载、归档身份和内容摘要校验，再立即清理。该入口只验证明确选择的
 根包 payload，不注册原生插件、不修改用户安装状态，也不替代依赖安装、登录及 clean-VM 验收。
@@ -100,10 +100,10 @@ Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运�
 不同版本的 Package，不需要等待其他 Package 同步，也不生成组合 currentness。
 
 Framework v2 从官方 Catalog 在线安装时，下载软件中心所展示的编号版本。已有
-`v2_release` 时使用它的版本与归档摘要，其余条目使用 Catalog 的 v1 版本。
-若公开 registry 明确返回该 v2 编号版本的 manifest 不存在，普通安装与更新仍可使用
-同一 Catalog 条目中已发布的精确 v1 版本。权限、网络及完整性失败保持原错误。
-精确发布安装继续核对指定版本与摘要。Full 离线安装继续使用其冻结 seed 对应的版本。
+`v2_release` 时使用它的版本与归档摘要，尚未迁完的遗留条目按过渡方案读取 Catalog 版本。
+目标态下，`v2_release` 必须在不可变 OCI publication 与 manifest readback 成功后才能进入 Catalog，
+缺失选定 manifest 时必须 fail closed，不把 v2 选择静默降级为 v1；当前存在的临时 404 回退消除工作记于[当前差距](../active/current-state-vs-ideal-gap.md)。
+精确发布安装继续核对指定版本与摘要。Full 离线安装将冻结 seed 作为匹配的公开字节加速源，不屏蔽 `authorized_only` 私有源与在线目录更新。
 
 系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
 `codex_surface.interaction_mode = headless_internal` 的内部能力 Package，
@@ -186,7 +186,7 @@ workflow 对准确源码提交的当前结果及 commit statuses；Package 派�
 ## 软件包的发布入口
 
 Package 只有一套软件包发布机制：`publish-package.yml` 发布不可变版本并推进该
-Package 自己的 `latest-stable`。用户通过 `opl packages install <package-id> --json`
+Package 自己的 `latest-stable`。用户通过 `opl pack ensure <package-id> --json` / `opl pack install <source> --json`
 安装，或在 OPL 的软件包界面选择安装；原生插件管理器负责实际载体生命周期。
 
 一个 Package 是否已进入该流程，从它当前 projection 的
@@ -197,9 +197,9 @@ GitHub Release 页面及附件，也不建立 ZIP、wheel 等平行安装包发�
 annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库文档与源码变更记录，
 不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
 
-私有 Package 从其私有 owner 仓库通过固定 Framework commit 的薄 workflow 调用同一个 `publish-package.yml`，使用自身 `GITHUB_TOKEN` 与受保护 `release-stable` 环境签名密钥（第一方优先使用随 Framework 交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub` 公钥验证，或回退已有 `private-package-signing.pub`）。新私有 namespace 先上传固定无敏感内容标记并经只读核验证明 `visibility=private` 与匿名访问拒绝后，再上传源码、manifest 与载荷。跨仓公开分发已获授权的私有源码可使用只读 Deploy Key（`OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>`）或 `OWNER_SOURCE_READ_TOKEN` 检出，并通过 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` 绑定精确源码 commit 授权。公开 `Daily OPL Package Channel` 仅处理 `visibility=public` 条目，私有包交由私有 owner 工作流接力。
+私有 Package 从其私有 owner 仓库通过薄 workflow 调用同一个 `publish-package.yml`，使用自身 `GITHUB_TOKEN` 与受保护 `release-stable` 环境签名密钥（第一方优先使用随 Framework 交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub` 公钥验证，或回退已有 `private-package-signing.pub`）。新私有 namespace 先上传固定无敏感内容标记并经只读核验证明 `visibility=private` 与匿名访问拒绝后，再上传源码、manifest 与载荷。跨仓公开分发已获授权的私有源码可使用只读 Deploy Key（`OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>`）或 `OWNER_SOURCE_READ_TOKEN` 检出，并通过 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` 绑定精确源码 commit 授权。公开 `Daily OPL Package Channel` 仅处理 `visibility=public` 条目，私有包交由私有 owner 工作流接力。
 
-该规则覆盖全部 package id。未进入 OCI 流程的内部模块由各自 owner descriptor 声明其 carrier 与安装入口。App 等独立安装产物的 Release Bundle 在写作模型不可用时支持 `prepared_notes.source=prepared_ai|prepared_mechanical`（Schema 为 `release-bundle-freeze-request.schema.json` 与 `release-bundle.schema.json`），Framework 仅校验与纳入摘要而不伪造说明。领域质量、资格和运行可用性与软件包发布分别据实记录。
+该规则覆盖全部 package id。未进入 OCI 流程的内部模块由各自 owner descriptor 声明其 carrier 与安装入口。App 等独立安装产物的 Release Bundle 控制面、Schema 与发布说明校验由 `one-person-lab-app` 自行持有；领域质量、资格和运行可用性与软件包发布分别据实记录。
 
 ## 每日稳定发布
 

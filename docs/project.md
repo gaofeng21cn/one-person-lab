@@ -48,9 +48,9 @@ Framework 不持有：
 ## 默认入口
 
 - CLI：`opl`
-- 当前状态：`opl app state --profile fast --json`
-- Package：`opl packages status --json`
-- Framework readiness：`opl framework readiness --family-defaults --json`
+- 守护进程与首启自检：`opl daemon doctor --include-first-run --json`
+- Package：`opl pack list --json`
+- App 状态读面：`app.state.get`（`fast`）RPC
 - 桌面体验：One Person Lab App
 
-具体命令和 payload 以 `opl --help`、contracts 和 fresh readback 为准。
+具体命令和 payload 以 `opl --help`、`packages/daemon/src/rpc/` 和 fresh readback 为准。

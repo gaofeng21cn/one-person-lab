@@ -98,7 +98,7 @@ stage_id
 2. **OPL 生成 / 托管层**：OPL Pack / Stagecraft / Connect 根据合同与 `agent/stages/manifest.json` 生成 `family_stage_control_plane`、CLI、MCP、Skill descriptor、OpenAI / AI SDK tool descriptor、App projection、workspace projection 和 conformance readback；Codex App carrier 由 `agent/primary_skill/SKILL.md` 物化为 owner Package 的 Codex plugin。
 3. **Workspace 执行层**：Codex、App 或 hosted runner 消费投影后的 prompt、skill、tool descriptor 和 refs。`.agents/skills/` 是 workspace / quest-local Codex discovery projection，不是 domain repo 的 canonical source；`.codex/` 仅保留 OPL 的配置、owner、manifest 和 transaction 元数据。
 
-知识正文的归属、来源与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)统一定义，机器字段见 [durable knowledge lifecycle](../../contracts/opl-framework/durable-knowledge-lifecycle-contract.json)。产品知识由 `contracts/durable_knowledge_catalog.json` 登记；用户、主题和项目知识通过获授权的来源绑定接入，同一模型支持个人资料库、普通工作目录与混合来源。知识 scope 不由目录前缀决定。
+知识正文的归属、来源与生命周期由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)统一定义，机器接口由 [`packages/workspace/src/`](../../packages/workspace/src/index.ts) 持有。产品知识由 `contracts/durable_knowledge_catalog.json` 登记；用户、主题和项目知识通过获授权的来源绑定接入，同一模型支持个人资料库、普通工作目录与混合来源。知识 scope 不由目录前缀决定。
 
 StageRun 为 producer、reviewer、repairer 和 re-reviewer 固定同一份私有正文快照。静态 `knowledge_refs` 只表达编写关联，不绕过 catalog、来源权限和有效性直接注入正文；`skills` 仍按不可变 managed content 绑定。公开状态只投影召回回执和快照引用。必要知识与可选知识的缺口处理遵守领域任务声明。
 
@@ -153,4 +153,4 @@ OMA 负责目标理解、设计依据、`AgentBlueprint` / `EvalSpec`、证据�
 
 领域仓只维护自己的产品正文和语义规则。个人及项目正文通过来源登记直接读取；工作区保存绑定、任务产物、修订提案和回执，不要求中间全文副本。项目根与调用者范围来自已授权 execution scope，普通请求不能自行带入另一个项目或用户的私有目录。
 
-直接 Skill 与托管 Stage 共用 Framework 的知识快照接口。`opl knowledge prepare` 建立新的私有绑定，`opl knowledge read-context` 读取绑定正文；普通 list、inspect、recall 只输出目录或回执。操作入口见[知识来源接口](../specs/knowledge-sources.md)，具体字段与命令以 `opl help` 和知识合同为准。接受、并发修订、派生失效、撤权和保留规则只由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)维护。 邮件等业务证据经领域语义判断后才进入个人或项目知识；领域数据库和可重建索引不成为另一份个人来源 registry。新知识在既有授权来源登记，注册正文的修订使用共同写回链；provenance 和批准记录留在控制面，正文沿用用户资料库格式。
+直接 Skill 与托管 Stage 共用 Framework 的知识快照接口。`opl workspace snapshot` 建立阶段快照绑定，`opl workspace sources` 与 `opl workspace writeback` 管理来源和修订；操作入口见[知识来源接口](../specs/knowledge-sources.md)，具体字段与命令以 `opl --help` 和源码类型为基准。接受、并发修订、派生失效、撤权和保留规则只由[知识来源与记忆政策](./knowledge-source-and-memory-policy.md)维护。邮件等业务证据经领域语义判断后才进入个人或项目知识；领域数据库和可重建索引不成为另一份个人来源 registry。新知识在既有授权来源登记，注册正文的修订使用共同写回链；provenance 和批准记录留在控制面，正文沿用用户资料库格式。

@@ -54,6 +54,15 @@
 30. 已接受版本、来源权限和时效约束共同决定可用性；冻结快照不延续已撤回的权限，关键约束变化须在真实行动前核验。
 31. 语义接受与业务行动权归相应 owner。通用来源解析、写入、回执和结构检查不能替代它们。
 
+## v2 收敛边界
+
+32. Framework 的本机 durable state 只有 `opld` JSON-RPC 这一条写入路径，CLI、Studio 和 SDK 不得直接写 flat JSON、绕过 `opl.db`，或在非 macOS 主机回写 macOS 专用状态路径。
+33. `v2_release` 只有在不可变 OCI publication 与 manifest readback 成功后才能进入 Catalog。GHCR manifest 缺失必须 fail closed，resolver 不得从 Catalog 选择的 v2 release 静默降级到 v1。
+34. `OPL_FULL_RUNTIME_HOME` 只可作为匹配版本和 commit 的公开 Package 字节加速器。在线目录、私有 `authorized_only` Package 和授权检查不能因 seed 存在而消失。
+35. OPL Link companion 的 server owner 是 Studio `opl-host-core`；Framework 与 `@opl/connect` 只维护 Gateway companion authorization，不得创建第二 companion host。
+36. 活跃 Catalog Package 完成 `opl.package.v2` 迁移后，必须删除 pre-v2 发布工具 pin 和 v1→v2 runtime adapter，不保留永久双轨执行链。
+37. v2 只保留只读 `opl_base` 当前版本投影和公共 Catalog `source_refresh`；Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback 及旧工作流 `provider_*` 控制不属于受支持的 Framework surface。
+
 共同生命周期与保留规则由[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)持有。
 
 ## Documentation
