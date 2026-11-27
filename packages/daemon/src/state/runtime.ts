@@ -462,6 +462,7 @@ export class DaemonRuntime {
       packService: this.packService,
       connectService: this.connectService,
       version: this.version,
+      onCatalogChanged: () => emitPush('event.pack.catalog.changed', {}),
     });
 
     this.contributionDispatcher = new ContributionDispatcher({
