@@ -79,6 +79,53 @@ test('first install activates a v1 pending Codex even when it was staged by the 
   assert.equal(fs.existsSync(f.pending), false);
 });
 
+for (const damage of ['missing generations', 'missing stage', 'missing bin', 'missing codex', 'changed executable'] as const) {
+  for (const active of [true, false]) {
+    test(`a damaged staged payload (${damage}) preserves evidence ${active ? 'with an active Codex' : 'and permits first installation'}`, async (t) => {
+      const f = installFixture(t);
+      const activeCodex = path.join(f.current, 'codex');
+      const bin = path.join(f.generation, 'bin');
+      const stagedCodex = path.join(bin, 'codex');
+      if (!active) fs.unlinkSync(activeCodex);
+      const bytes = Buffer.from(`${JSON.stringify(f.receipt, null, 2)}\n`);
+      fs.writeFileSync(f.pending, bytes);
+      const incompleteExecutable = `${candidate}\n// interrupted update\n`;
+      const missingPaths = {
+        'missing generations': path.dirname(f.generation),
+        'missing stage': f.generation,
+        'missing bin': bin,
+        'missing codex': stagedCodex,
+      };
+      if (damage === 'changed executable') {
+        fs.writeFileSync(stagedCodex, incompleteExecutable);
+      } else {
+        fs.rmSync(missingPaths[damage], { recursive: true });
+      }
+
+      if (active) {
+        await assert.rejects(activateLegacyCodexGeneration(f.runtime, env));
+        assert.deepEqual(fs.readFileSync(f.pending), bytes);
+        assert.equal(fs.readFileSync(activeCodex, 'utf8'), 'active version');
+      } else {
+        assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
+        assert.equal(fs.existsSync(f.pending), false);
+        assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
+        const copies = fs.readdirSync(f.runtime, { withFileTypes: true }).filter(entry =>
+          entry.isFile() && fs.readFileSync(path.join(f.runtime, entry.name)).equals(bytes));
+        assert.equal(copies.length, 1);
+        assert.equal(fs.existsSync(activeCodex), false);
+      }
+      if (damage === 'changed executable') {
+        assert.equal(fs.readFileSync(stagedCodex, 'utf8'), incompleteExecutable);
+      } else {
+        assert.equal(fs.existsSync(missingPaths[damage]), false);
+      }
+      assert.equal(fs.readFileSync(path.join(f.current, 'opl'), 'utf8'), 'existing tool');
+      assert.equal(fs.readFileSync(path.join(f.previous, 'codex'), 'utf8'), 'older version');
+    });
+  }
+}
+
 // Interrupt a separate process so every on-disk state comes from the real
 // installer and a process exit cannot run its ordinary error recovery.
 const interruptedActivation = `
