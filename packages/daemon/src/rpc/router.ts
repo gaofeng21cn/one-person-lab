@@ -209,16 +209,6 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const mode = pickString(params, 'mode');
     const confirmed = pickBoolean(params, 'confirmed');
 
-    const gatewayAction = !packageId && gatewayAccountActions.find(action => action.action_id === actionId);
-    if (gatewayAction) {
-      requireTrustedHost(conn, actionId);
-      try {
-        return await executeGatewayAction(gatewayAction, payload, dryRun || mode === 'preview', runtime.paths.state_dir);
-      } finally {
-        runtime.appStateCache.invalidate();
-      }
-    }
-
     return runtime.contributionDispatcher.executeContribution({
       callerSessionId: ctx.session_id,
       clientContext: ctx,
@@ -246,6 +236,21 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       if (result.status === 'executed') runtime.appStateCache.invalidate();
       return result;
     }
+    const gatewayAction = gatewayAccountActions.find(action => action.action_id === actionId);
+    if (gatewayAction) {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId') || pickString(payload, 'package_id')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Gateway actions do not accept Package targets.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      try {
+        return await executeGatewayAction(gatewayAction, payload, dryRun, runtime.paths.state_dir);
+      } finally {
+        runtime.appStateCache.invalidate();
+      }
+    }
+
     if (actionId === 'package_contribution_execute') {
       return handleContributionExecute(params, conn);
     }
