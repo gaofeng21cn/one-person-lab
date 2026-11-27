@@ -1,4 +1,4 @@
-import { resolveCodexBinary } from '@opl/runway';
+import { codexStartupReady } from '@opl/runway';
 import { readWorkspaceRoot } from './workspace-root.ts';
 
 function coreCheck(itemId: string, label: string, ready: boolean, reason: string, step: string) {
@@ -17,15 +17,8 @@ function coreCheck(itemId: string, label: string, ready: boolean, reason: string
   };
 }
 
-export function readSystemInitialize(stateDir: string, modelAccessReady: boolean) {
+export function readSystemInitialize(stateDir: string, modelAccessReady: boolean, codexReady = codexStartupReady()) {
   const workspace = readWorkspaceRoot(stateDir);
-  let codexReady: boolean;
-  try {
-    codexReady = resolveCodexBinary() !== null;
-  } catch {
-    // An explicit but stale executable affects the local assistant only.
-    codexReady = false;
-  }
   const checklist = [
     coreCheck('workspace_root', 'Working directory', workspace.exists && workspace.writable, 'workspace_unavailable', 'Choose an accessible working directory.'),
     coreCheck('codex', 'Local assistant', codexReady, 'codex_unavailable', 'Set up the local assistant.'),

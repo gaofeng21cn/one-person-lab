@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import type { readSystemInitialize } from '../src/state/initialize.ts';
-import { connectTestRpc, createDaemonSandbox } from './helpers/sandbox.ts';
+import { connectTestRpc, createDaemonSandbox, E2E_CODEX_STUB } from './helpers/sandbox.ts';
 
 test('Studio startup checks track actual local readiness independently of installed Packages', async (t) => {
   const sb = createDaemonSandbox({
@@ -43,4 +43,38 @@ test('Studio startup checks track actual local readiness independently of instal
   assert.deepEqual((await read()).setup_flow.blocking_items, ['codex_config']);
   const publicResponse = await sdk.call('app.initialize.get', {}) as { system_initialize?: unknown };
   assert.equal(publicResponse.system_initialize, undefined);
+});
+
+test('a present but broken Codex stays unavailable until the selected executable works', async (t) => {
+  const sb = createDaemonSandbox();
+  t.after(() => sb.cleanup());
+  const binary = path.join(sb.root, 'codex');
+  fs.symlinkSync(process.execPath, binary); // Executes successfully, but reports a Node version.
+  await sb.spawnDaemonProcess({ OPL_CODEX_BIN: binary });
+  const app = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
+  t.after(() => app.close());
+
+  const assistantReady = async () => {
+    const data = await app.call('app.initialize.get', {}) as { system_initialize: ReturnType<typeof readSystemInitialize> };
+    return !data.system_initialize.setup_flow.blocking_items.includes('codex');
+  };
+  const activePath = async (method: string) => {
+    const data = await app.call(method, {}) as { runtime_activation: { codex: { runtime_binary_path: string | null } } };
+    return data.runtime_activation.codex.runtime_binary_path;
+  };
+  const fastReady = async () => {
+    const result = await app.call('app.state.get', { profile: 'fast', include_setup: true }) as {
+      app_state: { system_initialize: ReturnType<typeof readSystemInitialize> };
+    };
+    return !result.app_state.system_initialize.setup_flow.blocking_items.includes('codex');
+  };
+  assert.equal(await assistantReady(), false);
+  assert.equal(await fastReady(), false);
+  assert.equal(await activePath('app.codexRuntime.get'), null);
+  assert.equal(await activePath('app.codexRuntime.activate'), null);
+  fs.unlinkSync(binary);
+  fs.symlinkSync(E2E_CODEX_STUB, binary);
+  assert.equal(await fastReady(), true);
+  assert.equal(await assistantReady(), true);
+  assert.equal(await activePath('app.codexRuntime.get'), binary);
 });

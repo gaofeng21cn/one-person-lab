@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { activateCodexRuntime, ensureCodexRuntime, resolveCodexBinary } from '@opl/runway';
+import { activateCodexRuntime, ensureCodexRuntime, readActiveCodexPath } from '@opl/runway';
 import { DaemonRpcError } from '../errors.ts';
 
 export const codexInstallAction = {
@@ -13,10 +13,10 @@ export const codexInstallAction = {
   dry_run_supported: true,
 };
 
-export function readCodexRuntime() {
+export async function readCodexRuntime() {
   let binary: string | null = null;
   try {
-    binary = resolveCodexBinary()?.path ?? null;
+    binary = await readActiveCodexPath();
   } catch {
     // An invalid configured binary is unavailable and can be repaired explicitly.
   }
@@ -59,7 +59,7 @@ export async function executeCodexInstall(
     else delete env.OPL_FULL_RUNTIME_HOME;
   }
 
-  const result = dryRun ? readCodexRuntime().runtime_activation : await ensureCodexRuntime(env);
+  const result = dryRun ? (await readCodexRuntime()).runtime_activation : await ensureCodexRuntime(env);
   return {
     ok: true,
     status: dryRun ? 'preview' : 'executed',

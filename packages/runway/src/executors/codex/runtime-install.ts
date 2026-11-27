@@ -7,7 +7,7 @@ import { acquireAdvisoryLock, KernelError } from '@opl/core';
 import { codexRuntimeRoot, managedCodexBinary, resolveCodexBinary } from './binary.ts';
 import { stageCodexPayload } from './runtime-payload.ts';
 import { activateLegacyCodexGeneration } from './runtime-pending.ts';
-import { verifyCodexAppServer } from './runtime-probe.ts';
+import { checkCodexExecutable, verifyCodexAppServer } from './runtime-probe.ts';
 
 async function withInstallLock<T>(root: string, run: () => Promise<T>): Promise<T> {
   const deadline = Date.now() + 300_000;
@@ -89,6 +89,11 @@ export async function ensureCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
   });
 }
 
+export async function readActiveCodexPath(env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
+  const selected = configuredRuntime(env);
+  return selected && await checkCodexExecutable(selected.path, env) ? selected.path : null;
+}
+
 export async function activateCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
   const root = codexRuntimeRoot(env);
   const pending = path.join(root, 'pending-codex-generation.json');
@@ -96,9 +101,9 @@ export async function activateCodexRuntime(env: NodeJS.ProcessEnv = process.env)
   if (existsSync(pending)) {
     deferred = await withInstallLock(root, () => activateLegacyCodexGeneration(root, env)) === 'deferred_same_app_instance';
   }
-  const selected = configuredRuntime(env);
+  const binary = await readActiveCodexPath(env);
   return {
-    status: deferred ? 'deferred_same_app_instance' as const : selected ? 'active' as const : 'unavailable' as const,
-    runtime_binary_path: selected?.path ?? null,
+    status: deferred ? 'deferred_same_app_instance' as const : binary ? 'active' as const : 'unavailable' as const,
+    runtime_binary_path: binary,
   };
 }

@@ -4,9 +4,56 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { isRecord } from '@opl/core';
+import { resolveCodexBinary } from './binary.ts';
 
 const readVersion = promisify(execFile);
 const timeoutMs = 8_000;
+
+type VersionCheck = { signature: string; ready: boolean };
+let lastVersionCheck: VersionCheck | undefined;
+
+function binarySignature(binaryPath: string): string | undefined {
+  const stat = fs.statSync(binaryPath, { bigint: true, throwIfNoEntry: false });
+  if (!stat) return undefined;
+  return [binaryPath, stat.dev, stat.ino, stat.size, stat.ctimeNs].join(':');
+}
+
+// Page mounts read the last observed version result as long as the selected
+// file is unchanged. A first mount can still render before an explicit check.
+export function codexStartupReady(env: NodeJS.ProcessEnv = process.env): boolean {
+  try {
+    const candidate = resolveCodexBinary(undefined, env);
+    if (!candidate) return false;
+    const signature = binarySignature(candidate.path);
+    if (!signature) return false;
+    return lastVersionCheck?.signature === signature ? lastVersionCheck.ready : true;
+  } catch {
+    return false;
+  }
+}
+
+async function readCodexVersion(binaryPath: string, env: NodeJS.ProcessEnv, cwd: string): Promise<string> {
+  const { stdout } = await readVersion(binaryPath, ['--version'], {
+    cwd, env, timeout: timeoutMs, killSignal: 'SIGKILL', maxBuffer: 64 * 1024,
+  });
+  const version = /^codex(?:-cli)?\s+(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/.exec(stdout.trim())?.[1];
+  if (!version) throw new Error('Codex CLI returned an invalid version.');
+  return version;
+}
+
+export async function checkCodexExecutable(binaryPath: string, env: NodeJS.ProcessEnv): Promise<boolean> {
+  const signature = binarySignature(binaryPath);
+  if (!signature) return false;
+  let ready = true;
+  try {
+    await readCodexVersion(binaryPath, env, os.tmpdir());
+  } catch {
+    ready = false;
+  }
+  if (binarySignature(binaryPath) !== signature) return false;
+  lastVersionCheck = { signature, ready };
+  return ready;
+}
 
 export async function verifyCodexAppServer(binaryPath: string, sourceEnv: NodeJS.ProcessEnv): Promise<string> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-protocol-')));
@@ -19,11 +66,7 @@ export async function verifyCodexAppServer(binaryPath: string, sourceEnv: NodeJS
   }
   try {
     fs.mkdirSync(codexHome);
-    const { stdout } = await readVersion(binaryPath, ['--version'], {
-      cwd: root, env, timeout: timeoutMs, killSignal: 'SIGKILL', maxBuffer: 64 * 1024,
-    });
-    const version = /^codex(?:-cli)?\s+(\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?)$/.exec(stdout.trim())?.[1];
-    if (!version) throw new Error('Codex CLI returned an invalid version.');
+    const version = await readCodexVersion(binaryPath, env, root);
     await new Promise<void>((resolve, reject) => {
       const child = spawn(binaryPath, ['app-server'], {
         cwd: root, env, stdio: ['pipe', 'pipe', 'pipe'], detached: process.platform !== 'win32',

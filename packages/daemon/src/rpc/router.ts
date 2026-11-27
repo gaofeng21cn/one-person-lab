@@ -179,7 +179,13 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     return {
       ...doc,
       state,
-      ...(model && { system_initialize: readSystemInitialize(runtime.paths.state_dir, model.model_access_ready) }),
+      ...(model && {
+        system_initialize: readSystemInitialize(
+          runtime.paths.state_dir,
+          model.model_access_ready,
+          (await readCodexRuntime()).runtime_activation.status === 'active',
+        ),
+      }),
     };
   });
 
