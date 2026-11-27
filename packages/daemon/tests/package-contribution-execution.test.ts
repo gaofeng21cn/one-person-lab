@@ -75,3 +75,65 @@ test('App contribution invokes the declared ref with the owner input only after 
   await rpc.call('pack.link', { dir: passive });
   await assert.rejects(call({ ...payload, package_id: passiveId, confirmed: true }), /CONTRIBUTION_HANDLER_UNAVAILABLE/);
 });
+
+test('Package owner reads and writes use the selected registered workspace across matching local item IDs', async (t) => {
+  const sandbox = createDaemonSandbox();
+  t.after(() => sandbox.cleanup());
+  const { runtime } = await sandbox.startInProcess();
+  const label = { 'en-US': 'Review', 'zh-CN': '审阅' };
+  const dir = writeMinimalV2Package(path.join(sandbox.root, 'scoped-agent'), {
+    id: 'scoped-agent',
+    extraManifest: {
+      provides: { skills: [{ id: 'scoped-agent', path: './skills/scoped-agent', exposure: 'default' }],
+        contribution_handler: { kind: 'esm_module', module: './owner.mjs', export: 'handle' } },
+      ui: { declarative: { views: [{
+        id: 'scope.notes', view_type: 'list_detail', slot: 'runtime.detail', title: label, data_ref: 'scope.read',
+        actions: [{ id: 'scoped.write', label, action_ref: 'scope.write' }],
+      }] } },
+    },
+  });
+  fs.mkdirSync(path.join(dir, 'contracts'));
+  fs.writeFileSync(path.join(dir, 'contracts/domain_descriptor.json'), JSON.stringify({
+    surface_kind: 'domain_agent_descriptor', agent_id: 'scoped-agent', domain_id: 'scope',
+    standard_agent_interface: { version: 'opl_standard_agent_interface.v1', inventory_projection: {
+      source_kind: 'workspace_relative_json', relative_path: 'inventory.json', items_pointer: '/items',
+      field_map: { work_item_id: 'id' },
+    } },
+  }));
+  fs.writeFileSync(path.join(dir, 'owner.mjs'), `
+    import fs from 'node:fs';
+    import path from 'node:path';
+    export function handle({ref, input, operation}) {
+      const file = path.join(process.env.OPL_PROFILE_WORKSPACE, 'note');
+      if (operation === 'execute') fs.writeFileSync(file, input.note);
+      return { schema_version: 'opl-package-app-contribution-response.v1', ok: true, ref, operation,
+        result: { note: fs.readFileSync(file, 'utf8') } };
+    }
+  `);
+  const rpc = await connectTestRpc(sandbox.sessionPath, 'opl_app', '2.0');
+  t.after(() => rpc.close());
+  await rpc.call('pack.link', { dir });
+  const workspaceRoots = ['first', 'second'].map(name => path.join(sandbox.root, name));
+  for (const workspace of workspaceRoots) {
+    fs.mkdirSync(workspace);
+    fs.writeFileSync(path.join(workspace, 'inventory.json'), JSON.stringify({ items: [{ id: 'paper' }] }));
+    fs.writeFileSync(path.join(workspace, 'note'), path.basename(workspace));
+    await rpc.call('workspace.init', { root_path: workspace, domain_id: 'scope' });
+  }
+  const items = runtime.appStateCache.getState().app_state.operator.workbench.work_item_projection_v2.items;
+  assert.equal(items.length, 2);
+  const selected = items.find(({ identity }) => identity.workspace_path === fs.realpathSync(workspaceRoots[1]!))!.identity;
+  const { agent_id, domain_id, work_item_id, domain_work_item_id, work_item_scope_id, identity_state } = selected;
+  const identity = { agent_id, domain_id, work_item_id, domain_work_item_id, work_item_scope_id, identity_state };
+  const read = (input: Record<string, unknown>) => rpc.call('app.contribution.read', {
+    package_id: agent_id, ref: 'scope.read', input,
+  });
+  assert.deepEqual((await read({ work_item_identity: identity }) as { result: unknown }).result, { note: 'second' });
+  await assert.rejects(read({ work_item_identity: identity, workspace_path: workspaceRoots[0] }), /CONTRIBUTION_WORKSPACE_MISMATCH/);
+  await assert.rejects(read({ work_item_identity: { ...identity, work_item_scope_id: 'gone' } }), /CONTRIBUTION_IDENTITY_UNAVAILABLE/);
+  await rpc.call('app.action.execute', { action_id: 'package_contribution_execute', payload: {
+    package_id: agent_id, ref: 'scope.write', input: { work_item_identity: identity, note: 'updated' },
+  } });
+  assert.equal(fs.readFileSync(path.join(workspaceRoots[0]!, 'note'), 'utf8'), 'first');
+  assert.equal(fs.readFileSync(path.join(workspaceRoots[1]!, 'note'), 'utf8'), 'updated');
+});
