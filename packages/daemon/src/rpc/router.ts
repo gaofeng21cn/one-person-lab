@@ -27,6 +27,7 @@ import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts'
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
 import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
+import { writeCodexUserInstructions } from '../state/codex-user-instructions.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
 import {
   coerceInstallSourceSpec,
@@ -230,6 +231,13 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.contribution.execute', handleContributionExecute);
   handlers.set('app.action.execute', async (params, conn) => {
     const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef');
+    if (actionId === 'codex_user_instructions_set') {
+      requireTrustedHost(conn, actionId);
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      const result = writeCodexUserInstructions(runtime.paths.state_dir, pickRecord(params, 'payload') ?? {}, dryRun);
+      const execution = { action_id: actionId, dry_run: dryRun, status: dryRun ? 'preview' : 'executed', result };
+      return { ...execution, app_action_execution: execution };
+    }
     const action = connectionActions.find(entry => entry.action_id === actionId);
     if (!action || pickString(params, 'package_id', 'packageId')) return handleContributionExecute(params, conn);
     const context = requireTrustedHost(conn, action.action_id);
