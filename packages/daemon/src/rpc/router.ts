@@ -421,13 +421,17 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     if (!packageId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(packageId) || packageId.length > 128) {
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires a valid Package ID.');
     }
+    const runtimeRoot = params.runtime_root;
+    if (runtimeRoot != null && (typeof runtimeRoot !== 'string' || !path.isAbsolute(runtimeRoot))) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires an absolute Full runtime directory.');
+    }
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     try {
       return await ensurePackage(runtime.packService, {
         packageId,
         dryRun,
         clientContext: ctx,
-        resolveSource: createOfficialPackageResolver(),
+        resolveSource: createOfficialPackageResolver({ runtimeRoot }),
         installSource: (input) => runtime.installPackage(input),
       });
     } finally {

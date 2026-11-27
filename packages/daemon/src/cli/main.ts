@@ -743,6 +743,8 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           const result = await callDaemonRpc('pack.ensure', {
             package_id: packageId,
             dry_run: getBoolFlag(parsed, '--dry-run'),
+            // A previously started daemon has the environment of its first client.
+            runtime_root: process.env.OPL_FULL_RUNTIME_HOME?.trim() || null,
           }, { stateDir, timeoutMs: 840_000 });
           emitOutput(result, parsed);
           return 0;
