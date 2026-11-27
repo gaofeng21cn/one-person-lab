@@ -24,6 +24,7 @@ export async function stageOfficialPackageSource(
   source: InstallSourceSpec,
   release?: { version: string; commit: string; contentDigest: string } | null,
   fetchImpl?: RegistryFetch,
+  authHeader?: string,
 ) {
   if (!source.package_id) throw new PackError('INVALID_INPUT', 'Official package source requires its catalog identity.');
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-official-pkg-'));
@@ -33,7 +34,7 @@ export async function stageOfficialPackageSource(
     if (source.kind === 'local_dir' && source.path) {
       copyDirectoryPhysical(source.path, pkgRoot);
     } else if (source.kind === 'oci') {
-      const archive = await downloadOciSource(source, { cacheRoot: path.join(tmpRoot, 'download'), fetchImpl });
+      const archive = await downloadOciSource(source, { cacheRoot: path.join(tmpRoot, 'download'), fetchImpl, authHeader });
       extractPackageSourceArchive(archive, pkgRoot);
       pkgRoot = officialArchiveRoot(pkgRoot);
     } else {

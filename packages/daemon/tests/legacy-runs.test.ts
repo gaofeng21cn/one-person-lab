@@ -21,9 +21,9 @@ test('legacy run inspection reads bounded v1 references without starting either 
   db.exec(`
     CREATE TABLE stage_attempts (workflow_id, stage_attempt_id, task_id, domain_id, stage_id, provider_kind, status, updated_at, provider_receipt_json);
     INSERT INTO stage_attempts VALUES
-      ('wf-1', 'att-1', 'task-1', 'sample', 'review', 'temporal', 'running', '2026-01-01', 'private'),
-      ('wf-2', 'att-2', 'task-2', 'sample', 'review', 'temporal', 'human_gate', '2026-01-02', 'private'),
-      ('local', 'att-3', 'task-3', 'sample', 'review', 'local', 'completed', '2026-02-01', 'private');
+      ('wf-1', 'att-1', 'task-1', 'sample', 'review', 'temporal', 'running', '2026-01-01', 'sensitive-receipt-body'),
+      ('wf-2', 'att-2', 'task-2', 'sample', 'review', 'temporal', 'human_gate', '2026-01-02', 'sensitive-receipt-body'),
+      ('local', 'att-3', 'task-3', 'sample', 'review', 'local', 'completed', '2026-02-01', 'sensitive-receipt-body');
     CREATE TABLE stage_run_launches (workflow_id, stage_run_id, domain_id, stage_id, launch_status, terminal_status, updated_at);
     INSERT INTO stage_run_launches VALUES ('parent', 'run-1', 'sample', 'review', 'started', NULL, '2026-01-01');
   `);
@@ -38,7 +38,7 @@ test('legacy run inspection reads bounded v1 references without starting either 
   ]);
   assert.equal(report.sections[1]?.items[0]?.workflow_id, 'wf-2');
   assert.equal(report.sections[1]?.items[0]?.last_recorded_status, 'human_gate');
-  assert.doesNotMatch(result.stdout, /private|receipt_json/);
+  assert.doesNotMatch(result.stdout, /sensitive-receipt-body|receipt_json/);
   assert.deepEqual(fs.readFileSync(index), contents);
   assert.equal(fs.existsSync(sb.dbPath), false);
   fs.writeFileSync(index, 'corrupt index');

@@ -1,0 +1,103 @@
+name: Cross-Repo 5-Tier E2E
+
+on:
+  schedule:
+    - cron: '15 19 * * *'
+  workflow_dispatch:
+    inputs:
+      studio_ref:
+        description: OPL Studio branch, tag, or commit SHA
+        required: false
+        default: main
+        type: string
+      app_ref:
+        description: OPL App branch, tag, or commit SHA
+        required: false
+        default: main
+        type: string
+      tiers:
+        description: Comma-separated E2E tiers to execute
+        required: false
+        default: '1,2,3,4,5'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  e2e:
+    name: Cross-Repo E2E (Tiers ${{ inputs.tiers || '1,2,3,4,5' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Framework
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: one-person-lab
+          persist-credentials: false
+
+      - name: Checkout Studio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/opl-studio
+          ref: ${{ inputs.studio_ref || 'main' }}
+          path: opl-studio
+          persist-credentials: false
+
+      - name: Checkout App
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/one-person-lab-app
+          ref: ${{ inputs.app_ref || 'main' }}
+          path: one-person-lab-app
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: one-person-lab/package-lock.json
+
+      - name: Install and build Framework
+        working-directory: one-person-lab
+        run: |
+          npm ci --ignore-scripts
+          npm run v2:build
+
+      - name: Run Cross-Repo 5-Tier E2E
+        id: run_e2e
+        working-directory: one-person-lab
+        env:
+          OPL_STUDIO_ROOT: ${{ github.workspace }}/opl-studio
+          OPL_APP_ROOT: ${{ github.workspace }}/one-person-lab-app
+        run: |
+          set +e
+          node ./tests/e2e/run.mjs --tier "${{ inputs.tiers || '1,2,3,4,5' }}" --json > e2e-report.json
+          status=$?
+          set -e
+          node --input-type=module <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('e2e-report.json', 'utf8'));
+          const repos = report.repositories || {};
+          console.log('## Cross-Repo 5-Tier E2E Summary');
+          console.log('');
+          console.log(`- **Result**: \`ok=${report.ok}\` | **Passed**: ${report.totals.passed} | **Failed**: ${report.totals.failed} | **Skipped**: ${report.totals.skipped} | **Leaks**: ${report.totals.leaked_processes} | **Duration**: ${report.totals.duration_ms}ms`);
+          console.log(`- **Framework**: \`${repos.framework?.short_commit || 'n/a'}\` | **Studio**: \`${repos.studio?.short_commit || 'n/a'}\` | **App**: \`${repos.app?.short_commit || 'n/a'}\``);
+          NODE
+          exit "$status"
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cross-repo-e2e-report
+          path: one-person-lab/e2e-report.json
+          if-no-files-found: ignore

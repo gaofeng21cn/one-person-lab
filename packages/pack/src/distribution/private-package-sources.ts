@@ -25,6 +25,10 @@ function storeFile(stateDir?: string): string {
   return privatePackageSourceStoreFile(paths, defaultState);
 }
 
+export function privatePackageSourceStorePath(stateDir?: string): string {
+  return storeFile(stateDir);
+}
+
 function safeEntry(sourceId: string, row?: Record<string, unknown>) {
   const owner = privateSourceOwner(sourceId);
   const enabled = !row || row.enabled === true;

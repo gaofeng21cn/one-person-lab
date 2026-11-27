@@ -121,8 +121,9 @@ class MixedPackageChannelTests(unittest.TestCase):
             if '/git/ref/tags/v' in endpoint:
                 return {'object': {'type': 'tag', 'sha': TAG}}
             if f'/git/tags/{TAG}' in endpoint:
-                return {'object': {'type': 'commit', 'sha': V2_OWNER if '/modern/' in endpoint else LEGACY_OWNER}}
-            return {'private': endpoint.endswith('/restricted')}
+                is_v2 = '/modern/' in endpoint or '/restricted-v2/' in endpoint
+                return {'object': {'type': 'commit', 'sha': V2_OWNER if is_v2 else LEGACY_OWNER}}
+            return {'private': endpoint.endswith('/restricted') or endpoint.endswith('/restricted-v2')}
 
         args = SimpleNamespace(
             framework_root=self.framework, catalog_root=self.catalog, controller_source_commit=CONTROLLER,
@@ -148,7 +149,7 @@ class MixedPackageChannelTests(unittest.TestCase):
         self.assertEqual(plan['workflow_source_commit'], CONTROLLER)
         self.assertEqual(plan['catalog_source_commit'], CATALOG)
         entries = {row['package_id']: row for row in plan['packages']}
-        self.assertEqual(set(entries), {'classic', 'modern', 'restricted'})
+        self.assertEqual(set(entries), {'classic', 'modern', 'restricted', 'restricted-v2'})
         self.assertEqual(entries['classic']['expected_framework_source_commit'], LEGACY)
         modern = entries['modern']
         self.assertEqual(modern['expected_framework_source_commit'], CONTROLLER)
@@ -157,13 +158,17 @@ class MixedPackageChannelTests(unittest.TestCase):
         self.assertEqual(modern['expected_owner_source_commit'], V2_OWNER)
         self.assertEqual(modern['package_format'], 'v2')
         self.assertEqual(entries['restricted']['expected_framework_source_commit'], LEGACY)
+        restricted_v2 = entries['restricted-v2']
+        self.assertEqual(restricted_v2['expected_framework_source_commit'], CONTROLLER)
+        self.assertEqual(restricted_v2['expected_catalog_source_commit'], CATALOG)
+        self.assertEqual(restricted_v2['expected_package_version'], '1.0.1')
+        self.assertEqual(restricted_v2['expected_owner_source_commit'], V2_OWNER)
+        self.assertEqual(restricted_v2['package_format'], 'v2')
+        self.assertEqual(restricted_v2['expected_latest_stable_predecessor'], 'resolve-authenticated')
         self.assertEqual(entries['modern']['expected_latest_stable_predecessor'], PREDECESSOR)
         self.assertEqual(entries['restricted']['expected_latest_stable_predecessor'], 'resolve-authenticated')
         self.assertEqual(plan['blocked_packages'], [{
             'package_id': 'broken', 'reason': 'V2 Package payload bytes differ from the Catalog digest',
-        }, {
-            'package_id': 'restricted-v2',
-            'reason': 'The v2 official Package installer does not yet support authorized-only sources',
         }])
         self.assertEqual(json.loads((self.output / 'selected-candidates.json').read_text())['candidate_fingerprint']
                          ['modern']['owner_source_commit'], V2_OWNER)
@@ -174,22 +179,23 @@ class MixedPackageChannelTests(unittest.TestCase):
                 self.posted.append((endpoint, payload['inputs']))
                 return None
             if 'contents/.github/' in endpoint:
+                pin = CONTROLLER if '/restricted-v2/' in endpoint else LEGACY
                 text = (
-                    f'    uses: gaofeng21cn/one-person-lab/.github/workflows/publish-package.yml@{LEGACY}\n'
-                    f'      expected_framework_source_commit: {LEGACY}\n'
+                    f'    uses: gaofeng21cn/one-person-lab/.github/workflows/publish-package.yml@{pin}\n'
+                    f'      expected_framework_source_commit: {pin}\n'
                     '      expected_catalog_source_commit: ${{ inputs.expected_catalog_source_commit }}\n'
                 )
                 return {'content': base64.b64encode(text.encode()).decode()}
             return {'workflow_runs': []}
 
         tampered = dict(entries['modern'], package_id='misbound', expected_framework_source_commit=LEGACY)
-        unsupported_private = dict(entries['restricted'], package_id='restricted-v2', package_format='v2')
-        plan['packages'].extend([tampered, unsupported_private])
+        unpinned_private = dict(entries['restricted-v2'], package_id='restricted-unpinned', owner_repository='example/restricted-unpinned')
+        plan['packages'].extend([tampered, unpinned_private])
         with patch.object(dispatcher, 'gh', side_effect=fake_dispatch):
             outcomes = {item['package_id']: item['status'] for item in dispatcher.dispatch(plan, '42')}
         self.assertEqual(outcomes, {
             'classic': 'dispatched', 'modern': 'dispatched', 'restricted': 'dispatched',
-            'misbound': 'dispatch_unresolved', 'restricted-v2': 'dispatch_unresolved',
+            'restricted-v2': 'dispatched', 'misbound': 'dispatch_unresolved', 'restricted-unpinned': 'dispatch_unresolved',
         })
         public_calls = {payload['package_id']: payload for endpoint, payload in self.posted if '/example/' not in endpoint}
         self.assertEqual(public_calls['classic']['expected_framework_source_commit'], LEGACY)
@@ -198,3 +204,7 @@ class MixedPackageChannelTests(unittest.TestCase):
         self.assertEqual(len(private_calls), 1)
         self.assertNotIn('expected_framework_source_commit', private_calls[0])
         self.assertEqual(private_calls[0]['expected_catalog_source_commit'], CATALOG)
+        private_v2_calls = [payload for endpoint, payload in self.posted if '/example/restricted-v2/' in endpoint]
+        self.assertEqual(len(private_v2_calls), 1)
+        self.assertNotIn('expected_framework_source_commit', private_v2_calls[0])
+        self.assertEqual(private_v2_calls[0]['expected_catalog_source_commit'], CATALOG)

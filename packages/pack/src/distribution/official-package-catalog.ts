@@ -4,7 +4,8 @@ import path from 'node:path';
 import { isRecord } from '@opl/core';
 import { PackError } from '../errors.ts';
 import { KebabIdSchema } from '../manifest/schema.ts';
-import { parseOciRef } from './registry-client.ts';
+import { packageRegistryNamespace, parseOciRef } from './registry-client.ts';
+import { privateSourceOwner } from './private-package-source-store.ts';
 import type { InstallSourceSpec } from '../types.ts';
 
 const catalogRoot = 'https://raw.githubusercontent.com/gaofeng21cn/opl-catalog/main/';
@@ -83,22 +84,49 @@ export async function readOfficialPackageCatalog(
   return entries;
 }
 
+export function officialPackagePrivateSourceId(entry: OfficialPackageCatalogEntry): string | null {
+  if (entry.visibility !== 'authorized_only') return null;
+  const repo = typeof entry.manifest?.source_repo === 'string'
+    ? entry.manifest.source_repo
+    : typeof entry.public_summary?.owner_source_repo === 'string'
+      ? entry.public_summary.owner_source_repo
+      : null;
+  const ownerMatch = repo ? /^https:\/\/github\.com\/([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?)\/[\w.-]+?(?:\.git)?$/.exec(repo) : null;
+  if (!ownerMatch) return null;
+  const sourceId = `github-packages:${ownerMatch[1]!.toLowerCase()}`;
+  try {
+    privateSourceOwner(sourceId);
+    return sourceId;
+  } catch {
+    return null;
+  }
+}
+
 export function officialPackageInstallSource(
   entry: OfficialPackageCatalogEntry,
   runtimeRoot: string | null,
   generation: 'preferred' | 'legacy' = 'preferred',
+  options?: { readonly allowAuthorizedOnly?: boolean },
 ): InstallSourceSpec {
   const { manifest, package_id: packageId } = entry;
-  if (entry.visibility !== 'public' || !manifest || manifest.package_id !== packageId) {
+  const authorizedOnly = entry.visibility === 'authorized_only';
+  if ((!options?.allowAuthorizedOnly && authorizedOnly) || !manifest || manifest.package_id !== packageId) {
     throw new PackError('PACK_NOT_FOUND', `Official public Package source unavailable for '${packageId}'.`);
+  }
+  if (runtimeRoot && authorizedOnly) {
+    throw new PackError('PACK_NOT_FOUND', `Offline Full seed does not include authorized-only Package '${packageId}'.`);
   }
   if (!runtimeRoot) {
     const surface = manifest.codex_surface;
     const carrier = isRecord(surface) ? surface.configured_codex_plugin_carrier : undefined;
     const ref = isRecord(carrier) ? carrier.publication_ref : undefined;
     if (typeof ref !== 'string') throw new PackError('PACK_NOT_FOUND', `Official publication source unavailable for '${packageId}'.`);
+    const expectedOwner = authorizedOnly
+      ? officialPackagePrivateSourceId(entry)?.slice('github-packages:'.length) ?? null
+      : 'gaofeng21cn';
+    const expectedNamespace = packageRegistryNamespace(entry.visibility);
     const { registry, repository } = parseOciRef(ref);
-    if (registry !== 'ghcr.io' || repository !== `gaofeng21cn/one-person-lab-packages/${packageId}`) {
+    if (registry !== 'ghcr.io' || !expectedOwner || repository !== `${expectedOwner}/${expectedNamespace}/${packageId}`) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' points outside its registered Package repository.`);
     }
     const release = generation === 'preferred' ? selectedV2Release(entry) : null;

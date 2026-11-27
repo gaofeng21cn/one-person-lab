@@ -170,6 +170,9 @@ describe("E2E-M1 Harness Self-Tests", () => {
       assert.equal(fullJson.totals.passed, 4);
       assert.equal(fullJson.totals.skipped, 0);
       assert.equal(fullJson.totals.leaked_processes, 0);
+      assert.equal(typeof fullJson.started_at, "string");
+      assert.equal(typeof fullJson.finished_at, "string");
+      assert.match(fullJson.repositories?.framework?.commit ?? "", /^[0-9a-f]{40}$/);
 
       const filtered = spawnSync(process.execPath, [RUN_MJS, "--dir", suiteDir, "--feature", "F1", "--json"], {
         encoding: "utf8",

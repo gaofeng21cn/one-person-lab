@@ -5,7 +5,12 @@ import path from 'node:path';
 import { test } from 'node:test';
 import type { InstalledPackageRecord, PackStore } from '@opl/pack';
 import { projectPackageDirectory } from '../src/state/package-projection.ts';
-import { OfficialSoftwareCatalog, isOfficialCatalogPackage, projectCatalogEntries } from '../src/state/package-catalog.ts';
+import {
+  OfficialSoftwareCatalog,
+  applyAuthorizedPrivatePackageOverlay,
+  isOfficialCatalogPackage,
+  projectCatalogEntries,
+} from '../src/state/package-catalog.ts';
 
 function catalogEntry(id: string, restricted = false) {
   return {
@@ -168,4 +173,84 @@ test('a failed refresh preserves the last good public catalog and a later reques
   catalog.read();
   await changed.promise;
   assert.equal(catalog.read().status, 'ready');
+});
+
+test('authorized private source overlays installability and selected version only for trusted authorized sources', async () => {
+  const privatePkg = {
+    package_id: 'private-med',
+    software_type: 'agent',
+    version: '1.0.0',
+    visibility: 'authorized_only',
+    manifest: {
+      package_id: 'private-med',
+      source_repo: 'https://github.com/gaofeng21cn/private-med.git',
+      display_name: 'Internal Private Name',
+      presentation: { description_i18n: { 'zh-CN': 'internal only description' } },
+      codex_surface: {
+        configured_codex_plugin_carrier: {
+          publication_ref: 'ghcr.io/gaofeng21cn/one-person-lab-private-packages/private-med:latest-stable',
+        },
+      },
+      v2_release: {
+        version: '1.4.0',
+        source_commit: 'a'.repeat(40),
+        payload_manifest_ref: 'payloads/private-med-1.4.0.json',
+        payload_sha256: 'sha256:' + 'b'.repeat(64),
+      },
+    },
+    public_summary: {
+      owner_source_repo: 'https://github.com/gaofeng21cn/private-med.git',
+      display_name: 'Private Med Summary',
+      description_i18n: { 'en-US': 'Approved public summary' },
+    },
+  };
+  const ready = Promise.withResolvers<void>();
+  const catalog = new OfficialSoftwareCatalog(ready.resolve, {
+    runtimeRoot: null,
+    fetchImpl: async () => Response.json({
+      schema_version: 'opl_software_catalog_index.v1',
+      catalog_id: 'public-registry:opl',
+      packages: [privatePkg],
+    }),
+  });
+  catalog.read();
+  await ready.promise;
+  const snapshot = catalog.read();
+  const baseProjection = projectPackageDirectory([], { enabled: new Map(), shortcuts: new Map() }, snapshot, {
+    getInstallSource: () => null,
+  });
+
+  // Untrusted / unauthorized stays non-installable and redacted
+  const unauthedRow = baseProjection.directory.entries[0] as Record<string, any>;
+  assert.equal(unauthedRow.display_name, 'Private Med Summary');
+  assert.equal(unauthedRow.installability.installable, false);
+  assert.equal(unauthedRow.package_access.download_allowed, false);
+  assert.deepEqual(unauthedRow.available_actions, []);
+  assert.equal(unauthedRow.selected_version, undefined);
+
+  // Wrong source stays non-installable
+  const wrongSource = applyAuthorizedPrivatePackageOverlay(
+    baseProjection,
+    snapshot,
+    new Set(['github-packages:other-owner']),
+    [],
+    { getInstallSource: () => null },
+  );
+  assert.equal((wrongSource.directory.entries[0] as Record<string, any>).installability.installable, false);
+
+  // Authorized source projects installability + v2 selected_version without leaking internal description
+  const authed = applyAuthorizedPrivatePackageOverlay(
+    baseProjection,
+    snapshot,
+    new Set(['github-packages:gaofeng21cn']),
+    [],
+    { getInstallSource: () => null },
+  );
+  const authedRow = authed.directory.entries[0] as Record<string, any>;
+  assert.equal(authedRow.installability.installable, true);
+  assert.equal(authedRow.package_access.status, 'authorized');
+  assert.equal(authedRow.package_access.download_allowed, true);
+  assert.equal(authedRow.selected_version, '1.4.0');
+  assert.equal(authedRow.recommended_action, 'agent_package_install');
+  assert.ok(!JSON.stringify(authedRow).includes('internal only description'));
 });

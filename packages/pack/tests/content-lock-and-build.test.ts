@@ -127,30 +127,21 @@ test('buildPackage rejects missing manifest paths and escaping/release symlinks'
   }
 });
 
-test('matches real opl-channel-weixin canonical 64-bit content_lock digest if present on disk', (t) => {
-  const weixinDir = '/Users/gaofeng/workspace/one-person-lab-app/packages/opl-channel-weixin';
-  const manifestPath = path.join(weixinDir, 'opl-package.json');
-  if (!fs.existsSync(manifestPath)) {
-    t.skip('External one-person-lab-app checkout not present');
-    return;
-  }
-  const raw = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
-    content_lock?: { paths?: string[]; digest?: string };
-  };
-  const paths = raw.content_lock?.paths ?? [];
-  const expectedDigest = raw.content_lock?.digest;
-  if (!paths.length || !expectedDigest) {
-    t.skip('opl-channel-weixin content_lock absent');
-    return;
-  }
-  if (!paths.every((rel) => fs.existsSync(path.join(weixinDir, rel)))) {
-    t.skip('opl-channel-weixin build artifacts not built on disk');
-    return;
-  }
-  const actual = computePackageContentDigest(paths, (rel) =>
-    fs.readFileSync(path.join(weixinDir, rel)),
-  );
-  assert.equal(actual, expectedDigest);
+test('computePackageContentDigest yields deterministic canonical SHA-256 across input ordering and detects tampering', () => {
+  const files = new Map<string, Buffer>([
+    ['skills/demo/SKILL.md', Buffer.from('# Demo\nUTF-8 content — 检验\n', 'utf8')],
+    ['assets/icon.png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+    ['opl-package.json', Buffer.from('{"schema_version":"opl.package.v2"}\n', 'utf8')],
+  ]);
+  const forward = computePackageContentDigest(['opl-package.json', 'skills/demo/SKILL.md', 'assets/icon.png'], (rel) => files.get(rel)!);
+  const reversed = computePackageContentDigest(['assets/icon.png', 'skills/demo/SKILL.md', 'opl-package.json'], (rel) => files.get(rel)!);
+  assert.match(forward, /^sha256:[0-9a-f]{64}$/);
+  assert.equal(forward, reversed);
+
+  const tampered = new Map(files);
+  tampered.set('assets/icon.png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0b]));
+  const changed = computePackageContentDigest(['opl-package.json', 'skills/demo/SKILL.md', 'assets/icon.png'], (rel) => tampered.get(rel)!);
+  assert.notEqual(changed, forward);
 });
 
 test('buildPackage validates cli argv[1..] paths, rejects symlinked opl-release.lock.json, and archive allows normalized ./ prefixes', () => {

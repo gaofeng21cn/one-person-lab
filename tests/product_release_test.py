@@ -148,21 +148,36 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual((result['status'], result['version']), ('needs_release', '1.2.5'))
         self.assertEqual(self.git('rev-parse', 'v1.2.4^{}'), self.first)
 
-    def test_private_v2_owner_stops_before_source_changes(self):
+    def test_private_v2_owner_prepares_release_normally(self):
         projection, allowlist, payload = self.package_selection()
         projection['visibility'] = 'authorized_only'
         (self.root / 'opl-package.json').write_text(json.dumps({
-            'schema_version': 'opl.package.v2', 'identity': {'id': 'fixture', 'version': '1.2.3'},
+            'schema_version': 'opl.package.v2',
+            'identity': {'id': 'fixture', 'version': '1.2.3', 'intent': 'extension',
+                         'name': {'en-US': 'Fixture', 'zh-CN': '样例'},
+                         'summary': {'en-US': 'Fixture', 'zh-CN': '样例'}, 'publisher': 'fixture'},
         }))
         self.commit()
-        with patch('package_release.owner.wait_for_checks') as checks:
+        dry = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                          apply=False, payload_path=payload, v2_controller=ROOT)
+        self.assertEqual((dry['status'], dry['package_format'], dry['version']), ('needs_release', 'v2', '1.2.4'))
+
+        remote = self.root.parent / ('remote-priv-' + self.root.name + '.git')
+        self.addCleanup(lambda: shutil.rmtree(remote, ignore_errors=True))
+        subprocess.run(['git', 'clone', '--bare', str(self.root), str(remote)], check=True, capture_output=True)
+        self.git('remote', 'add', 'origin', str(remote))
+
+        def merge(root, *_args):
+            self.git('push', 'origin', 'HEAD:refs/heads/main')
+            return self.git('rev-parse', 'HEAD')
+
+        with patch('package_release.owner.wait_for_checks'), patch('package_release.owner.merge_release_changes', side_effect=merge):
             result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
                                    apply=True, payload_path=payload, v2_controller=ROOT)
-        self.assertEqual(result['reason_code'], 'v2_private_installation_unavailable')
-        self.assertEqual((result['status'], result['version']), ('blocked', '1.2.4'))
-        checks.assert_not_called()
-        self.assertEqual(self.git('tag', '--list'), 'v1.2.3')
-        self.assertEqual(self.git('status', '--porcelain'), '')
+        commit = self.git('rev-parse', 'v1.2.4^{}')
+        self.assertEqual((result['status'], result['version']), ('prepared', '1.2.4'))
+        self.assertEqual(result['owner_source_commit'], commit)
+        self.assertEqual(result['candidate']['lock']['git_commit'], commit)
 
     def test_v2_owner_freezes_validated_bytes_before_tag_and_aligns_declared_versions(self):
         projection, allowlist, payload = self.package_selection()

@@ -1,19 +1,29 @@
-import { OfficialSoftwareCatalog } from './package-catalog.ts';
-import { buildRunwayWorkbench } from './task-projection.ts';
-import { ensureTaskVisibilitySchema } from './task-visibility.ts';
-import { createDomainTaskInventoryReader, type DomainTaskInventory } from './domain-task-inventory.ts';
-import { projectPackageDirectory, packageActions } from './package-projection.ts';
-import { readAppPackagePreferences } from './app-package-preferences.ts';
-import { projectUiContributions } from './ui-projection.ts';
-import { readWorkspaceRoot, workspaceRootAction } from './workspace-root.ts';
+import path from 'node:path';
+import {
+  gatewayStorePaths,
+  readLocalCodexAccessState,
+  readOplGatewayAccount,
+  resolveCodexHome,
+  withGatewayStateDirectory,
+  type ConnectService,
+} from '@opl/connect';
+import type { SqliteDb } from '@opl/core';
+import { privatePackageSourceStorePath, type InstalledPackageRecord, type PackService } from '@opl/pack';
 import { codexInstallAction } from '../rpc/codex-runtime.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
-import { projectSoftwareSources, softwareSourceActions } from '../rpc/software-source-actions.ts';
-import { projectConnectionAuthorization } from './connection-authorization.ts';
-import type { SqliteDb } from '@opl/core';
-import { readLocalCodexAccessState, readOplGatewayAccount, withGatewayStateDirectory, type ConnectService } from '@opl/connect';
-import type { InstalledPackageRecord, PackService } from '@opl/pack';
 import { gatewayAccountActions } from '../rpc/gateway-actions.ts';
+import { projectSoftwareSources, softwareSourceActions } from '../rpc/software-source-actions.ts';
+import { readAppPackagePreferences } from './app-package-preferences.ts';
+import { createCodexPersonalizationReader, type CodexPersonalizationSnapshot } from './codex-personalization.ts';
+import { projectConnectionAuthorization } from './connection-authorization.ts';
+import { createDomainTaskInventoryReader, type DomainTaskInventory } from './domain-task-inventory.ts';
+import { fileStatFingerprint } from './file-stat-cache.ts';
+import { applyAuthorizedPrivatePackageOverlay, OfficialSoftwareCatalog } from './package-catalog.ts';
+import { packageActions, projectPackageDirectory } from './package-projection.ts';
+import { buildRunwayWorkbench } from './task-projection.ts';
+import { ensureTaskVisibilitySchema } from './task-visibility.ts';
+import { projectUiContributions } from './ui-projection.ts';
+import { readWorkspaceRoot, workspaceRootAction, workspaceRootPreferencePath } from './workspace-root.ts';
 
 export interface ProjectedPackageSummary {
   readonly package_id: string;
@@ -75,6 +85,12 @@ function readCodexModelPolicy() {
   };
 }
 
+type CodexModelPolicySnapshot = ReturnType<typeof readCodexModelPolicy>;
+type WorkspaceRootSnapshot = ReturnType<typeof readWorkspaceRoot>;
+type SoftwareSourcesSnapshot = ReturnType<typeof projectSoftwareSources>;
+type GatewayAccountSnapshot = ReturnType<typeof readOplGatewayAccount>;
+type ConnectionAuthSnapshot = ReturnType<typeof projectConnectionAuthorization>;
+
 export interface AppStateSnapshot {
   readonly profile: 'fast' | 'full';
   readonly revision: number;
@@ -91,12 +107,12 @@ export interface AppStateSnapshot {
   readonly connections: ReturnType<ConnectService['list']>;
   readonly grants?: ReturnType<ConnectService['listProjection']>['grants'];
   readonly invocations?: ReturnType<ConnectService['listProjection']>['invocations'];
+  readonly recent_operations?: ReturnType<PackService['operationStatus']>;
   readonly tasks: readonly Record<string, unknown>[];
   readonly schedules: readonly Record<string, unknown>[];
-  readonly recent_operations?: ReturnType<PackService['operationStatus']>;
   readonly app_state: {
     readonly operator: { readonly workbench: ReturnType<typeof buildRunwayWorkbench> };
-    readonly agent_packages: ReturnType<typeof projectPackageDirectory> & { readonly sources?: ReturnType<typeof projectSoftwareSources> };
+    readonly agent_packages: ReturnType<typeof projectPackageDirectory> & { readonly sources?: SoftwareSourcesSnapshot };
     readonly ui_contributions: ReturnType<typeof projectUiContributions>;
     readonly actions: readonly Record<string, unknown>[];
     readonly packages: readonly ProjectedPackageSummary[];
@@ -105,16 +121,28 @@ export interface AppStateSnapshot {
     readonly connections: ReturnType<ConnectService['list']>;
     readonly tasks: readonly Record<string, unknown>[];
     readonly schedules: readonly Record<string, unknown>[];
-    readonly paths?: { readonly workspace_root: ReturnType<typeof readWorkspaceRoot>; readonly workspace_root_path: string | null };
+    readonly codex_personalization?: CodexPersonalizationSnapshot;
+    readonly paths?: { readonly workspace_root: WorkspaceRootSnapshot; readonly workspace_root_path: string | null };
     readonly settings_control_center?: {
       readonly app_settings_read_model: {
-        readonly connections: { readonly authorization: ReturnType<typeof projectConnectionAuthorization> };
-        readonly workspace_services?: { readonly workspace_root: ReturnType<typeof readWorkspaceRoot> };
-        readonly opl_gateway_account?: ReturnType<typeof readOplGatewayAccount>;
-        readonly codex_model_policy?: ReturnType<typeof readCodexModelPolicy>;
+        readonly connections: { readonly authorization: ConnectionAuthSnapshot };
+        readonly workspace_services?: { readonly workspace_root: WorkspaceRootSnapshot };
+        readonly opl_gateway_account?: GatewayAccountSnapshot;
+        readonly codex_model_policy?: CodexModelPolicySnapshot;
       };
     };
   };
+}
+
+function codexAccessFingerprint(codexHome: string): string {
+  const configStat = fileStatFingerprint(path.join(codexHome, 'config.toml'), true);
+  const authStat = fileStatFingerprint(path.join(codexHome, 'auth.json'), true);
+  const envFlags = [
+    Boolean(process.env.OPL_CODEX_API_KEY?.trim()),
+    Boolean(process.env.CODEX_API_KEY?.trim()),
+    Boolean(process.env.OPENAI_API_KEY?.trim()),
+  ].join(':');
+  return `${codexHome}\0${configStat}\0${authStat}\0${envFlags}`;
 }
 
 export class AppStateCache {
@@ -124,10 +152,36 @@ export class AppStateCache {
   readonly #version: string;
   readonly #catalog: OfficialSoftwareCatalog;
   readonly #inventoryReader = createDomainTaskInventoryReader();
+  readonly #personalizationReader = createCodexPersonalizationReader();
   #lastInventory: DomainTaskInventory | undefined;
   #revision = 1;
   #fastSnapshot: AppStateSnapshot | null = null;
   #fullSnapshot: AppStateSnapshot | null = null;
+  #connectionAuthorization: ConnectionAuthSnapshot | null = null;
+  #workspaceRootCache = new Map<string, {
+    envKey: string;
+    prefPath: string;
+    prefStat: string;
+    selectedStat: string;
+    value: WorkspaceRootSnapshot;
+  }>();
+  #sourcesCache = new Map<string, { key: string; value: SoftwareSourcesSnapshot | undefined }>();
+  #codexPolicyCache = new Map<string, { fingerprint: string; value: CodexModelPolicySnapshot }>();
+  #gatewayAccountCache = new Map<string, {
+    key: string;
+    staleAfterMs: number | null;
+    value: GatewayAccountSnapshot | undefined;
+  }>();
+  #trustedSnapshots = new Map<string, {
+    revision: number;
+    workspaceRoot: WorkspaceRootSnapshot;
+    sources: SoftwareSourcesSnapshot | undefined;
+    codexModelPolicy: CodexModelPolicySnapshot;
+    account: GatewayAccountSnapshot | undefined;
+    authorization: ConnectionAuthSnapshot;
+    personalization: CodexPersonalizationSnapshot;
+    snapshot: AppStateSnapshot;
+  }>();
 
   constructor(options: {
     readonly db: SqliteDb;
@@ -155,46 +209,163 @@ export class AppStateCache {
     this.#revision += 1;
     this.#fastSnapshot = null;
     this.#fullSnapshot = null;
+    this.#connectionAuthorization = null;
+    this.#personalizationReader.invalidate();
+    this.#trustedSnapshots.clear();
+  }
+
+  #getConnectionAuthorization(): ConnectionAuthSnapshot {
+    return (this.#connectionAuthorization ??= projectConnectionAuthorization(this.#connectService.listProjection()));
+  }
+
+  #readWorkspaceRootCached(gatewayStateDir: string): WorkspaceRootSnapshot {
+    const envRoot = process.env.OPL_WORKSPACE_ROOT?.trim() || '';
+    const envKey = `${envRoot}\0${process.env.HOME?.trim() || ''}\0${process.env.OPL_STATE_DIR?.trim() || ''}\0${process.env.OPL_DATA_DIR?.trim() || ''}`;
+    const prefPath = envRoot ? '' : workspaceRootPreferencePath(gatewayStateDir);
+    const prefStat = envRoot ? 'env' : fileStatFingerprint(prefPath, false);
+    const cached = this.#workspaceRootCache.get(gatewayStateDir);
+    if (cached && cached.envKey === envKey && cached.prefPath === prefPath && cached.prefStat === prefStat) {
+      const selectedStat = cached.value.selected_path ? fileStatFingerprint(cached.value.selected_path, true) : 'null';
+      if (selectedStat === cached.selectedStat) return cached.value;
+    }
+    const value = readWorkspaceRoot(gatewayStateDir);
+    this.#workspaceRootCache.set(gatewayStateDir, {
+      envKey,
+      prefPath,
+      prefStat,
+      selectedStat: value.selected_path ? fileStatFingerprint(value.selected_path, true) : 'null',
+      value,
+    });
+    return value;
+  }
+
+  #readSourcesCached(gatewayStateDir: string): SoftwareSourcesSnapshot | undefined {
+    const storePath = privatePackageSourceStorePath(gatewayStateDir);
+    const key = `${process.env.OPL_STATE_DIR?.trim() || ''}\0${process.env.OPL_DATA_DIR?.trim() || ''}\0${storePath}\0${fileStatFingerprint(storePath, false)}`;
+    const cached = this.#sourcesCache.get(gatewayStateDir);
+    if (cached && cached.key === key) return cached.value;
+    let value: SoftwareSourcesSnapshot | undefined;
+    try {
+      value = projectSoftwareSources(gatewayStateDir);
+    } catch {
+      // A damaged source store is diagnosed by source_list and leaves other settings usable.
+    }
+    this.#sourcesCache.set(gatewayStateDir, { key, value });
+    return value;
+  }
+
+  #readCodexPolicyCached(codexHome: string, fingerprint: string): CodexModelPolicySnapshot {
+    const cached = this.#codexPolicyCache.get(codexHome);
+    if (cached && cached.fingerprint === fingerprint) return cached.value;
+    const value = readCodexModelPolicy();
+    this.#codexPolicyCache.set(codexHome, { fingerprint, value });
+    return value;
+  }
+
+  #readGatewayAccountCached(gatewayStateDir: string, codexFingerprint: string): GatewayAccountSnapshot | undefined {
+    const gatewayPaths = withGatewayStateDirectory(gatewayStateDir, gatewayStorePaths);
+    const key = [
+      gatewayPaths.gateway_account_dir,
+      fileStatFingerprint(gatewayPaths.gateway_account_dir, false),
+      fileStatFingerprint(gatewayPaths.gateway_account_file, false),
+      fileStatFingerprint(gatewayPaths.gateway_installation_file, false),
+      codexFingerprint,
+    ].join('\0');
+    const cached = this.#gatewayAccountCache.get(gatewayStateDir);
+    if (cached && cached.key === key && (cached.staleAfterMs === null || Date.now() < cached.staleAfterMs)) {
+      return cached.value;
+    }
+    // Only the trusted App/CLI reads private account settings. Keep them out
+    // of shared snapshots and observe account changes made by another process.
+    let value: GatewayAccountSnapshot | undefined;
+    try {
+      value = withGatewayStateDirectory(gatewayStateDir, readOplGatewayAccount);
+    } catch {
+      // The dedicated Gateway status RPC reports an unreadable private store.
+    }
+    const staleAfterMs = value && !value.freshness.stale && value.freshness.stale_after
+      ? Date.parse(value.freshness.stale_after)
+      : null;
+    this.#gatewayAccountCache.set(gatewayStateDir, {
+      key,
+      staleAfterMs: Number.isFinite(staleAfterMs) ? staleAfterMs : null,
+      value,
+    });
+    return value;
   }
 
   getState(profile: 'fast' | 'full' = 'fast', gatewayStateDir?: string): AppStateSnapshot {
     const snapshot = this.#getSharedState(profile);
     if (!gatewayStateDir) return snapshot;
-    const workspaceRoot = readWorkspaceRoot(gatewayStateDir);
 
-    // Only the trusted App/CLI reads private account settings. Keep them out
-    // of shared snapshots and observe account changes made by another process.
-    let account: ReturnType<typeof readOplGatewayAccount> | undefined;
-    try {
-      account = withGatewayStateDirectory(gatewayStateDir, readOplGatewayAccount);
-    } catch {
-      // The dedicated Gateway status RPC reports an unreadable private store.
+    const codexHome = resolveCodexHome();
+    const codexFingerprint = codexAccessFingerprint(codexHome);
+    const workspaceRoot = this.#readWorkspaceRootCached(gatewayStateDir);
+    const sources = this.#readSourcesCached(gatewayStateDir);
+    const codexModelPolicy = this.#readCodexPolicyCached(codexHome, codexFingerprint);
+    const account = this.#readGatewayAccountCached(gatewayStateDir, codexFingerprint);
+    const authorization = this.#getConnectionAuthorization();
+    const personalization = this.#personalizationReader.read(this.#packService);
+
+    const trustedKey = `${profile}\0${gatewayStateDir}\0${codexHome}`;
+    const prev = this.#trustedSnapshots.get(trustedKey);
+    if (
+      prev
+      && prev.revision === this.#revision
+      && prev.workspaceRoot === workspaceRoot
+      && prev.sources === sources
+      && prev.codexModelPolicy === codexModelPolicy
+      && prev.account === account
+      && prev.authorization === authorization
+      && prev.personalization === personalization
+    ) {
+      return prev.snapshot;
     }
-    let sources: ReturnType<typeof projectSoftwareSources> | undefined;
-    try {
-      sources = projectSoftwareSources(gatewayStateDir);
-    } catch {
-      // A damaged source store is diagnosed by source_list and leaves other settings usable.
-    }
-    return {
+
+    const authorizedSources = new Set(
+      (sources?.entries ?? [])
+        .filter(source => source.enabled && source.credential_handle_present && source.status === 'authorized')
+        .map(source => source.source_id),
+    );
+    const agentPackages = applyAuthorizedPrivatePackageOverlay(
+      snapshot.app_state.agent_packages,
+      this.#catalog.read(),
+      authorizedSources,
+      snapshot.packages,
+      this.#packService.store,
+    );
+
+    const trustedSnapshot: AppStateSnapshot = {
       ...snapshot,
       app_state: {
         ...snapshot.app_state,
-        agent_packages: { ...snapshot.app_state.agent_packages, ...(sources && { sources }) },
+        agent_packages: { ...agentPackages, ...(sources && { sources }) },
         paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },
         actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...(sources ? softwareSourceActions : []), codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
+        codex_personalization: personalization,
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
           app_settings_read_model: {
             ...snapshot.app_state.settings_control_center?.app_settings_read_model,
-            connections: { authorization: projectConnectionAuthorization(this.#connectService.listProjection()) },
+            connections: { authorization },
             workspace_services: { workspace_root: workspaceRoot },
-            codex_model_policy: readCodexModelPolicy(),
+            codex_model_policy: codexModelPolicy,
             ...(account && { opl_gateway_account: account }),
           },
         },
       },
     };
+    this.#trustedSnapshots.set(trustedKey, {
+      revision: this.#revision,
+      workspaceRoot,
+      sources,
+      codexModelPolicy,
+      account,
+      authorization,
+      personalization,
+      snapshot: trustedSnapshot,
+    });
+    return trustedSnapshot;
   }
 
   #getSharedState(profile: 'fast' | 'full'): AppStateSnapshot {

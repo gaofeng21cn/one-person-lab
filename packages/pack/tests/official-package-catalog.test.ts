@@ -6,12 +6,14 @@ import path from 'node:path';
 import test from 'node:test';
 import {
   officialPackageInstallSource,
+  officialPackagePrivateSourceId,
   readOfficialPackageCatalog,
   readOfficialV2Source,
   type OfficialPackageCatalogEntry,
 } from '../src/distribution/official-package-catalog.ts';
 import { resolveOciArtifact } from '../src/distribution/registry-client.ts';
 import { createOfficialPackageResolver } from '../src/distribution/official-package-source.ts';
+import { configurePrivatePackageSource } from '../src/distribution/private-package-sources.ts';
 
 const packageId = 'sample-agent';
 const repository = 'https://github.com/gaofeng21cn/example-repo.git';
@@ -194,4 +196,109 @@ test('official resolver retries only a missing public v2 OCI manifest, using the
     await assert.rejects(resolve(packageId), scenario.expected);
     assert.deepEqual(requestedVersions, scenario.requests);
   }
+});
+
+test('authorized private v2 packages resolve with Basic auth header, reject unauthorized/offline/wrong-repo, and support pending-tag fallback', async (t) => {
+  const privatePkgId = 'private-agent';
+  const privateRepo = 'https://github.com/gaofeng21cn/private-agent.git';
+  const privatePub = `ghcr.io/gaofeng21cn/one-person-lab-private-packages/${privatePkgId}:latest-stable`;
+  const v2Version = '2.1.0';
+  const digest = 'sha256:' + 'e'.repeat(64);
+  const payloadBytes = JSON.stringify({
+    package_format: 'v2', package_id: privatePkgId, package_version: v2Version, source_commit: commit,
+    source_repo: privateRepo, archive_sha256: digest, content_lock: { digest },
+  });
+  const privateEntry: OfficialPackageCatalogEntry = {
+    package_id: privatePkgId,
+    visibility: 'authorized_only',
+    version: '1.2.3',
+    manifest: {
+      package_id: privatePkgId, source_repo: privateRepo, version: '1.2.3',
+      codex_surface: { carrier_source_commit: commit, configured_codex_plugin_carrier: { publication_ref: privatePub } },
+      v2_release: {
+        version: v2Version, source_commit: commit, payload_manifest_ref: `payloads/${privatePkgId}-${v2Version}.json`,
+        payload_sha256: 'sha256:' + createHash('sha256').update(payloadBytes).digest('hex'),
+      },
+    },
+    payload: { package_id: privatePkgId, source_repo: privateRepo, source_commit: commit, package_version: '1.2.3' },
+  };
+
+  assert.equal(officialPackagePrivateSourceId(privateEntry), 'github-packages:gaofeng21cn');
+  assert.equal(officialPackagePrivateSourceId(entry), null);
+  assert.throws(() => officialPackageInstallSource(privateEntry, null), /public Package source unavailable/);
+  assert.throws(() => officialPackageInstallSource(privateEntry, '/tmp/full-seed', 'preferred', { allowAuthorizedOnly: true }), /Offline Full seed/);
+  assert.deepEqual(officialPackageInstallSource(privateEntry, null, 'preferred', { allowAuthorizedOnly: true }), {
+    kind: 'oci', package_id: privatePkgId, ref: privatePub, version: v2Version,
+  });
+  const wrongPrivateRef = {
+    ...privateEntry.manifest,
+    codex_surface: { configured_codex_plugin_carrier: { publication_ref: `ghcr.io/gaofeng21cn/one-person-lab-packages/${privatePkgId}:latest-stable` } },
+  };
+  assert.throws(
+    () => officialPackageInstallSource({ ...privateEntry, manifest: wrongPrivateRef }, null, 'preferred', { allowAuthorizedOnly: true }),
+    /outside its registered Package repository/,
+  );
+
+  // Missing authorization fails closed before contacting registry
+  const emptyState = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-priv-auth-empty-'));
+  t.after(() => fs.rmSync(emptyState, { recursive: true, force: true }));
+  const unauthorizedResolve = createOfficialPackageResolver({
+    runtimeRoot: null,
+    stateDir: emptyState,
+    fetchImpl: async url => {
+      if (String(url).endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [privateEntry] });
+      assert.fail(`Unauthorized request must not reach ${String(url)}`);
+    },
+  });
+  await assert.rejects(unauthorizedResolve(privatePkgId), /requires an authorized 'github-packages:gaofeng21cn'/);
+
+  // Configured env token passes Authorization: Basic to GHCR /token and supports pending-tag fallback
+  const authState = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-priv-auth-ok-'));
+  t.after(() => fs.rmSync(authState, { recursive: true, force: true }));
+  configurePrivatePackageSource({
+    stateDir: authState,
+    sourceId: 'github-packages:gaofeng21cn',
+    credentialHandle: 'env:OPL_GITHUB_PACKAGES_TOKEN',
+    enabled: true,
+  });
+  const prevToken = process.env.OPL_GITHUB_PACKAGES_TOKEN;
+  const prevUser = process.env.OPL_GITHUB_USERNAME;
+  process.env.OPL_GITHUB_PACKAGES_TOKEN = 'ghp_private_fixture_token';
+  process.env.OPL_GITHUB_USERNAME = 'x-access-token';
+  t.after(() => {
+    if (prevToken === undefined) delete process.env.OPL_GITHUB_PACKAGES_TOKEN;
+    else process.env.OPL_GITHUB_PACKAGES_TOKEN = prevToken;
+    if (prevUser === undefined) delete process.env.OPL_GITHUB_USERNAME;
+    else process.env.OPL_GITHUB_USERNAME = prevUser;
+  });
+
+  const expectedBasic = 'Basic ' + Buffer.from('x-access-token:ghp_private_fixture_token', 'utf8').toString('base64');
+  const tokenHeaders: string[] = [];
+  const manifestTags: string[] = [];
+  const legacyReached = new Error('Private legacy manifest reached with auth');
+  const authorizedResolve = createOfficialPackageResolver({
+    runtimeRoot: null,
+    stateDir: authState,
+    fetchImpl: async (url, init) => {
+      const address = new URL(String(url));
+      if (address.pathname.endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [privateEntry] });
+      if (address.pathname.endsWith(`/${privatePkgId}-${v2Version}.json`)) return new Response(payloadBytes);
+      if (address.pathname === '/token') {
+        const hdr = new Headers(init?.headers).get('authorization') ?? '';
+        tokenHeaders.push(hdr);
+        assert.equal(hdr, expectedBasic);
+        assert.match(address.searchParams.get('scope') ?? '', /one-person-lab-private-packages\/private-agent:pull/);
+        return Response.json({ token: 'private-bearer-token' });
+      }
+      assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer private-bearer-token');
+      const tag = address.pathname.split('/').pop()!;
+      manifestTags.push(tag);
+      if (tag === v2Version) return Response.json({ errors: [{ code: 'MANIFEST_UNKNOWN' }] }, { status: 404 });
+      if (tag === '1.2.3') throw legacyReached;
+      assert.fail(`Unexpected tag ${tag}`);
+    },
+  });
+  await assert.rejects(authorizedResolve(privatePkgId), legacyReached);
+  assert.deepEqual(tokenHeaders, [expectedBasic, expectedBasic]);
+  assert.deepEqual(manifestTags, [v2Version, '1.2.3']);
 });

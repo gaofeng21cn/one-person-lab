@@ -176,7 +176,10 @@ export class DaemonRuntime {
     // Omit codexRunner on PackService so link/install/update/uninstall/toggle perform
     // deterministic filesystem projection without invoking external `codex plugin add`.
     const officialUpdateSource = {
-      resolveOfficialUpdate: (id: string) => createOfficialPackageResolver({ runtimeRoot: null })(id),
+      resolveOfficialUpdate: (id: string) => createOfficialPackageResolver({
+        runtimeRoot: null,
+        stateDir: this.paths.state_dir,
+      })(id),
     };
     this.packService = createPackService({
       ...officialUpdateSource,

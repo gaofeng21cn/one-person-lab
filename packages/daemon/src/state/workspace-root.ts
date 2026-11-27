@@ -7,7 +7,7 @@ import { DaemonRpcError } from '../errors.ts';
 
 const preferenceFile = 'workspace-root.json';
 
-function preferencePath(stateDir: string) {
+export function workspaceRootPreferencePath(stateDir: string) {
   const current = path.join(stateDir, preferenceFile);
   if (process.platform === 'darwin' || fs.existsSync(current) || process.env.OPL_STATE_DIR || process.env.OPL_DATA_DIR
       || stateDir !== resolveStatePaths().state_dir) return current;
@@ -22,7 +22,7 @@ export function readWorkspaceRoot(stateDir: string) {
   if (!selected) {
     source = 'state';
     try {
-      const stored = JSON.parse(fs.readFileSync(preferencePath(stateDir), 'utf8'));
+      const stored = JSON.parse(fs.readFileSync(workspaceRootPreferencePath(stateDir), 'utf8'));
       selected = typeof stored?.selected_path === 'string' ? stored.selected_path.trim() || null : null;
       if (stored?.selected_path !== null && !selected) throw new Error('Invalid workspace root preference.');
     } catch (error) {
@@ -72,7 +72,7 @@ export function executeWorkspaceRootAction(stateDir: string, payload: Record<str
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Choose an existing directory.');
   }
   if (!dryRun) {
-    const target = preferencePath(stateDir);
+    const target = workspaceRootPreferencePath(stateDir);
     const temporary = target + '.' + randomUUID() + '.tmp';
     try {
       fs.writeFileSync(temporary, JSON.stringify({

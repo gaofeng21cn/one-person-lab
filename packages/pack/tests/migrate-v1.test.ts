@@ -204,25 +204,21 @@ test('capability migration preserves exported specialties and the provider mater
   }
 });
 
-test('read-only smoke migration of real external OPL domain repos if present on disk', (t) => {
-  const candidates = [
-    '/Users/gaofeng/workspace/med-autoscience',
-    '/Users/gaofeng/workspace/opl-relay',
-    '/Users/gaofeng/workspace/opl-persona',
-  ];
-  const existing = candidates.filter((dir) => fs.existsSync(dir));
-  if (existing.length === 0) {
-    t.skip('External OPL domain repos not present in workspace');
-    return;
-  }
+const workspaceParent = process.env.OPL_TEST_WORKSPACE_ROOT?.trim() || path.resolve(import.meta.dirname, '../../../../');
+const optionalDomainRepos = ['med-autoscience', 'opl-relay', 'opl-persona']
+  .map((name) => path.join(workspaceParent, name))
+  .filter((dir) => fs.existsSync(dir));
 
-  for (const repoDir of existing) {
-    const res = migrateV1Package({ repoDir, apply: false });
-    assert.equal(res.applied, false);
-    assert.equal(res.manifest.schema_version, 'opl.package.v2');
-    assert.ok(res.manifest.identity.id.length > 0);
-  }
-});
+if (optionalDomainRepos.length > 0) {
+  test('read-only smoke migration of sibling OPL domain repos when present on disk', () => {
+    for (const repoDir of optionalDomainRepos) {
+      const res = migrateV1Package({ repoDir, apply: false });
+      assert.equal(res.applied, false);
+      assert.equal(res.manifest.schema_version, 'opl.package.v2');
+      assert.ok(res.manifest.identity.id.length > 0);
+    }
+  });
+}
 
 test('migrateV1Package rewrites nested ${PLUGIN_ROOT} for post-relocation buildPackage, relocates runtime/, removes empty plugins/, handles missing icons, and avoids alphabetical plugins/assets mis-selection', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-mig-r2-'));
