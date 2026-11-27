@@ -109,7 +109,7 @@ Codex 原生插件管理器安装、更新和卸载；Framework 聚合两个作�
 
 官方软件目录 `gaofeng21cn/opl-catalog` 保存 Package 投影、不可变版本的 payload manifest 和 carrier allowlist。Catalog 索引发布当前目录条目。历史入口可通过精确 Git revision 与不可变发布产物追溯。测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配。
 
-薄载体可以在 Catalog 的 carrier allowlist 中声明 `carrier_projection_ref`，由发布准备读取准确提交中的 owner 载体合同。载体的安装路径和提交中的文件路径可以不同。准备和校验均使用同一提交中的原始 Git blob，OCI 元数据记下这些文件在源码归档中的真实路径。
+薄载体可以在 Catalog 的 carrier allowlist 中声明 `carrier_projection_ref`，由发布准备读取准确提交中的 owner 载体合同。日跑从固定的发布工具 checkout 加载载体路径解析器。载体的安装路径和提交中的文件路径可以不同。准备和校验均使用同一提交中的原始 Git blob，OCI 元数据记下这些文件在源码归档中的真实路径。
 
 Flow managed policy 由安装的 owner descriptor 指定来源，Framework 解释 `opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
 

@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import _ordered_content_digest, wait_for_checks
+from package_release.owner import _carrier_source_paths, _ordered_content_digest, wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -22,6 +22,24 @@ spec.loader.exec_module(package)
 
 
 class PackagePublisherCheckoutTests(unittest.TestCase):
+    def test_carrier_resolver_comes_from_selected_framework_checkout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            framework = Path(temp) / 'framework'
+            resolver = framework / 'scripts/package-carrier-source-paths.mjs'
+            resolver.parent.mkdir(parents=True)
+            resolver.write_text(
+                'export function packageCarrierSourcePaths({ sourceCommit }) {\n'
+                '  return new Map([["skills/example/SKILL.md", `owner/${sourceCommit}/SKILL.md`]]);\n'
+                '}\n'
+            )
+            commit = 'a' * 40
+            self.assertEqual(
+                _carrier_source_paths(Path(temp), {
+                    'carrier_projection_ref': 'contracts/carrier_projection.json',
+                }, commit, framework),
+                {'skills/example/SKILL.md': f'owner/{commit}/SKILL.md'},
+            )
+
     def test_daily_workflow_uses_exact_legacy_tooling_without_weakening_main_authority(self):
         controller = 'a' * 40
         tooling = 'b' * 40

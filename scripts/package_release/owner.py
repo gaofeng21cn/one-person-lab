@@ -192,10 +192,10 @@ def execute_commands(root, settings, field):
         run(command, cwd=root)
 
 
-def _carrier_source_paths(root, allowlist, commit):
+def _carrier_source_paths(root, allowlist, commit, framework):
     if not allowlist.get('carrier_projection_ref'):
         return None
-    resolver = Path(__file__).resolve().parents[1] / 'package-carrier-source-paths.mjs'
+    resolver = framework / 'scripts/package-carrier-source-paths.mjs'
     if not resolver.is_file():
         raise ReleaseError('Missing package-carrier-source-paths resolver')
     script = (
@@ -218,14 +218,14 @@ def _carrier_source_paths(root, allowlist, commit):
     return json.loads(output)
 
 
-def content_changed(root, previous_commit, projection, allowlist, settings=None):
+def content_changed(root, previous_commit, projection, allowlist, framework, settings=None):
     carrier = safe_path(root, allowlist['source_root'])
     descriptor = read(carrier / 'opl-package.json')
     paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
     source_root = allowlist['source_root']
     head_commit = git(root, 'rev-parse', 'HEAD')
-    head_map = _carrier_source_paths(root, allowlist, head_commit)
-    prev_map = _carrier_source_paths(root, allowlist, previous_commit)
+    head_map = _carrier_source_paths(root, allowlist, head_commit, framework)
+    prev_map = _carrier_source_paths(root, allowlist, previous_commit, framework)
     pairs = {}
     all_paths = sorted(
         set(paths)
@@ -386,7 +386,7 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
     if base == payload['source_commit']:
         return {'status': 'unchanged', 'owner_source_commit': base}
     execute_commands(root, settings, 'prepare')
-    if not content_changed(root, payload['source_commit'], projection, allowlist, settings):
+    if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}
     carrier = safe_path(root, allowlist['source_root'])
     current = read(carrier / 'opl-package.json')['version']
