@@ -503,6 +503,11 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     };
   });
 
+  handlers.set('pack.updatePlan', (_params, conn) => {
+    requireTrustedHost(conn, 'pack.updatePlan');
+    return runtime.packService.updatePlan();
+  });
+
   handlers.set('pack.updateAll', async (params, conn) => {
     const ctx = requireTrustedHost(conn, 'pack.updateAll');
     const syncCodex = pickBoolean(params, 'sync_codex', 'syncCodex') ?? true;
@@ -533,8 +538,13 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       }
     }
 
+    if (params.updates !== undefined && !Array.isArray(params.updates)
+      || params.sources !== undefined && !isRecord(params.sources)) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Invalid package update batch.');
+    }
     const res = await runtime.packService.updateAll({
-      updates,
+      ...(params.updates !== undefined || params.sources !== undefined ? { updates } : {}),
+      background: pickBoolean(params, 'background'),
       syncCodex,
       clientContext: ctx,
     });

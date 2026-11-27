@@ -5,6 +5,12 @@ import { nowIso } from '../ids.ts';
 import { txImmediate } from '../sqlite.ts';
 import { MIGRATION_0001_INITIAL_V2, type SqliteMigration } from './0001_initial_v2.ts';
 
+const PACKAGE_UPDATE_SOURCE: SqliteMigration = {
+  version: 1001,
+  name: '1001_package_update_source',
+  sql: 'ALTER TABLE installed_packages ADD COLUMN update_source_json TEXT;',
+};
+
 export interface MigrationResult {
   readonly applied: readonly number[];
   readonly skipped: readonly number[];
@@ -15,7 +21,7 @@ export function runMigrations(
   db: DatabaseSync,
   extraMigrations: readonly SqliteMigration[] = [],
 ): MigrationResult {
-  const all = [MIGRATION_0001_INITIAL_V2, ...extraMigrations].sort(
+  const all = [MIGRATION_0001_INITIAL_V2, PACKAGE_UPDATE_SOURCE, ...extraMigrations].sort(
     (a, b) => a.version - b.version,
   );
   const seenVersions = new Set<number>();

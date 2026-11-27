@@ -744,8 +744,10 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'update') {
           if (getBoolFlag(parsed, '--all')) {
-            emitOutput(await rpc('pack.updateAll', { updates: [] }), parsed);
-            return 0;
+            const method = getBoolFlag(parsed, '--dry-run') ? 'pack.updatePlan' : 'pack.updateAll';
+            const result = await rpc(method, { sync_codex: !getBoolFlag(parsed, '--no-codex-sync') }) as { failures?: unknown[] };
+            emitOutput(result, parsed);
+            return result.failures?.length ? 1 : 0;
           }
           const packageId = rest[0];
           const source = getStringFlag(parsed, '--source') ?? rest[1];

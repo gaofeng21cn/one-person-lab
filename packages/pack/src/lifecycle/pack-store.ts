@@ -22,6 +22,7 @@ import type {
   PackageOperationRecord,
   PackageOperationStatus,
   PackageOrigin,
+  PackageUpdateSource,
   ReloadMode,
 } from '../types.ts';
 
@@ -135,6 +136,13 @@ export class PackStore {
     return row ? mapInstalledRow(row) : null;
   }
 
+  getInstallSource(packageId: string): PackageUpdateSource | null {
+    const row = this.db
+      .prepare('SELECT update_source_json FROM installed_packages WHERE package_id = ?')
+      .get(packageId) as { update_source_json: string | null } | undefined;
+    return row?.update_source_json ? JSON.parse(row.update_source_json) as PackageUpdateSource : null;
+  }
+
   listInstalledPackages(filter: {
     readonly intent?: PackageIntent;
     readonly origin?: PackageOrigin;
@@ -179,6 +187,7 @@ export class PackStore {
     readonly install_mode: PackageInstallMode;
     readonly install_path: string;
     readonly content_digest: string;
+    readonly source?: PackageUpdateSource | null;
     readonly enabled?: boolean;
     readonly carrier_synced?: boolean;
   }): InstalledPackageRecord {
@@ -196,8 +205,8 @@ export class PackStore {
       db.prepare(
         `INSERT INTO installed_packages (
           package_id, version, intent, origin, install_mode, install_path,
-          content_digest, manifest_json, enabled, carrier_synced, installed_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          content_digest, manifest_json, update_source_json, enabled, carrier_synced, installed_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(package_id) DO UPDATE SET
           version = excluded.version,
           intent = excluded.intent,
@@ -206,6 +215,7 @@ export class PackStore {
           install_path = excluded.install_path,
           content_digest = excluded.content_digest,
           manifest_json = excluded.manifest_json,
+          update_source_json = excluded.update_source_json,
           enabled = excluded.enabled,
           carrier_synced = excluded.carrier_synced,
           updated_at = excluded.updated_at`,
@@ -218,6 +228,7 @@ export class PackStore {
         input.install_path,
         input.content_digest,
         manifestJson,
+        input.source ? JSON.stringify(input.source) : null,
         enabledVal,
         syncedVal,
         installedAt,

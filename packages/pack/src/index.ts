@@ -5,6 +5,7 @@ export type {
   CodexSyncProjectionResult,
   ExternalCodexPluginSummary,
   InstallSourceSpec,
+  PackageUpdateSource,
   InstalledPackageRecord,
   PackContextOptions,
   PackEventBus,

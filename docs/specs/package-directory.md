@@ -16,6 +16,12 @@ App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Packag
 
 目录是发现和编排入口，不是第二个安装数据库。安装、启停、修复、更新和卸载仍由 Package owner 与配置的 native carrier 执行；Framework 聚合安全状态，App 负责呈现和 dispatch，执行后重新读取 owner projection。
 
+### Framework v2 的已安装 Package 更新
+
+`opl pack update --all --dry-run --json` 从各包的安装来源读取候选版本，`opl pack update --all --json` 执行可用更新。Studio 分别通过可信宿主 RPC `pack.updatePlan` 和 `pack.updateAll` 使用同一计划。显式给 RPC 传空的 `updates` 数组表示空批次。后台执行传 `background: true`，跳过已停用的包。手动更新会保留包的启停状态。
+
+Framework 持久化来源身份。由官方目录验证的安装可按目录刷新，其余安装沿用原来源以及用户指定的版本或摘要。开发链接、外部载体和缺少来源的历史安装会显示需要手动管理。一个来源不可用时，其他包继续更新，结果列出失败项。
+
 ## 管理范围与产品类型
 
 软件中心先回答“这是由谁维护的软件”，再回答“它是什么、装了什么、能否更新”。默认范围是 OPL 自己维护的软件，覆盖标准和非标准智能体、应用、扩展、通道和运行依赖及其受支持载体；OPL 核心只是其中一组架构关系。
