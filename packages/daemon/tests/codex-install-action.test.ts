@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import path from 'node:path';
 import { connectTestRpc, createDaemonSandbox, E2E_CODEX_STUB } from './helpers/sandbox.ts';
 
 test('Studio can discover and preview local Codex installation through the trusted App socket', async (t) => {
-  const sandbox = createDaemonSandbox();
+  const sandbox = createDaemonSandbox({ OPL_RUNTIME_ROOT: '' });
   t.after(() => sandbox.cleanup());
   await sandbox.spawnDaemonProcess();
   const app = await connectTestRpc(sandbox.sessionPath, 'opl_app', '2.0');
@@ -22,9 +23,13 @@ test('Studio can discover and preview local Codex installation through the trust
   }), /INVALID_INPUT/);
 
   const current = await app.call('app.codexRuntime.get') as {
-    runtime_activation: { codex: { runtime_binary_path: string } };
+    runtime_activation: { codex: { runtime_binary_path: string; managed_binary_path: string } };
   };
   assert.equal(current.runtime_activation.codex.runtime_binary_path, E2E_CODEX_STUB);
+  assert.equal(current.runtime_activation.codex.managed_binary_path, path.join(
+    sandbox.homeDir, 'Library', 'Application Support', 'OPL', 'runtime', 'current', 'bin',
+    process.platform === 'win32' ? 'codex.exe' : 'codex',
+  ));
   const sdk = await connectTestRpc(sandbox.sessionPath, 'sdk_python', '2.0');
   t.after(() => sdk.close());
   await assert.rejects(() => sdk.call('app.action.execute', { ...request, dry_run: true }), /TRUSTED_HOST_REQUIRED/);

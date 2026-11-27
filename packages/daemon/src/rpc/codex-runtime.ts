@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { activateCodexRuntime, ensureCodexRuntime, readActiveCodexPath } from '@opl/runway';
+import { activateCodexRuntime, ensureCodexRuntime, managedCodexBinary, readActiveCodexPath } from '@opl/runway';
 import { DaemonRpcError } from '../errors.ts';
 
 export const codexInstallAction = {
@@ -23,7 +23,7 @@ export async function readCodexRuntime() {
   return {
     runtime_activation: {
       status: binary ? 'active' : 'unavailable',
-      codex: { runtime_binary_path: binary },
+      codex: { runtime_binary_path: binary, managed_binary_path: managedCodexBinary(process.env) },
     },
   };
 }
@@ -33,7 +33,7 @@ export async function activateAppCodexRuntime() {
   return {
     runtime_activation: {
       status: result.status,
-      codex: { runtime_binary_path: result.runtime_binary_path },
+      codex: { runtime_binary_path: result.runtime_binary_path, managed_binary_path: managedCodexBinary(process.env) },
     },
   };
 }

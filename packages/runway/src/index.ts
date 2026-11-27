@@ -80,6 +80,7 @@ export { activateCodexRuntime, ensureCodexRuntime, readActiveCodexPath } from '.
 export { ExecutorRegistry } from './executors/registry.ts';
 
 export {
+  managedCodexBinary,
   resolveCodexBinary,
   type CodexBinaryInfo,
   type CodexBinarySource,
