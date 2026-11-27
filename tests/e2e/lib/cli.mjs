@@ -39,6 +39,7 @@ export function assertCoreCliHelp(help) {
   const required = {
     daemon: ["start", "status", "stop", "doctor"],
     workspace: ["init", "list", "inspect"],
+    sources: ["list", "configure", "check", "disconnect"],
     pack: ["install", "ensure", "list", "inspect", "update"],
     connect: ["list", "gateway", "mcp-app-stdio"],
     runway: ["start", "list", "status"],
