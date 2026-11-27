@@ -117,7 +117,8 @@ function validateReceipt(receipt, input, subjectDigest, layers, keyDigest, attes
     || receipt.attestations?.transparency_log !== 'not_uploaded_private'
     || receipt.anonymous_readback?.status !== 'denied_verified'
     || receipt.authenticated_readback?.status !== 'verified'
-    || !matchingLayer('source.v1+gzip', content?.source_archive_digest)
+    || !(matchingLayer('source.v1+gzip', content?.source_archive_digest)
+      || matchingLayer('source.v2+gzip', content?.source_archive_digest))
     || !matchingLayer('manifest.v1+json', content?.manifest_digest)
     || !matchingLayer('payload.v1+json', content?.payload_manifest_digest)) {
     fail('Receipt does not match the selected Package, source, access policy, or signed content.');

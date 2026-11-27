@@ -9,6 +9,24 @@ const frameworkRepository = 'gaofeng21cn/one-person-lab';
 const catalogRepository = 'gaofeng21cn/opl-catalog';
 const commitPattern = /^[a-f0-9]{40}$/;
 
+function selectedRelease(manifest, inputs) {
+  if (manifest.v2_release) {
+    const release = manifest.v2_release;
+    if (release.version === inputs.expected_package_version
+      && release.source_commit === inputs.expected_owner_source_commit) {
+      if (!/^sha256:[a-f0-9]{64}$/.test(release.payload_sha256 ?? '')) return null;
+      return { format: 'v2', version: release.version, sourceCommit: release.source_commit,
+        payloadRef: release.payload_manifest_ref, payloadSha256: release.payload_sha256 };
+    }
+  }
+  const surface = manifest.codex_surface;
+  if (manifest.version !== inputs.expected_package_version
+    || surface?.carrier_source_commit !== inputs.expected_owner_source_commit
+    || (manifest.v2_release && inputs.expected_latest_stable_predecessor === 'resolve-authenticated')) return null;
+  return { format: 'v1', version: manifest.version, sourceCommit: surface.carrier_source_commit,
+    payloadRef: surface.plugin_payload_manifest_url };
+}
+
 export function validateScheduledPublication({ run, plan, inputs, callerRepository, currentPackage }) {
   if (run.repository?.full_name !== frameworkRepository
     || run.path !== '.github/workflows/daily-package-channel.yml'
@@ -20,8 +38,7 @@ export function validateScheduledPublication({ run, plan, inputs, callerReposito
   }
   if (String(run.id) !== String(inputs.automation_source_run_id)
     || plan.source_run_id !== String(run.id)
-    || (plan.workflow_source_commit ?? plan.framework_source_commit) !== run.head_sha
-    || plan.framework_source_commit !== inputs.expected_framework_source_commit) {
+    || (plan.workflow_source_commit ?? plan.framework_source_commit) !== run.head_sha) {
     throw new Error('Daily publication provenance does not match the requested Framework commit.');
   }
   if ((plan.catalog_source_commit ?? '') !== (inputs.expected_catalog_source_commit ?? '')) {
@@ -31,9 +48,13 @@ export function validateScheduledPublication({ run, plan, inputs, callerReposito
     && entry.owner_tag_status === 'ready');
   if (selected.length !== 1) throw new Error('Daily plan must select one ready Package.');
   const entry = selected[0];
+  const release = currentPackage && selectedRelease(currentPackage, inputs);
+  const publicationTooling = entry.expected_framework_source_commit ?? plan.framework_source_commit;
   if (!currentPackage || currentPackage.package_id !== inputs.package_id
-    || currentPackage.version !== inputs.expected_package_version
-    || currentPackage.codex_surface?.carrier_source_commit !== inputs.expected_owner_source_commit
+    || !release || (entry.package_format ?? 'v1') !== release.format
+    || publicationTooling !== inputs.expected_framework_source_commit
+    || (release.format === 'v2' ? (publicationTooling !== run.head_sha || !inputs.expected_catalog_source_commit)
+      : publicationTooling !== plan.framework_source_commit)
     || (currentPackage.visibility ?? 'public') !== (entry.visibility ?? 'public')
     || currentPackage.source_repo?.replace(/^https:\/\/github.com\//, '').replace(/\.git$/, '') !== entry.owner_repository) {
     throw new Error('Daily plan no longer selects the current canonical Package release.');
@@ -84,9 +105,10 @@ function currentCatalogPackage(inputs, legacyPath = null) {
     && name.endsWith(`/${inputs.package_id}.json`));
   if (packagePaths.length !== 1) throw new Error('Official Catalog must declare one current Package.');
   const manifest = githubFile(catalogRepository, packagePaths[0].path, head.sha);
+  const release = selectedRelease(manifest, inputs);
   if (manifest.package_id !== inputs.package_id
-    || manifest.version !== inputs.expected_package_version
-    || manifest.codex_surface?.carrier_source_commit !== inputs.expected_owner_source_commit
+    || !release
+    || (release.format === 'v2' && !catalogCommit)
     || manifest.publication_channel_admission === 'retired'
     || manifest.publication_channel_admission === 'development_only') {
     throw new Error('Requested Package release differs from official Catalog main.');
@@ -102,16 +124,13 @@ function currentCatalogPackage(inputs, legacyPath = null) {
         throw new Error(`Selected Catalog release policy changed: ${key}.`);
       }
     }
-    const surface = selected.codex_surface;
-    const mainSurface = manifest.codex_surface;
-    if (selected.package_id !== manifest.package_id || selected.version !== manifest.version
-      || surface?.carrier_source_commit !== mainSurface?.carrier_source_commit
-      || surface?.plugin_payload_manifest_url !== mainSurface?.plugin_payload_manifest_url
-      || surface?.configured_codex_plugin_carrier?.publication_ref
-        !== mainSurface?.configured_codex_plugin_carrier?.publication_ref) {
+    const pinnedRelease = selectedRelease(selected, inputs);
+    if (selected.package_id !== manifest.package_id || JSON.stringify(pinnedRelease) !== JSON.stringify(release)
+      || selected.codex_surface?.configured_codex_plugin_carrier?.publication_ref
+        !== manifest.codex_surface?.configured_codex_plugin_carrier?.publication_ref) {
       throw new Error('Selected Catalog release no longer matches the current publisher policy.');
     }
-    const payloadRef = mainSurface?.plugin_payload_manifest_url;
+    const payloadRef = release.payloadRef;
     const selectedPayloadDirectory = legacyPath ? 'contracts/opl-framework/packages' : 'packages';
     if (payloadRef !== `payloads/${inputs.package_id}-${inputs.expected_package_version}.json`
       || JSON.stringify(githubFile(selectedRepo, `${selectedPayloadDirectory}/${payloadRef}`, selectedCommit))

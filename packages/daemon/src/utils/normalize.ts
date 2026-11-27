@@ -113,7 +113,7 @@ export function coerceInstallSourceSpec(raw: unknown, packageIdHint?: string): I
     if (spec.startsWith('ghcr.io/') || spec.startsWith('docker.io/')) {
       return { kind: 'oci', ref: spec, ...hint };
     }
-    if (spec.endsWith('.tgz') || spec.endsWith('.tar.gz')) {
+    if (spec.endsWith('.tgz') || spec.endsWith('.tar.gz') || spec.endsWith('.oplpack')) {
       return { kind: 'tarball', path: path.resolve(spec), ...hint };
     }
     if (

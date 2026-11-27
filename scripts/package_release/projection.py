@@ -44,6 +44,9 @@ class PackageProjection:
     def payload(self, manifest):
         return safe_path(self.packages, manifest['codex_surface']['plugin_payload_manifest_url'])
 
+    def v2_payload(self, manifest):
+        return safe_path(self.packages, manifest['v2_release']['payload_manifest_ref'])
+
     def changed_files(self, package_id):
         files = [self.manifest(package_id), self.allowlist(package_id),
                  *sorted((self.packages / 'payloads').glob(f'{package_id}-*.json'))]

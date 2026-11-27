@@ -56,6 +56,8 @@ jobs:
       - name: Install dependencies
         working-directory: .package-publisher
         run: npm ci --ignore-scripts
+      - name: Install Framework v2 publisher dependencies
+        run: npm ci --ignore-scripts
       - name: Create scoped publication identity
         id: publisher-token
         if: vars.PACKAGE_RELEASE_APP_ID != ''
@@ -108,8 +110,11 @@ jobs:
         run: |
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 .package-publisher/scripts/sync-private-package-publishers.py \
-            --catalog-root "$RUNNER_TEMP/opl-catalog" "${args[@]}"
+          python3 scripts/sync-private-package-publishers.py \
+            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
+            --controller-source-commit "$GITHUB_SHA" \
+            --catalog-root "$RUNNER_TEMP/opl-catalog" \
+            --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
       - name: Compare independent Package fingerprints
         env:
           GH_TOKEN: ${{ steps.sync-publisher-token.outputs.token || github.token }}
@@ -118,7 +123,9 @@ jobs:
           set -euo pipefail
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
-          python3 .package-publisher/scripts/package-channel-detection.py \
+          python3 scripts/package-channel-detection.py \
+            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
+            --controller-source-commit "$GITHUB_SHA" \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output-root dist/opl-daily-packages \
             --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"

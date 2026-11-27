@@ -157,11 +157,11 @@ Package 由该工作流指定的固定 Framework 提交提供生成、校验和�
 记录工作流提交、工具提交和 Catalog 提交。发布前核对三者与选中的 Package、owner
 源码标签及渠道前序一致。私有 owner 的发布入口使用同一工具提交。
 
-当选中的 owner 提交已经采用根目录 `opl.package.v2` 描述符，每日准备报告从
-`identity.id` 和 `identity.version` 计算候选版本，并返回
-`v2_package_publisher_unsupported`。当前发布器的 Catalog 投影生成和发布校验仍要求旧版
-描述符与已提交的 Codex 载体。此状态在准备 owner PR 和源码标签之前返回。正式迁移还需
-验证正在消费该 Catalog 与 OCI 渠道的安装入口能读取 v2 载荷。
+采用根目录 `opl.package.v2` 描述符的 Package 由当前工作流提交构建。发布器从精确
+owner 提交生成安装归档和 v2 锁，Catalog 的 `v2_release` 记录候选版本、owner 提交与
+载荷摘要，原有 Catalog 版本继续指向已发布的 v1 安装制品。日更使用同一 OCI 仓库和
+`latest-stable`，发布前核对 v2 归档摘要、内容锁、来源标签和渠道前序。v2 安装端按
+Catalog 选定的版本与归档摘要取得安装制品。私有发布入口同步失败时只阻止对应 Package。
 
 `source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
@@ -228,6 +228,7 @@ Framework 随后复用 Flow 的 `package_release.py prepare --catalog-root <chec
 稳定请求 ID 由 Package、版本和源码提交组成，跨日回读相同身份的在途和成功运行，避免
 重复排队。已存在的准备分支按完整文件树核对；相同内容沿用原提交和 CI，不同内容保留并报告冲突。
 单包版本冲突、CI失败、访问失败和未知派发结果单独记录，其他合法候选继续。
+私有发布入口的同步失败也只阻止对应 Package，当前批次继续检测其他候选。
 已发布载荷的源码与 owner 当前 main 没有共同祖先时，准备器先确认两个准确提交均可读，
 再抓取原提交并按 owner 既有交付路径比较字节。该比较不改写旧载荷来源；缺失提交、
 身份拒绝和其他比较错误继续阻止该 Package 的准备。
