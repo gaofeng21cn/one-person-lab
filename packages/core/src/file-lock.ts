@@ -25,6 +25,7 @@ export interface AdvisoryLockPayload {
 export interface AdvisoryLockOptions {
   ownerId?: string;
   staleAfterMs?: number;
+  preserveLiveHolder?: boolean;
   timeoutMs?: number;
   pollMs?: number;
   mode?: number;
@@ -125,7 +126,7 @@ function isStaleLockFile(filePath: string, staleAfterMs: number): boolean {
   }
 }
 
-function isReclaimableLock(filePath: string, defaultStaleAfterMs: number): boolean {
+function isReclaimableLock(filePath: string, defaultStaleAfterMs: number, preserveLiveHolder = false): boolean {
   const lstat = fs.lstatSync(filePath, { throwIfNoEntry: false });
   if (lstat?.isSymbolicLink()) {
     try {
@@ -141,6 +142,7 @@ function isReclaimableLock(filePath: string, defaultStaleAfterMs: number): boole
   if (!isHolderProcessAlive(lock.process_identity, lock.pid)) {
     return true;
   }
+  if (preserveLiveHolder) return false;
   const staleMs = typeof lock.stale_after_ms === 'number' && Number.isFinite(lock.stale_after_ms)
     ? lock.stale_after_ms
     : defaultStaleAfterMs;
@@ -320,9 +322,9 @@ export function acquireAdvisoryLock(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
 
-      if (isReclaimableLock(resolvedPath, staleAfterMs)) {
+      if (isReclaimableLock(resolvedPath, staleAfterMs, options.preserveLiveHolder)) {
         const reclaimed = reclaimLockFileAtomically(resolvedPath, (candidatePath) =>
-          isReclaimableLock(candidatePath, staleAfterMs),
+          isReclaimableLock(candidatePath, staleAfterMs, options.preserveLiveHolder),
         );
         if (reclaimed) continue;
       }

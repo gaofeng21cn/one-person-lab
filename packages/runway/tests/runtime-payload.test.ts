@@ -3,10 +3,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
+import { acquireAdvisoryLock } from '@opl/core';
 import { createPackageSourceArchive } from '@opl/pack';
 import { stageCodexPayload } from '../src/executors/codex/runtime-payload.ts';
 import { activateCodexRuntime, ensureCodexRuntime } from '../src/executors/codex/runtime-install.ts';
-import { managedCodexBinary } from '../src/executors/codex/binary.ts';
+import { codexRuntimeRoot, managedCodexBinary } from '../src/executors/codex/binary.ts';
 
 test('an explicit private Codex path permits first install, while an invalid external selection stays authoritative', async (t) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-first-selection-'));
@@ -28,6 +30,34 @@ test('an explicit private Codex path permits first install, while an invalid ext
   env.OPL_CODEX_BIN = path.join(home, 'external', 'codex');
   await assert.rejects(activateCodexRuntime(env), /OPL_CODEX_BIN/);
   await assert.rejects(ensureCodexRuntime(env), /OPL_CODEX_BIN/);
+});
+
+test('a second installer waits across a slow download and never reclaims the live installer by age', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-install-wait-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const env: NodeJS.ProcessEnv = { HOME: home, PATH: '', OPL_FULL_RUNTIME_HOME: home };
+  fs.mkdirSync(path.join(home, 'manifest'));
+  fs.writeFileSync(path.join(home, 'manifest', 'full-package-manifest.json'), '{}');
+  const lockPath = path.join(codexRuntimeRoot(env), 'codex-install.lock');
+  const holder = acquireAdvisoryLock(lockPath);
+  t.after(() => holder.release());
+  let result: unknown;
+  const waiter = ensureCodexRuntime(env).catch(error => { result = error; });
+  const now = Date.now();
+  let advanced = now + 6 * 60_000;
+  t.mock.method(Date, 'now', () => advanced);
+  try {
+    await delay(400);
+    assert.equal(result, undefined);
+    advanced = now + 31 * 60_000;
+    await delay(400);
+    assert.equal(result, undefined);
+    assert.equal(fs.existsSync(lockPath), true);
+  } finally {
+    holder.release();
+    await waiter;
+  }
+  assert.match(String(result), /missing its verified Codex offline seed/);
 });
 
 test('Full Codex staging verifies frozen bytes and refuses an archive for another platform', async (t) => {

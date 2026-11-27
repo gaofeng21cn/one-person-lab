@@ -10,14 +10,14 @@ import { activateLegacyCodexGeneration } from './runtime-pending.ts';
 import { checkCodexExecutable, verifyCodexAppServer } from './runtime-probe.ts';
 
 async function withInstallLock<T>(root: string, run: () => Promise<T>): Promise<T> {
-  const deadline = Date.now() + 300_000;
   for (;;) {
     let lock;
     try {
-      lock = acquireAdvisoryLock(path.join(root, 'codex-install.lock'));
+      // Healthy downloads can outlive the default stale-lock interval.
+      lock = acquireAdvisoryLock(path.join(root, 'codex-install.lock'), { preserveLiveHolder: true });
     } catch (error) {
-      if (!(error instanceof KernelError) || error.code !== 'LOCK_CONTENTION' || Date.now() >= deadline) throw error;
-      await delay(100);
+      if (!(error instanceof KernelError) || error.code !== 'LOCK_CONTENTION') throw error;
+      await delay(250);
       continue;
     }
     try {
