@@ -5,6 +5,7 @@ import { createDomainTaskInventoryReader, type DomainTaskInventory } from './dom
 import { projectPackageDirectory, packageActions } from './package-projection.ts';
 import { readAppPackagePreferences } from './app-package-preferences.ts';
 import { projectUiContributions } from './ui-projection.ts';
+import { readWorkspaceRoot, workspaceRootAction } from './workspace-root.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
 import { projectConnectionAuthorization } from './connection-authorization.ts';
 import type { SqliteDb } from '@opl/core';
@@ -102,9 +103,11 @@ export interface AppStateSnapshot {
     readonly connections: ReturnType<ConnectService['list']>;
     readonly tasks: readonly Record<string, unknown>[];
     readonly schedules: readonly Record<string, unknown>[];
+    readonly paths?: { readonly workspace_root: ReturnType<typeof readWorkspaceRoot>; readonly workspace_root_path: string | null };
     readonly settings_control_center?: {
       readonly app_settings_read_model: {
         readonly connections: { readonly authorization: ReturnType<typeof projectConnectionAuthorization> };
+        readonly workspace_services?: { readonly workspace_root: ReturnType<typeof readWorkspaceRoot> };
         readonly opl_gateway_account?: ReturnType<typeof readOplGatewayAccount>;
         readonly codex_model_policy?: ReturnType<typeof readCodexModelPolicy>;
       };
@@ -155,6 +158,7 @@ export class AppStateCache {
   getState(profile: 'fast' | 'full' = 'fast', gatewayStateDir?: string): AppStateSnapshot {
     const snapshot = this.#getSharedState(profile);
     if (!gatewayStateDir) return snapshot;
+    const workspaceRoot = readWorkspaceRoot(gatewayStateDir);
 
     // Only the trusted App/CLI reads private account settings. Keep them out
     // of shared snapshots and observe account changes made by another process.
@@ -168,12 +172,14 @@ export class AppStateCache {
       ...snapshot,
       app_state: {
         ...snapshot.app_state,
-        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions],
+        paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
           app_settings_read_model: {
             ...snapshot.app_state.settings_control_center?.app_settings_read_model,
             connections: { authorization: projectConnectionAuthorization(this.#connectService.listProjection()) },
+            workspace_services: { workspace_root: workspaceRoot },
             codex_model_policy: readCodexModelPolicy(),
             ...(account && { opl_gateway_account: account }),
           },
