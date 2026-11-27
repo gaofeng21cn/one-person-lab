@@ -62,6 +62,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     assert.doesNotMatch(help.stdout, /^\s*foundry:/m);
 
     assert.match(help.stdout, /^\s*connect:.*\bgateway\b/m);
+    assert.match(help.stdout, /^\s*daemon:.*\bapply-codex-profile\b/m);
 
     // Retired / unknown commands fail with exit 2 and never call codex stub
     for (const retired of [['app', 'state', '--json'], ['agents', 'modules'], ['cordis', 'status'], ['foundry', '--help']]) {
