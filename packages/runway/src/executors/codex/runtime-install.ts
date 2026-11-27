@@ -4,7 +4,7 @@ import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireAdvisoryLock, KernelError } from '@opl/core';
-import { codexRuntimeRoot, managedCodexBinary, resolveCodexBinary } from './binary.ts';
+import { codexRuntimeRoot, managedCodexBinary, resolveCodexBinary, resolveCodexFromRuntime } from './binary.ts';
 import { stageCodexPayload } from './runtime-payload.ts';
 import { activateLegacyCodexGeneration } from './runtime-pending.ts';
 import { checkCodexExecutable, verifyCodexAppServer } from './runtime-probe.ts';
@@ -66,8 +66,14 @@ async function install(env: NodeJS.ProcessEnv) {
 function configuredRuntime(env: NodeJS.ProcessEnv) {
   // The App can export the stable OPL executable before first install.
   const configured = env.OPL_CODEX_BIN?.trim();
-  if (configured && path.resolve(configured) === managedCodexBinary(env)
-    && !statSync(configured, { throwIfNoEntry: false })) return null;
+  if (configured && path.resolve(configured) === managedCodexBinary(env)) {
+    const entry = statSync(configured, { throwIfNoEntry: false });
+    if (!entry || entry.isFile()) {
+      // Reuse the executor's file and execute-permission checks for this
+      // exact path. A missing or unusable private binary can be installed.
+      return resolveCodexFromRuntime(env);
+    }
+  }
   return resolveCodexBinary(undefined, env);
 }
 

@@ -57,7 +57,7 @@ export function managedCodexBinary(env: NodeJS.ProcessEnv): string {
   return path.join(codexRuntimeRoot(env), 'current', 'bin', process.platform === 'win32' ? 'codex.exe' : 'codex');
 }
 
-function resolveCodexFromRuntime(env: NodeJS.ProcessEnv = process.env): CodexBinaryInfo | null {
+export function resolveCodexFromRuntime(env: NodeJS.ProcessEnv = process.env): CodexBinaryInfo | null {
   const candidate = managedCodexBinary(env);
   if (!isExecutableFile(candidate)) return null;
   return { path: candidate, source: 'runtime' };

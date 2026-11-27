@@ -18,6 +18,13 @@ test('an explicit private Codex path permits first install, while an invalid ext
   assert.deepEqual(await activateCodexRuntime(env), { status: 'unavailable', runtime_binary_path: null });
   await assert.rejects(ensureCodexRuntime(env), /missing its verified Codex offline seed/);
 
+  if (process.platform !== 'win32') {
+    fs.writeFileSync(env.OPL_CODEX_BIN, 'unusable private executable', { mode: 0o600 });
+    assert.deepEqual(await activateCodexRuntime(env), { status: 'unavailable', runtime_binary_path: null });
+    await assert.rejects(ensureCodexRuntime(env), /missing its verified Codex offline seed/);
+    assert.equal(fs.readFileSync(env.OPL_CODEX_BIN, 'utf8'), 'unusable private executable');
+  }
+
   env.OPL_CODEX_BIN = path.join(home, 'external', 'codex');
   await assert.rejects(activateCodexRuntime(env), /OPL_CODEX_BIN/);
   await assert.rejects(ensureCodexRuntime(env), /OPL_CODEX_BIN/);
