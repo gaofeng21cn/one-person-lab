@@ -7,6 +7,7 @@ import {
   OplReleaseLockV2Schema,
   type OplPackageManifestV2,
   type OplReleaseLockV2,
+  type ExactPackageRelease,
 } from '../manifest/schema.ts';
 import { parsePackageManifestV2 } from '../manifest/validate.ts';
 import type { BuildPackageResult } from '../types.ts';
@@ -286,4 +287,13 @@ export function verifyReleaseLock(
   }
 
   return { lock, digest: recomputedDigest };
+}
+
+export function verifyExactPackageRelease(root: string, packageId: string, release: ExactPackageRelease): string {
+  const { lock } = verifyReleaseLock(root);
+  if (lock.package_id !== packageId || lock.version !== release.version
+      || lock.git_commit !== release.git_commit || lock.digest !== release.digest) {
+    throw new PackError('PACK_LOCK_MISMATCH', `Package '${packageId}' does not match the requested release version, commit and digest.`);
+  }
+  return lock.digest;
 }

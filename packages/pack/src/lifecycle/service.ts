@@ -13,8 +13,10 @@ import {
 } from '@opl/core';
 import type { InstalledPackageSnapshot } from '@opl/connect';
 import { PackError } from '../errors.ts';
+import type { ExactPackageRelease } from '../manifest/schema.ts';
 import {
   buildPackage,
+  verifyExactPackageRelease,
   computeLiveDirectoryContentDigest,
   readPackageManifestFromDir,
   verifyReleaseLock,
@@ -65,6 +67,7 @@ type OfficialUpdateResolver = (packageId: string) => Promise<{
 
 export interface CreatePackServiceOptions {
   readonly resolveOfficialUpdate?: OfficialUpdateResolver;
+  readonly probeCliExtensions?: (root: string, manifest: OplPackageManifestV2) => Promise<void>;
   readonly db: SqliteDb;
   readonly stateDir?: string;
   readonly marketplaceRoot?: string;
@@ -209,6 +212,7 @@ export class PackService {
   readonly #fetchImpl?: RegistryFetch;
   readonly #downloadTransport?: DownloadTransport;
   readonly #resolveOfficialUpdate?: OfficialUpdateResolver;
+  readonly #probeCliExtensions?: CreatePackServiceOptions['probeCliExtensions'];
   readonly #packageMutations = new Map<string, Promise<void>>();
   readonly #activeControllers = new Map<string, AbortController>();
 
@@ -227,19 +231,25 @@ export class PackService {
     this.#codexRunner = options.codexRunner;
     this.#fetchImpl = options.fetchImpl;
     this.#resolveOfficialUpdate = options.resolveOfficialUpdate;
+    this.#probeCliExtensions = options.probeCliExtensions;
     this.#downloadTransport = options.downloadTransport;
   }
 
   // Serialize changes to a package across the async carrier call and the database
   // write. A concurrent disable or uninstall must see the installed version it acts on.
-  private async acquirePackageMutation(packageId: string): Promise<() => void> {
-    const previous = this.#packageMutations.get(packageId);
+  private async acquirePackageMutation(packageId: string, manifest?: OplPackageManifestV2): Promise<() => void> {
+    // Registrations for the same CLI namespace must see the previous owner's
+    // committed manifest before probing, even when the packages have different IDs.
+    const resources = [packageId, ...(manifest?.provides?.cli_extensions ?? []).map(ext => `cli:${ext.namespace}`)];
+    const previous = resources.map(key => this.#packageMutations.get(key));
     let release!: () => void;
     const active = new Promise<void>(resolve => { release = resolve; });
-    this.#packageMutations.set(packageId, active);
-    await previous;
+    for (const key of resources) this.#packageMutations.set(key, active);
+    await Promise.all(previous);
     return () => {
-      if (this.#packageMutations.get(packageId) === active) this.#packageMutations.delete(packageId);
+      for (const key of resources) {
+        if (this.#packageMutations.get(key) === active) this.#packageMutations.delete(key);
+      }
       release();
     };
   }
@@ -391,6 +401,7 @@ export class PackService {
     readonly source: InstallSourceSpec;
     readonly action: 'install' | 'update';
     readonly updateSource?: PackageUpdateSource;
+    readonly ensure?: { exactRelease?: ExactPackageRelease };
     readonly expectedUpdate?: { installedVersion: string; installedDigest: string; availableVersion: string; background?: boolean };
     readonly batchId?: string | null;
     readonly syncCodex?: boolean;
@@ -434,7 +445,7 @@ export class PackService {
           { expected_package_id: input.source.package_id, actual_package_id: manifest.identity.id },
         );
       }
-      releaseMutation = await this.acquirePackageMutation(manifest.identity.id);
+      releaseMutation = await this.acquirePackageMutation(manifest.identity.id, manifest);
       const installedBefore = this.store.getInstalledPackage(manifest.identity.id);
       if (input.action === 'update' && !installedBefore) {
         throw new PackError('PACK_NOT_FOUND', 'Package was removed before the update.');
@@ -446,7 +457,10 @@ export class PackService {
         || manifest.identity.version !== input.expectedUpdate.availableVersion)) {
         throw new PackError('PACK_OPERATION_BUSY', 'Package or source version changed during update. Check for updates again.');
       }
-      const enabled = installedBefore?.enabled ?? true;
+      if (input.ensure && installedBefore && (installedBefore.origin !== 'opl' || installedBefore.install_mode !== 'release')) {
+        throw new PackError('PACK_OPERATION_BUSY', 'The Package source changed during restore.');
+      }
+      const enabled = input.ensure ? true : installedBefore?.enabled ?? true;
       this.store.transitionOperation(opId, {
         status: 'verifying',
         package_id: manifest.identity.id,
@@ -457,9 +471,14 @@ export class PackService {
       this.assertDependenciesSatisfied(manifest);
 
       const lockPath = path.join(staged.stagingDir, 'opl-release.lock.json');
-      const digest = fs.existsSync(lockPath)
-        ? verifyReleaseLock(staged.stagingDir, undefined, { allowSymlinks: false }).digest
-        : buildPackage(staged.stagingDir, { writeLock: true }).digest;
+      let digest: string;
+      if (input.ensure?.exactRelease) {
+        digest = verifyExactPackageRelease(staged.stagingDir, manifest.identity.id, input.ensure.exactRelease);
+      } else if (fs.existsSync(lockPath)) {
+        digest = verifyReleaseLock(staged.stagingDir).digest;
+      } else {
+        digest = buildPackage(staged.stagingDir, { writeLock: true }).digest;
+      }
 
       const destDir = path.join(this.packagesRoot, manifest.identity.id, manifest.identity.version);
       this.store.transitionOperation(opId, {
@@ -478,6 +497,9 @@ export class PackService {
         if (fs.existsSync(lockFileInStaged)) {
           fs.copyFileSync(lockFileInStaged, path.join(tmpDest, 'opl-release.lock.json'));
         }
+        // Probe the disposable source after copying verified bytes. Extension
+        // startup can write local caches, which must not enter the release.
+        await this.#probeCliExtensions?.(staged.stagingDir, manifest);
         backupDest = fs.existsSync(destDir) ? `${destDir}.bak-${opId}` : null;
         if (backupDest) {
           fs.rmSync(backupDest, { recursive: true, force: true });
@@ -569,6 +591,7 @@ export class PackService {
   }
 
   async install(input: {
+    readonly ensure?: { exactRelease?: ExactPackageRelease };
     readonly updateSource?: PackageUpdateSource;
     readonly source: InstallSourceSpec;
     readonly syncCodex?: boolean;
@@ -578,6 +601,7 @@ export class PackService {
       source: input.source,
       updateSource: input.updateSource,
       action: 'install',
+      ensure: input.ensure,
       syncCodex: input.syncCodex,
       clientContext: input.clientContext,
     });
@@ -749,8 +773,9 @@ export class PackService {
       progress: { stage: 'linking' },
     });
 
-    const release = await this.acquirePackageMutation(manifest.identity.id);
+    const release = await this.acquirePackageMutation(manifest.identity.id, manifest);
     try {
+      await this.#probeCliExtensions?.(realRoot, manifest);
       const { digest } = computeLiveDirectoryContentDigest(realRoot, { allowSymlinks: true });
       let codexSync: CodexSyncProjectionResult = {
         package_id: manifest.identity.id,

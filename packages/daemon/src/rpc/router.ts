@@ -14,6 +14,7 @@ import {
   buildPackage,
   createOfficialPackageResolver,
   ensurePackage,
+  ExactPackageReleaseSchema,
   migrateV1Package,
   readPackageManifestFromDir,
   verifyReleaseLock,
@@ -521,7 +522,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     };
   });
 
-  handlers.set('pack.ensure', async (params, conn) => {
+  async function handlePackEnsure(params: Record<string, unknown>, conn: SocketConnectionState, requireExact = false) {
     const ctx = requireTrustedHost(conn, 'pack.ensure');
     const packageId = pickString(params, 'package_id', 'packageId');
     if (!packageId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(packageId) || packageId.length > 128) {
@@ -531,11 +532,18 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     if (runtimeRoot != null && (typeof runtimeRoot !== 'string' || !path.isAbsolute(runtimeRoot))) {
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires an absolute Full runtime directory.');
     }
+    const exact = requireExact || Object.hasOwn(params, 'exact_release')
+      ? ExactPackageReleaseSchema.safeParse(params.exact_release)
+      : undefined;
+    if (exact && !exact.success) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'exact_release requires a valid version, git_commit and digest.');
+    }
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     try {
       return await ensurePackage(runtime.packService, {
         packageId,
         dryRun,
+        exactRelease: exact?.data,
         clientContext: ctx,
         resolveSource: createOfficialPackageResolver({ runtimeRoot }),
         installSource: (input) => runtime.installPackage(input),
@@ -548,7 +556,9 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
         runtime.appStateCache.invalidate();
       }
     }
-  });
+  }
+  handlers.set('pack.ensure', handlePackEnsure);
+  handlers.set('pack.ensureExact', (params, conn) => handlePackEnsure(params, conn, true));
 
   handlers.set('pack.build', (params) => {
     const dir = pickString(params, 'dir') ?? '.';

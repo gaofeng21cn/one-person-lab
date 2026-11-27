@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { verifyCodexAppServer } from './runtime-probe.ts';
@@ -61,8 +61,8 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
     if (dir === path.dirname(dir)) break;
   }
   const generations = path.join(root, 'generations');
-  assertDirectory(generations);
   if (pending?.surface_kind === appliedKind) {
+    assertDirectory(generations);
     return finishActivation(metadata, generations, pending.generation);
   }
   if (pending?.surface_kind !== 'opl_runtime_pending_generation.v1' || pending.dependency_id !== 'codex-cli'
@@ -75,11 +75,6 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
     throw new Error('Invalid pending Codex generation metadata.');
   }
 
-  const staged = pending.generation_root;
-  assertDirectory(staged);
-  if (path.dirname(fs.realpathSync(staged)) !== generations) {
-    throw new Error('Pending Codex generation is outside the runtime generations directory.');
-  }
   const current = path.join(root, 'current');
   const live = path.join(current, 'bin');
   const previous = path.join(root, 'previous-toolchain');
@@ -87,6 +82,25 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
   if (stat(live)) assertDirectory(live);
   if (stat(previous)) assertDirectory(previous);
 
+  // Keep the original receipt and candidate for inspection. Retiring the
+  // marker lets a first install proceed and keeps later launches idempotent.
+  function unavailable(error: unknown) {
+    if (fs.existsSync(path.join(live, 'codex'))) throw error;
+    fs.renameSync(metadata, path.join(root, `pending-codex-generation.unavailable-${randomUUID()}.json`));
+    return 'none' as const;
+  }
+
+  // Validate the parent separately so an absent child does not require realpath.
+  const requested = path.resolve(pending.generation_root);
+  const parent = path.dirname(requested);
+  const ownerRoot = path.dirname(parent);
+  if (path.basename(parent) !== 'generations' || !stat(ownerRoot) || fs.realpathSync(ownerRoot) !== root) {
+    throw new Error('Pending Codex generation is outside the runtime generations directory.');
+  }
+  if (stat(generations)) assertDirectory(generations);
+  const staged = path.join(generations, path.basename(requested));
+  if (!stat(staged)) return unavailable(new Error('Pending Codex generation directory is missing.'));
+  assertDirectory(staged);
   const transaction = path.join(staged, '.opl-v2-activation');
   if (stat(transaction)) {
     assertDirectory(transaction);
@@ -99,13 +113,21 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
 
   const bin = path.join(staged, 'bin');
   const binary = path.join(bin, 'codex');
+  if (!stat(bin)) return unavailable(new Error('Pending Codex bin directory is missing.'));
   assertDirectory(bin);
-  if (!stat(binary)?.isFile()) throw new Error('Invalid pending Codex executable.');
+  const executable = stat(binary);
+  if (!executable) return unavailable(new Error('Pending Codex executable is missing.'));
+  if (!executable.isFile()) throw new Error('Invalid pending Codex executable.');
   const hash = createHash('sha256');
   for await (const chunk of fs.createReadStream(binary)) hash.update(chunk);
-  if (hash.digest('hex') !== pending.codex_sha256 || await verifyCodexAppServer(binary, env) !== pending.version) {
-    throw new Error('Pending Codex executable does not match the verified version and digest.');
+  if (hash.digest('hex') !== pending.codex_sha256) return unavailable(new Error('Pending Codex executable digest mismatch.'));
+  let version: string;
+  try {
+    version = await verifyCodexAppServer(binary, env);
+  } catch (error) {
+    return unavailable(error);
   }
+  if (version !== pending.version) return unavailable(new Error('Pending Codex executable version mismatch.'));
 
   fs.mkdirSync(transaction, { mode: 0o700 });
   const next = path.join(transaction, 'next');

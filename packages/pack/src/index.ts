@@ -42,6 +42,8 @@ export {
   ModuleOrCommandEntrypointSchema,
   OplPackageManifestV2Schema,
   OplReleaseLockV2Schema,
+  ExactPackageReleaseSchema,
+  type ExactPackageRelease,
   PackageDependencySchema,
   RESERVED_APP_SETTINGS_IDS,
   RelativePosixPathSchema,

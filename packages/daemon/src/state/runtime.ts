@@ -179,6 +179,7 @@ export class DaemonRuntime {
     };
     this.packService = createPackService({
       ...officialUpdateSource,
+      probeCliExtensions: (root, manifest) => this.probeCliExtensions(root, manifest),
       db: this.db,
       stateDir: this.paths.state_dir,
       marketplaceRoot: this.marketplaceRoot,
@@ -998,7 +999,6 @@ export class DaemonRuntime {
   }): Promise<ReturnType<PackService['link']>> {
     const { realRoot, manifest } = readPackageManifestFromDir(input.dir);
     this.assertNoPluginsMirrorDir(realRoot, manifest);
-    await this.probeCliExtensions(realRoot, manifest);
     const res = await this.packService.link(input);
     this.syncDeclaredProviders();
     await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
@@ -1008,12 +1008,6 @@ export class DaemonRuntime {
 
   async installPackage(input: Parameters<PackService['install']>[0]): ReturnType<PackService['install']> {
     const res = await this.packService.install(input);
-    try {
-      await this.probeCliExtensions(res.package.install_path, res.package.manifest);
-    } catch (error) {
-      await this.packService.uninstall({ packageId: res.package.package_id }).catch(() => {});
-      throw error;
-    }
     this.syncDeclaredProviders();
     await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
     this.appStateCache.invalidate();
