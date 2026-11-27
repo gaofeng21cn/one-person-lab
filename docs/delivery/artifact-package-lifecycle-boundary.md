@@ -140,45 +140,13 @@ Framework 的入口为 `.github/workflows/publish-framework.yml`；它仅发布
 按 digest 校验下载内容。Homebrew Formula 消费同一 Framework artifact，
 App Cask 消费 App 的发布结果，两者独立推进。
 
-### 每日原生产品发布
+### 跨产品与日常发布边界
 
-`daily-product-channel.yml` 每日独立处理 `product-release-owners.json` 登记的
-第一方产品；它是发布路由，不是 Package 注册表或安装状态。已准入的 Package
-继续由原有每日 Package 流程动态发现。App 与 DSH 的每日运行由各自的 owner 调度，
-Framework 以只读方式回读。App Stable 和 Stable Full 沿用各自的受保护操作。
+跨产品日常编排（`control-daily-releases.yml`）、纯只读全景看板（`observe-daily-releases.yml`）、macOS Sparkle 复用打包链（`reusable-macos-sparkle-release.yml`）及标准回执契约（`opl.release-receipt.v1`）均由横向发布平台 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 持有。`one-person-lab` 仅保留自身的 `product-release.json`、`publish-framework.yml` 以及过渡期的日常 Package 发布工作流（直至活跃 Catalog Package 全部迁至 `opl.package.v2`）。
 
-产品根目录的 `product-release.json` 声明交付路径、版本文件、tag 格式及原生发布
-workflow。共用准备器比较已发布源码与 main，只对交付变化分配补丁版本，
-经现有 PR/CI 合入后创建 annotated tag。安装包、容器、Feed 与设备验收仍归
-各产品发布器。已冻结但未完成的 tag 复用原源码与发布 run，不移动旧 tag。
-DSH 的 `owner_schedule` 只回读既有每日任务，避免重复调度。
+每个产品仓库保留各自的版本、构建、签名、公证、干净设备验收与发布决定；`opl-release` 通过协议探针（OCI / GitHub Release / Sparkle Appcast）与标准 `opl.release-receipt.v1` 产物只读汇总全家族状态，不持有任何产品私有的发布特判逻辑。
 
-Framework 产品版本准备沿 Framework 主线进行。每日 Package 投影通过 Catalog 主线合入，仍在 GitHub Actions 中串行调度。各产品按其仓库独立准备。
-
-Framework v2 主线运行每日 Package 工作流。仍按现有 Catalog Payload 合同交付的
-Package 由该工作流指定的固定 Framework 提交提供生成、校验和发布工具。计划同时
-记录工作流提交、工具提交和 Catalog 提交。发布前核对三者与选中的 Package、owner
-源码标签及渠道前序一致。私有 owner 的发布入口使用同一工具提交。
-
-采用根目录 `opl.package.v2` 描述符的 Package 由当前工作流提交构建。发布器从精确
-owner 提交生成安装归档和 v2 锁，Catalog 的 `v2_release` 记录候选版本、owner 提交与
-载荷摘要，原有 Catalog 版本继续指向已发布的 v1 安装制品。日更使用同一 OCI 仓库和
-`latest-stable`，发布前核对 v2 归档摘要、内容锁、来源标签和渠道前序。v2 安装端按
-Catalog 选定的版本与归档摘要取得安装制品；公开载荷直接拉取，私有载荷通过用户配置的
-GitHub Packages 凭据引用鉴权下载并延用各自私有 owner 发布入口与签名环境。私有发布入口同步失败时只阻止对应 Package。
-
-`source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
-workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
-不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。
-
-每天的 Actions 汇总使用 Framework 运行 ID 关联各产品准备结果。产品结果记录观察时
-的 main、已冻结的 tag 和源码、原生 workflow 与公开渠道回读；额外渠道由 owner 的
-`observed_publishers` 声明。提交 tag、候选完成、资格失败、发布与实际渠道回读是
-不同阶段。产品发布任务可以在汇总之后继续推进，报告保留当时观测值和原生运行链接。
-
-同一北京时间日内最新的定时或手动恢复 Package 检测与派发按原始运行 ID 关联，公开
-OCI 渠道按精确版本和 owner 源码回读。手动使用 `observe_only` 可刷新当前报告。
-产品发布器继续持有签名、资格、公开发布与安装或部署的权限。
+Framework v2 主线当前仍保留过渡期的每日 Package 工作流（`daily-package-channel.yml`、`daily-package-channel-publication.yml` 与 `publish-package.yml`）。仍按现有 Catalog Payload 合同交付的 Package 由固定 Framework 提交提供生成与发布工具；采用 `opl.package.v2` 描述符的 Package 由当前工作流构建。待活跃 Catalog Package 全部完成 `opl.package.v2` 迁移后，该 Package 过渡链亦整体移交 `opl-release` 并从 Framework 删除。
 
 ## 软件包的发布入口
 
