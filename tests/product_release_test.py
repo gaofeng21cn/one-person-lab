@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.owner import _carrier_source_paths, _ordered_content_digest, merge_release_changes, prepare_owner, refresh_locks, wait_for_checks
 from package_release.common import ReleaseError
+from package_release.product_status import nightly_publication
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(product)
@@ -271,6 +272,68 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_pending')
         prepared['published_channel']['tag'] = prepared['tag']
         self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_verified')
+
+    def test_cancelled_tag_qualification_is_reported_with_older_public_release(self):
+        config = {**self.config, 'product_id': 'opl-netfleet', 'strategy': 'daily_patch',
+                  'publisher_workflow': 'release.yml', 'publisher_title_from_tag': 'OpenWrt release {tag}',
+                  'channel': {'kind': 'github_release'}, 'observed_publishers': []}
+        prepared = {'status': 'needs_release', 'tag': 'v1.2.6', 'source_commit': self.first,
+                    'previous_candidate': {'tag': 'v1.2.5', 'source_commit': 'c' * 40},
+                    'published_channel': {'tag': 'v1.2.4', 'version': '1.2.4',
+                                          'source_commit': self.first}}
+        candidate = {'id': 30, 'head_sha': 'b' * 40, 'head_branch': 'main', 'event': 'workflow_dispatch',
+                     'display_title': 'OpenWrt release v1.2.5', 'status': 'completed',
+                     'conclusion': 'failure', 'html_url': 'candidate-url'}
+        public = {'id': 20, 'head_sha': self.first, 'head_branch': 'v1.2.4', 'event': 'push',
+                  'status': 'completed', 'conclusion': 'cancelled', 'html_url': 'public-url'}
+
+        def api(path):
+            if 'release.yml/runs' in path and 'head_sha=' in path:
+                return {'workflow_runs': [public]} if 'head_sha=' + self.first in path else {'workflow_runs': []}
+            return {'workflow_runs': [candidate]}
+
+        with patch('package_release.product_status.gh', side_effect=api), \
+                patch('package_release.product_status.workflow_runs', return_value=[candidate]):
+            lanes = product.observe_lanes(config, prepared)
+        self.assertEqual(lanes[0]['status'], 'needs_release')
+        self.assertEqual(lanes[0]['published_channel']['tag'], 'v1.2.4')
+        self.assertEqual(lanes[0]['observed_publication_run']['status'], 'publisher_failure')
+        self.assertEqual(lanes[0]['public_tag_publisher']['status'], 'publisher_cancelled')
+
+    def test_preceding_frozen_candidate_survives_newer_release_version(self):
+        self.git('tag', '-a', 'v1.2.4', '-m', 'candidate')
+        next_config = {**self.config, 'strategy': 'daily_patch', 'version_file': self.config['version_file']}
+        self.assertEqual(product.preceding_candidate(self.root, next_config, self.channel, '1.2.5'),
+                         {'tag': 'v1.2.4', 'source_commit': self.first})
+
+    def test_nightly_publication_receipt_binds_release_to_exact_action_attempt(self):
+        run = {'id': 40, 'run_attempt': 1, 'head_sha': self.first, 'status': 'completed',
+               'conclusion': 'success', 'html_url': 'run-url'}
+        readback = {'source_commit': self.first, 'tag': 'v26.11.27-nightly', 'url': 'release-url'}
+        receipt = {'schema': 'opl_standard_nightly_publication_receipt.v1', 'status': 'published',
+                   'tag': readback['tag'], 'repository': 'gaofeng21cn/one-person-lab-app',
+                   'cohort': {'app_sha': self.first}, 'actions': {'run_id': '40', 'run_attempt': '1'},
+                   'github_release': {'url': 'release-url'}}
+        with patch('package_release.product_status.workflow_runs', return_value=[run]), \
+                patch('package_release.product_status.run_artifact', return_value=receipt):
+            observed = nightly_publication('gaofeng21cn/one-person-lab-app', 'release-nightly.yml',
+                                           readback, None)
+        self.assertEqual(observed['status'], 'publication_verified')
+        self.assertEqual(observed['tag'], readback['tag'])
+
+    def test_nightly_publication_rejects_stale_or_unbound_receipt(self):
+        run = {'id': 40, 'run_attempt': 1, 'head_sha': self.first, 'status': 'completed',
+               'conclusion': 'success', 'html_url': 'run-url'}
+        readback = {'source_commit': self.first, 'tag': 'v26.11.27-nightly', 'url': 'release-url'}
+        receipt = {'schema': 'opl_standard_nightly_publication_receipt.v1', 'status': 'published',
+                   'tag': readback['tag'], 'repository': 'gaofeng21cn/one-person-lab-app',
+                   'cohort': {'app_sha': self.first}, 'actions': {'run_id': '39', 'run_attempt': '1'},
+                   'github_release': {'url': 'release-url'}}
+        with patch('package_release.product_status.workflow_runs', return_value=[run]), \
+                patch('package_release.product_status.run_artifact', return_value=receipt):
+            observed = nightly_publication('gaofeng21cn/one-person-lab-app', 'release-nightly.yml',
+                                           readback, None)
+        self.assertIsNone(observed)
 
     def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
         source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}

@@ -142,11 +142,14 @@ def detect(args):
             blocked.append({'package_id': pid, 'reason': str(exc)})
     dispatch = {'surface_kind': 'opl_package_publication_dispatch_plan.v1',
                 'source_run_id': os.getenv('GITHUB_RUN_ID', 'local'),
+                'selection_scope': 'selected' if args.package_id else 'all',
                 'workflow_source_commit': workflow_commit or controller_commit or commit,
                 'framework_source_commit': commit, 'status': 'publish_ready' if entries or private_entries else 'skipped',
                 'packages': entries + private_entries, 'ready_packages': entries,
                 'owner_managed_packages': private_entries, 'needs_owner_release': [],
                 'blocked_packages': blocked + plan['violations']}
+    if args.package_id:
+        dispatch['selected_package_ids'] = list(args.package_id)
     if catalog_commit:
         dispatch['catalog_source_commit'] = catalog_commit
         for entry in dispatch['packages']:
