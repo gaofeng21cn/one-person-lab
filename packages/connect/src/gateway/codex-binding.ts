@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -6,9 +7,19 @@ import { isRecord } from '@opl/core';
 import { readConfig, removeEmptyProviderTable, setConfigValue } from './codex-toml.ts';
 import { OPL_GATEWAY_INFERENCE_BASE_URL, type GatewayCodexBinding } from './types.ts';
 
+const clientCodexHome = new AsyncLocalStorage<string>();
+
+export function resolveCodexHome() {
+  return clientCodexHome.getStore() ?? path.resolve(process.env.CODEX_HOME?.trim()
+    || path.join(process.env.HOME?.trim() || os.homedir(), '.codex'));
+}
+
+export function withClientCodexHome<T>(codexHome: string, run: () => T): T {
+  return clientCodexHome.run(codexHome, run);
+}
+
 function configFile() {
-  const codexHome = process.env.CODEX_HOME?.trim() || path.join(process.env.HOME?.trim() || os.homedir(), '.codex');
-  return path.resolve(codexHome, 'config.toml');
+  return path.join(resolveCodexHome(), 'config.toml');
 }
 
 function readFile(file: string) {

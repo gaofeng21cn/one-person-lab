@@ -393,9 +393,10 @@ export class TestRpcClient {
     });
   }
 
-  async handshake(clientKind = 'opl_app', apiVersion?: string): Promise<Record<string, unknown>> {
+  async handshake(clientKind = 'opl_app', apiVersion?: string, codexHome?: string): Promise<Record<string, unknown>> {
     const params: Record<string, unknown> = { token: this.#token, client_kind: clientKind };
     if (apiVersion !== undefined) params.api_version = apiVersion;
+    if (codexHome !== undefined) params.codex_home = codexHome;
     const res = (await this.call('daemon.handshake', params)) as Record<string, unknown>;
     this.handshakeResult = res;
     return res;
