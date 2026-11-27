@@ -11,6 +11,7 @@ import {
   type OfficialPackageCatalogEntry,
 } from '../src/distribution/official-package-catalog.ts';
 import { resolveOciArtifact } from '../src/distribution/registry-client.ts';
+import { createOfficialPackageResolver } from '../src/distribution/official-package-source.ts';
 
 const packageId = 'sample-agent';
 const repository = 'https://github.com/gaofeng21cn/example-repo.git';
@@ -22,7 +23,7 @@ const entry: OfficialPackageCatalogEntry = {
   version: '1.2.3',
   manifest: {
     package_id: packageId, source_repo: repository, version: '1.2.3',
-    codex_surface: { configured_codex_plugin_carrier: { publication_ref: publication } },
+    codex_surface: { carrier_source_commit: commit, configured_codex_plugin_carrier: { publication_ref: publication } },
   },
   payload: { package_id: packageId, source_repo: repository, source_commit: commit, package_version: '1.2.3' },
 };
@@ -126,4 +127,71 @@ test('selects a numbered v2 OCI tag and pins the archive using the immutable pay
   assert.throws(() => officialPackageInstallSource({
     ...candidate, manifest: { ...candidate.manifest, v2_release: { ...facet, payload_manifest_ref: '../../different.json' } },
   }, null), /Invalid Catalog v2 release/);
+});
+
+test('official resolver retries only a missing public v2 OCI manifest, using the exact v1 tag', async () => {
+  const version = '2.4.0';
+  const digest = 'sha256:' + 'c'.repeat(64);
+  const bytes = JSON.stringify({
+    package_format: 'v2', package_id: packageId, package_version: version, source_commit: commit,
+    source_repo: repository, archive_sha256: digest, content_lock: { digest },
+  });
+  const candidate = {
+    ...entry,
+    manifest: {
+      ...entry.manifest,
+      v2_release: {
+        version, source_commit: commit, payload_manifest_ref: `payloads/${packageId}-${version}.json`,
+        payload_sha256: 'sha256:' + createHash('sha256').update(bytes).digest('hex'),
+      },
+    },
+  };
+  const missing = () => Response.json({ errors: [{ code: 'MANIFEST_UNKNOWN' }] }, { status: 404 });
+  const legacyReached = new Error('Reached the exact legacy manifest');
+  type ExpectedFailure = { message: string | RegExp };
+  const cases: Array<{
+    response?: () => Response;
+    expected: ExpectedFailure;
+    exactPackageId?: string;
+    tokenStatus?: number;
+    payloadStatus?: number;
+    requests: string[];
+  }> = [
+    { response: missing, expected: legacyReached, requests: [version, '1.2.3'] },
+    { response: missing, exactPackageId: packageId, expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
+    { response: () => new Response('', { status: 404 }), expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
+    { response: () => Response.json({ errors: [{ code: 'DENIED' }] }, { status: 404 }), expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
+    { response: () => new Response('', { status: 403 }), expected: { message: /manifest fetch failed with HTTP 403/ }, requests: [version] },
+    { response: () => new Response('', { status: 500 }), expected: { message: /manifest fetch failed with HTTP 500/ }, requests: [version] },
+    { response: () => { throw new Error('Registry network failure'); }, expected: { message: /network failure/ }, requests: [version] },
+    { tokenStatus: 404, expected: { message: /token request failed with HTTP 404/ }, requests: [] },
+    { payloadStatus: 404, expected: { message: /Catalog v2 payload.*HTTP 404/ }, requests: [] },
+    {
+      response: () => Response.json({ layers: [{
+        mediaType: 'application/vnd.onepersonlab.package.source.v2+gzip',
+        digest: 'sha256:' + 'b'.repeat(64), size: 128,
+      }] }),
+      expected: { message: /OCI digest mismatch/ }, requests: [version],
+    },
+  ];
+  for (const scenario of cases) {
+    const requestedVersions: string[] = [];
+    const resolve = createOfficialPackageResolver({
+      runtimeRoot: null,
+      exactPackageId: scenario.exactPackageId,
+      fetchImpl: async url => {
+        const address = new URL(String(url));
+        if (address.pathname.endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [candidate] });
+        if (address.pathname.endsWith(`/${packageId}-${version}.json`)) return new Response(bytes, { status: scenario.payloadStatus });
+        if (address.pathname === '/token') return Response.json({ token: 'fixture-token' }, { status: scenario.tokenStatus });
+        const selected = address.pathname.split('/').pop()!;
+        requestedVersions.push(selected);
+        if (selected === '1.2.3') throw legacyReached;
+        assert.equal(selected, version);
+        return scenario.response!();
+      },
+    });
+    await assert.rejects(resolve(packageId), scenario.expected);
+    assert.deepEqual(requestedVersions, scenario.requests);
+  }
 });

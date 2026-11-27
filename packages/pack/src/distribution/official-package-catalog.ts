@@ -83,7 +83,11 @@ export async function readOfficialPackageCatalog(
   return entries;
 }
 
-export function officialPackageInstallSource(entry: OfficialPackageCatalogEntry, runtimeRoot: string | null): InstallSourceSpec {
+export function officialPackageInstallSource(
+  entry: OfficialPackageCatalogEntry,
+  runtimeRoot: string | null,
+  generation: 'preferred' | 'legacy' = 'preferred',
+): InstallSourceSpec {
   const { manifest, package_id: packageId } = entry;
   if (entry.visibility !== 'public' || !manifest || manifest.package_id !== packageId) {
     throw new PackError('PACK_NOT_FOUND', `Official public Package source unavailable for '${packageId}'.`);
@@ -97,7 +101,7 @@ export function officialPackageInstallSource(entry: OfficialPackageCatalogEntry,
     if (registry !== 'ghcr.io' || repository !== `gaofeng21cn/one-person-lab-packages/${packageId}`) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' points outside its registered Package repository.`);
     }
-    const release = selectedV2Release(entry);
+    const release = generation === 'preferred' ? selectedV2Release(entry) : null;
     const version = release?.version ?? entry.version;
     if (!version || !catalogVersion.test(version)) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' has no selected Catalog version.`);
