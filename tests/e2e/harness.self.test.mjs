@@ -25,6 +25,7 @@ import {
   createLocalOciDir,
   createLocalPackageArchive,
   escalateProviderCapability,
+  assertCodexPluginPayload,
   readCodexMarketplaceProjection,
   sha256File,
   tamperBindTokenSignature,
@@ -770,16 +771,13 @@ if (args[0] === "sleep") { setInterval(() => {}, 10000); }
       const mpPluginDir = path.join(mpDir, "plugins", "med-autoscience");
       fs.mkdirSync(path.join(mpPluginDir, ".codex-plugin"), { recursive: true });
       fs.writeFileSync(path.join(mpDir, "marketplace.json"), JSON.stringify({ name: "opl-local", plugins: [{ name: "med-autoscience" }] }), "utf8");
-      fs.writeFileSync(path.join(mpPluginDir, ".codex-plugin/plugin.json"), JSON.stringify({ name: "med-autoscience", version: "0.4.0" }), "utf8");
-      fs.symlinkSync(ag.skillsDir, path.join(mpPluginDir, "skills"), "dir");
-      fs.symlinkSync(ag.assetsDir, path.join(mpPluginDir, "assets"), "dir");
+      fs.writeFileSync(path.join(mpPluginDir, ".codex-plugin/plugin.json"), JSON.stringify({ name: "med-autoscience", version: "0.4.0", interface: { logo: ag.manifest.identity.icon } }), "utf8");
+      fs.cpSync(ag.skillsDir, path.join(mpPluginDir, "skills"), { recursive: true });
+      fs.cpSync(ag.assetsDir, path.join(mpPluginDir, "assets"), { recursive: true });
       const proj = readCodexMarketplaceProjection(fakeOplHome, "med-autoscience");
       assert.equal(proj.marketplace.name, "opl-local");
       assert.equal(proj.pluginJson.name, "med-autoscience");
-      assert.equal(proj.skillsIsSymlink, true);
-      assert.equal(proj.skillsRealPath, fs.realpathSync(ag.skillsDir));
-      assert.equal(proj.assetsIsSymlink, true);
-      assert.equal(proj.assetsRealPath, fs.realpathSync(ag.assetsDir));
+      assertCodexPluginPayload(proj, ag.dir);
     });
 
     it("preserves 0755 modes across tgz/OCI tar extraction, blocks symlink escapes, excludes in-package outDir, and handles USTAR >100B prefix", () => {

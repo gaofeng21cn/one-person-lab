@@ -255,7 +255,7 @@ async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
   assert.equal(built.code, 0, `pack build failed:\n${built.stdout}\n${built.stderr}`);
   assert.equal(fs.existsSync(path.join(tmpMas, 'opl-release.lock.json')), true);
 
-  // 3. pack link projects .codex-plugin/plugin.json + symlinks into OPL_HOME/carriers/codex-marketplace
+  // 3. pack link projects the manifest and cacheable Package files into OPL_HOME/carriers/codex-marketplace
   const linked = await sb.spawnCli(['pack', 'link', tmpMas, '--json']);
   assert.equal(linked.code, 0, `pack link failed:\n${linked.stdout}\n${linked.stderr}`);
 
@@ -269,13 +269,12 @@ async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
   assert.equal(pluginJson.name, 'med-autoscience');
   assert.ok(pluginJson.interface?.defaultPrompt && pluginJson.interface.defaultPrompt.length > 0);
 
-  const skillsLink = path.join(pluginDir, 'skills', 'med-autoscience');
-  const assetsLink = path.join(pluginDir, 'assets');
-  assert.equal(fs.lstatSync(skillsLink).isSymbolicLink(), true);
-  assert.equal(fs.lstatSync(assetsLink).isSymbolicLink(), true);
   assert.ok(pluginJson.interface?.logo, 'Expected interface.logo in projected .codex-plugin/plugin.json');
-  const logoRel = pluginJson.interface.logo.replace(/^\.\//, '');
-  assert.equal(fs.existsSync(path.join(pluginDir, logoRel)), true, `Expected projected logo at ${logoRel}`);
+  for (const relativePath of ['skills/med-autoscience/SKILL.md', pluginJson.interface.logo]) {
+    const projected = path.join(pluginDir, relativePath);
+    assert.equal(fs.realpathSync(projected), path.join(fs.realpathSync(pluginDir), relativePath));
+    assert.deepEqual(fs.readFileSync(projected), fs.readFileSync(path.join(tmpMas, relativePath)));
+  }
 
   // 4. pack sync codex verifies bidirectional codex app-server --stdio plugin/list readback
   const synced = await sb.spawnCli(['pack', 'sync', 'codex', '--json']);
@@ -295,7 +294,7 @@ async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
 }
 
 describe('Wave 1 Gate 1: MAS migrate-v1 + build + link + codex plugin/list parity', () => {
-  it('migrates self-contained synthetic MAS v1 fixture, builds lock, links zero-copy Codex plugin, verifies plugin/list parity, and unlinks cleanly', async () => {
+  it('migrates self-contained synthetic MAS v1 fixture, builds lock, projects cacheable Codex plugin files, verifies plugin/list parity, and unlinks cleanly', async () => {
     const sb = trackSandbox();
     const gate1Stub = writeGate1CodexProtocolStub(path.join(sb.root, 'gate1-bin', 'codex.mjs'), sb.oplHome);
     sb.env.OPL_CODEX_BIN = gate1Stub;
@@ -306,7 +305,7 @@ describe('Wave 1 Gate 1: MAS migrate-v1 + build + link + codex plugin/list parit
     await runGate1Flow(sb, tmpMas);
   });
 
-  it('migrates isolated real MAS checkout when present on disk, builds lock, links zero-copy Codex plugin, verifies plugin/list parity, and unlinks cleanly', async (t) => {
+  it('migrates isolated real MAS checkout when present on disk, builds lock, projects cacheable Codex plugin files, verifies plugin/list parity, and unlinks cleanly', async (t) => {
     const realMasDir = resolveRealMasDir();
     if (!realMasDir || !fs.existsSync(realMasDir)) {
       t.skip('Optional external med-autoscience checkout not present on disk');

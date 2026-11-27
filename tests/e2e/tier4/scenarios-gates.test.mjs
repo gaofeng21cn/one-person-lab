@@ -14,6 +14,7 @@ import {
   buildObsidianVaultDir,
   buildV2Package,
   createLocalPackageArchive,
+  assertCodexPluginPayload,
   readCodexMarketplaceProjection,
   tamperPackageFile,
 } from "../lib/fixtures.mjs";
@@ -470,13 +471,7 @@ describe("Tier 4 — Real-World Application Scenarios & Wave Gates", { concurren
       typeof (proj.pluginJson.interface.logo ?? proj.pluginJson.interface.icon) === "string",
       `Expected logo/icon in projected plugin.json interface: ${JSON.stringify(proj.pluginJson.interface)}`
     );
-    for (const skill of pkg.manifest.provides.skills) {
-      const link = path.join(proj.skillsLinkPath, skill.id);
-      assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
-      assert.equal(fs.realpathSync(link), fs.realpathSync(path.join(pkg.dir, skill.path)));
-    }
-    assert.equal(proj.assetsIsSymlink, true, "assets must be zero-copy symlink");
-    assert.equal(proj.assetsRealPath, fs.realpathSync(pkg.assetsDir));
+    assertCodexPluginPayload(proj, pkg.dir);
 
     const codexLogs = readStubLogs(sb, "codex");
     assert.ok(
@@ -1481,18 +1476,7 @@ with OplClient(session_file=${JSON.stringify(sb.sessionPath)}, client_kind="sdk_
       } else {
         assert.ok(proj.pluginJson, `Expected Codex plugin.json for ${expectedId}`);
         assert.equal(proj.pluginJson.name, effectivePluginName);
-        if (fs.existsSync(path.join(all8[key].dir, "skills"))) {
-          const hasSkillSymlink =
-            proj.skillsIsSymlink ||
-            (fs.existsSync(proj.skillsLinkPath) &&
-              fs.readdirSync(proj.skillsLinkPath).some((name) =>
-                fs.lstatSync(path.join(proj.skillsLinkPath, name)).isSymbolicLink()
-              ));
-          assert.equal(hasSkillSymlink, true, `Expected zero-copy skills symlink for ${expectedId}`);
-        }
-        if (fs.existsSync(path.join(all8[key].dir, "assets"))) {
-          assert.equal(proj.assetsIsSymlink, true, `Expected zero-copy assets symlink for ${expectedId}`);
-        }
+        assertCodexPluginPayload(proj, all8[key].dir);
       }
     }
 
