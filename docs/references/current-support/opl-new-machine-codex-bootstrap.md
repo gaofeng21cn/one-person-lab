@@ -1,12 +1,12 @@
 # OPL 新机器安装
 
-本文给出新 macOS/Linux 开发机的最短安装与验证路径。release version、Package 列表和 App artifact 必须从 owner current source读取。产品分工见 [项目概览](../../project.md#产品分层)，安装与发布 owner 见 [仓库地图](../../public/repo-map.md)。
+本文给出新 macOS/Linux 开发机的安装与验证路径。当前版本、Package 列表和 App 安装包由各自的发布方提供。产品分工见 [项目概览](../../project.md#产品分层)，安装与发布归属见 [仓库地图](../../public/repo-map.md)。
 
 ## 选择产品
 
-- 需要桌面体验：安装 One Person Lab App；App installer负责其 bundled runtime和shell。
+- 需要桌面体验：安装 One Person Lab App，使用随 App 提供的运行时和界面。
 - 需要 headless/CLI：安装 OPL Framework，启动并检查本机 v2 daemon。
-- 需要专业 Agent/capability：在 Base 就绪后，通过对应 owner声明的 native carrier安装 Package。
+- 需要专业 Agent 或工具：在 Framework 就绪后，按该 Package 的发布说明安装所需能力。
 
 ## 安装 Framework
 
@@ -43,21 +43,17 @@ App installer 和发布资产归 [`one-person-lab-app`](https://github.com/gaofe
 curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main/install.sh | bash
 ```
 
-安装后从 Applications 启动并完成 App owner定义的 first-run。Framework 命令通过不能替代 App 签名、安装和真实启动验证。
-
-Full 可向 Framework 首装提供 `OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL` 和
-`OPL_FIRST_RUN_CODEX_PLATFORM_PACKAGE_TARBALL`。没有 managed Codex 时，Framework
-直接从配对归档物化 launcher 与平台二进制，并经版本、App Server 协议验证后激活，
-无需 npm registry 或 Gateway。App 负责归档与其发布 manifest 的摘要校验；Framework
-核对包身份和配对版本。已有安装的更新继续从上游解析最新稳定版，不沿用首装归档。
+在 macOS 上，安装器优先选择同一发行版的 Full 安装包，并在确认该发行版没有发布 Full 时使用 Standard。装好后从 Applications 启动 App，按界面完成首次设置。
 
 ## 安装 Packages
 
-`opl pack list` 查看本机 Package。按 Package owner 的说明取得 v2 制品或 OCI 引用后安装，并回读已安装的 Package：
+`opl pack list` 查看本机 Package。下例使用已下载的 v2 归档。把 `package_source` 和 `package_id` 改为发布说明中的实际归档路径和 Package ID。若发布方提供 OCI 引用，直接将该引用赋给 `package_source`。
 
 ```bash
-opl pack install <owner-package-source> --json
-opl pack inspect <package-id> --json
+package_source="./example-package.tar.gz"
+package_id="example-package"
+opl pack install "$package_source" --json
+opl pack inspect "$package_id" --json
 ```
 
 App official profile 和用户选择决定实际 Package 集合。Framework 根据已安装的描述符发现 Agent、Skill、Tool、Plugin、MCP 和 entrypoint，并向 App 投影入口。

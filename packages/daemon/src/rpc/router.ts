@@ -27,6 +27,8 @@ import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts'
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
 import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
+import { readCodexPersonalization, restoreCodexUserInstructions } from '../state/codex-personalization.ts';
+import { writeCodexUserInstructions } from '../state/codex-user-instructions.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
 import {
   coerceInstallSourceSpec,
@@ -131,17 +133,23 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   });
 
   // ---- app.* ----
+  const appState = (profile: 'fast' | 'full', conn: SocketConnectionState) => {
+    const trusted = conn.clientContext?.trusted_host;
+    const state = runtime.appStateCache.getState(profile, trusted ? runtime.paths.state_dir : undefined);
+    if (!trusted) return state;
+    return { ...state, app_state: { ...state.app_state, codex_personalization: readCodexPersonalization(runtime.packService) } };
+  };
   handlers.set('app.state.get', (params, conn) => {
     const rawProfile = pickString(params, 'profile') ?? 'fast';
     const profile = rawProfile === 'full' ? 'full' : 'fast';
-    return runtime.appStateCache.getState(profile, conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
+    return appState(profile, conn);
   });
 
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
   handlers.set('app.initialize.get', (_params, conn) => {
     const doc = runtime.doctor(true);
-    const state = runtime.appStateCache.getState('fast', conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
+    const state = appState('fast', conn);
     return {
       ...doc,
       state,
@@ -230,6 +238,17 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.contribution.execute', handleContributionExecute);
   handlers.set('app.action.execute', async (params, conn) => {
     const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef');
+    if (!pickString(params, 'package_id', 'packageId') &&
+        (actionId === 'codex_user_instructions_set' || actionId === 'codex_user_instructions_restore_opl_flow_default')) {
+      requireTrustedHost(conn, actionId);
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      const payload = pickRecord(params, 'payload') ?? {};
+      const result = actionId === 'codex_user_instructions_set'
+        ? writeCodexUserInstructions(runtime.paths.state_dir, payload, dryRun)
+        : restoreCodexUserInstructions(runtime.packService, runtime.paths.state_dir, payload, dryRun);
+      const execution = { action_id: actionId, dry_run: dryRun, status: dryRun ? 'preview' : 'executed', result };
+      return { ...execution, app_action_execution: execution };
+    }
     const action = connectionActions.find(entry => entry.action_id === actionId);
     if (!action || pickString(params, 'package_id', 'packageId')) return handleContributionExecute(params, conn);
     const context = requireTrustedHost(conn, action.action_id);

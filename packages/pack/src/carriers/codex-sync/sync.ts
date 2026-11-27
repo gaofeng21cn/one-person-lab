@@ -84,6 +84,17 @@ export async function codexPluginPresenceProblem(options: {
   if (plugin.source.type === 'local' && (!fs.existsSync(plugin.source.path) || absolute(plugin.source.path) !== absolute(projected))) {
     return `Codex plugin/list path mismatch for '${pluginId}'.`;
   }
+  const expected = manifest.provides?.skills?.filter((skill) => skill.exposure !== 'opt_in') ?? [];
+  if (expected.length && runner.readInstalledSkillPaths) {
+    const skillPaths = await runner.readInstalledSkillPaths(plugin.id, options.env);
+    const installed = new Set(skillPaths
+      .filter((file) => path.basename(file) === 'SKILL.md')
+      .map((file) => path.basename(path.dirname(file))));
+    const missing = expected.filter((skill) => !installed.has(skill.id));
+    if (missing.length) {
+      return `Codex skills/list is missing skills from '${pluginId}': ${missing.map((skill) => skill.id).join(', ')}.`;
+    }
+  }
   return null;
 }
 
