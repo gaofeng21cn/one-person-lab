@@ -19,7 +19,7 @@ def workflow_runs(repository, workflow, **filters):
 def run_summary(run):
     if run is None:
         return None
-    return {key: run[key] for key in ('id', 'status', 'conclusion', 'html_url', 'head_sha')}
+    return {key: run[key] for key in ('id', 'status', 'conclusion', 'html_url', 'head_sha', 'event') if key in run}
 
 
 def run_artifact(repository, run, name, member):
@@ -46,16 +46,26 @@ def run_artifact(repository, run, name, member):
         raise ReleaseError('Invalid Package evidence archive') from exc
 
 
-def dispatch_evidence(repository, detection):
+def dispatch_evidence(repository, detections):
+    remaining = {str(run['id']) for run in detections}
+    evidence = {}
+    incomplete = False
     candidates = workflow_runs(repository, 'daily-package-channel-publication.yml',
-                               created=f">={detection['created_at']}")
+                               created=f">={min(run['created_at'] for run in detections)}")
     for run in sorted(candidates, key=lambda row: row['id'], reverse=True):
         if run['event'] not in ('workflow_run', 'workflow_dispatch'):
             continue
-        result = run_artifact(repository, run, f"opl-package-dispatch-result-{run['id']}", 'dispatch-result.json')
-        if result and result['source_run_id'] == str(detection['id']):
-            return run_summary(run), {row['package_id']: row['status'] for row in result['packages']}
-    return None, {}
+        try:
+            result = run_artifact(repository, run, f"opl-package-dispatch-result-{run['id']}", 'dispatch-result.json')
+            source_id = result['source_run_id'] if result else None
+            if source_id in remaining:
+                evidence[source_id] = (run_summary(run), {row['package_id']: row['status'] for row in result['packages']})
+                remaining.remove(source_id)
+        except (ReleaseError, OSError, KeyError, ValueError, subprocess.TimeoutExpired):
+            incomplete = True
+        if not remaining:
+            break
+    return evidence, incomplete
 
 
 def public_status(repository, publishers, entry, row):
@@ -68,82 +78,127 @@ def public_status(repository, publishers, entry, row):
     row.update(version=version, source_commit=source_commit, publication_request_id=identity)
     title = f'Package {package_id} {version} / {identity}'
     matches = [run for run in publishers if run['display_title'] == title]
-    if not matches:
+    if matches:
+        publisher = max(matches, key=lambda run: run['id'])
+        row['publisher_run'] = run_summary(publisher)
+        if publisher['status'] != 'completed':
+            row['status'] = 'publisher_running'
+        elif publisher['conclusion'] != 'success':
+            row['status'] = 'publisher_failed'
+        else:
+            row['status'] = 'publication_unverified'
+    try:
+        channel = public_channel(package_id, repository.split('/')[0])
+    except (OSError, ReleaseError, ValueError, KeyError):
+        row['channel_observation'] = 'unavailable'
         return
-    publisher = max(matches, key=lambda run: run['id'])
-    row['publisher_run'] = run_summary(publisher)
-    if publisher['status'] != 'completed':
-        row.update(status='publisher_running')
-    elif publisher['conclusion'] != 'success':
-        row.update(status='publisher_failed')
-    else:
-        row.update(status='publication_unverified')
-        try:
-            channel = public_channel(package_id, repository.split('/')[0])
-        except (OSError, ReleaseError, ValueError):
-            return
-        fingerprint = channel.get('fingerprint') or {}
-        if fingerprint.get('package_version') == version and fingerprint.get('owner_source_commit') == source_commit:
-            row.update(status='publication_verified', digest=channel['digest'])
-        elif channel['status'] == 'present':
-            row.update(status='channel_differs')
+    fingerprint = channel.get('fingerprint') or {}
+    if fingerprint.get('package_version') == version and fingerprint.get('owner_source_commit') == source_commit:
+        row.update(status='publication_verified', digest=channel['digest'])
+    elif channel['status'] == 'present' and row['status'] == 'publication_unverified':
+        row['status'] = 'channel_differs'
 
 
 def daily_package_status(repository='gaofeng21cn/one-person-lab', *, window_start=None, window_end=None):
-    """Read a scheduled Package run and its exact dispatch and publication evidence."""
-    filters = {'event': 'schedule'}
+    """Combine Package outcomes from the exact successful daily runs in a window."""
+    filters = {}
     if window_start and window_end:
         filters['created'] = f'{window_start}..{window_end}'
     elif window_start:
         filters['created'] = f'>={window_start}'
     elif window_end:
         filters['created'] = f'<={window_end}'
-    runs = workflow_runs(repository, 'daily-package-channel.yml', **filters)
+    runs = []
+    for event in ('schedule', 'workflow_dispatch'):
+        runs.extend(workflow_runs(repository, 'daily-package-channel.yml', event=event, **filters))
+    runs = sorted({run['id']: run for run in runs}.values(), key=lambda run: run['id'])
     report = {'status': 'no_detection', 'detection_run': None, 'dispatch_run': None,
               'packages': [], 'blocked_packages': []}
     if not runs:
         return report
-    detection = max(runs, key=lambda row: row['id'])
+    detection = runs[-1]
     report['detection_run'] = run_summary(detection)
-    if detection['status'] != 'completed' or detection['conclusion'] != 'success':
-        report['status'] = 'detection_running' if detection['status'] != 'completed' else 'detection_failed'
-        return report
-    try:
-        plan = run_artifact(repository, detection, f"opl-daily-package-channel-candidate-{detection['id']}",
-                            'package-publication-dispatch-plan.json')
-    except (ReleaseError, subprocess.TimeoutExpired):
-        plan = None
-    if plan is None:
-        report['status'] = 'detection_unverified'
-        return report
-    if (plan['surface_kind'] != 'opl_package_publication_dispatch_plan.v1'
-            or plan['source_run_id'] != str(detection['id'])
-            or plan['workflow_source_commit'] != detection['head_sha']):
-        raise ReleaseError('Package plan does not bind to the selected detection run')
-    report.update(framework_source_commit=plan['framework_source_commit'],
-                  catalog_source_commit=plan.get('catalog_source_commit'))
+    if not filters:
+        runs = [detection]
 
-    try:
-        report['dispatch_run'], dispatch = dispatch_evidence(repository, detection)
-    except (ReleaseError, subprocess.TimeoutExpired):
-        report['dispatch_evidence'] = 'unavailable'
-        dispatch = {}
+    plans = []
+    unverified_runs = []
+    for run in runs:
+        if run['status'] != 'completed' or run['conclusion'] != 'success':
+            continue
+        try:
+            plan = run_artifact(repository, run, f"opl-daily-package-channel-candidate-{run['id']}",
+                                'package-publication-dispatch-plan.json')
+            if (not plan or plan.get('surface_kind') != 'opl_package_publication_dispatch_plan.v1'
+                    or plan.get('source_run_id') != str(run['id'])
+                    or plan.get('workflow_source_commit', plan.get('framework_source_commit')) != run['head_sha']
+                    or not isinstance(plan.get('packages'), list)
+                    or not isinstance(plan.get('blocked_packages'), list)):
+                raise ReleaseError('Package plan does not bind to its detection run')
+        except (ReleaseError, OSError, KeyError, ValueError, subprocess.TimeoutExpired):
+            unverified_runs.append(run_summary(run))
+            continue
+        plans.append((run, plan))
+    if unverified_runs:
+        report['unverified_runs'] = unverified_runs
+
+    selected = {}
+    for run, plan in plans:
+        # A covered Package may be unchanged and therefore absent from both result lists.
+        full_sweep = plan.get('selection_scope') == 'all'
+        selected_ids = plan.get('selected_package_ids')
+        if not isinstance(selected_ids, list):
+            selected_ids = []
+        for package_id, (_, _, blocked) in list(selected.items()):
+            if blocked and (full_sweep or package_id in selected_ids):
+                del selected[package_id]
+        for row in plan['packages']:
+            selected[row['package_id']] = (run, row, False)
+        for row in plan['blocked_packages']:
+            selected[row['package_id']] = (run, row, True)
+
+    dispatch_by_run = {}
+    if plans:
+        latest_run, latest_plan = plans[-1]
+        report.update(framework_source_commit=latest_plan['framework_source_commit'],
+                      catalog_source_commit=latest_plan.get('catalog_source_commit'))
+        relevant_runs = {run['id']: run for run, _, blocked in selected.values() if not blocked}
+        relevant_runs[latest_run['id']] = latest_run
+        try:
+            dispatch_by_run, incomplete = dispatch_evidence(repository, relevant_runs.values())
+            if incomplete:
+                report['dispatch_evidence'] = 'unavailable'
+        except (ReleaseError, OSError, KeyError, ValueError, subprocess.TimeoutExpired):
+            report['dispatch_evidence'] = 'unavailable'
+        report['dispatch_run'] = dispatch_by_run.get(str(latest_run['id']), (None, {}))[0]
+
     publishers = []
-    if any(entry['visibility'] == 'public' for entry in plan['packages']):
-        publishers = workflow_runs(repository, 'publish-package.yml', event='workflow_dispatch')
-    for entry in plan['packages']:
-        package_id = entry['package_id']
-        row = {'package_id': package_id, 'status': dispatch.get(package_id, 'dispatch_pending')}
+    if any(not blocked and entry['visibility'] == 'public' for _, entry, blocked in selected.values()):
+        try:
+            publishers = workflow_runs(repository, 'publish-package.yml', event='workflow_dispatch')
+        except (ReleaseError, OSError, KeyError, ValueError, subprocess.TimeoutExpired):
+            report['publisher_evidence'] = 'unavailable'
+    for package_id, (run, entry, blocked) in sorted(selected.items()):
+        row = {'package_id': package_id, 'detection_run': run_summary(run)}
+        if blocked:
+            # Owner diagnostics stay in the linked evidence.
+            report['blocked_packages'].append(dict(row, status='blocked'))
+            continue
+        dispatch_run, dispatch = dispatch_by_run.get(str(run['id']), (None, {}))
+        row.update(status=dispatch.get(package_id, 'dispatch_pending'), dispatch_run=dispatch_run)
         if entry['visibility'] == 'public':
             public_status(repository, publishers, entry, row)
         report['packages'].append(row)
 
-    # Report identity and stage only. Owner diagnostics remain in the linked evidence.
-    report['blocked_packages'] = [{'package_id': row['package_id'], 'status': 'blocked'}
-                                  for row in plan['blocked_packages']]
     statuses = {row['status'] for row in report['packages']}
-    if report['blocked_packages'] or statuses & {'dispatch_unresolved', 'publisher_failed'}:
+    if detection['status'] != 'completed':
+        report['status'] = 'detection_running'
+    elif detection['conclusion'] != 'success':
+        report['status'] = 'detection_failed'
+    elif report['blocked_packages'] or statuses & {'dispatch_unresolved', 'publisher_failed'}:
         report['status'] = 'blocked'
+    elif unverified_runs:
+        report['status'] = 'detection_unverified'
     elif statuses == {'publication_verified'}:
         report['status'] = 'publication_verified'
     elif statuses:

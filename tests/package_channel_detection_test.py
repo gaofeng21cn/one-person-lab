@@ -106,7 +106,7 @@ class MixedPackageChannelTests(unittest.TestCase):
                 payload_path.write_text(payload_path.read_text() + '\n')
         write(self.catalog / 'packages' / 'agents' / f'{package_id}.json', manifest)
 
-    def make_plan(self):
+    def make_plan(self, package_ids=None):
         def fake_run(command, **kwargs):
             if '-e' in command:
                 return SimpleNamespace(stdout=json.dumps(self.summary), returncode=0)
@@ -128,7 +128,7 @@ class MixedPackageChannelTests(unittest.TestCase):
         args = SimpleNamespace(
             framework_root=self.framework, catalog_root=self.catalog, controller_source_commit=CONTROLLER,
             output_root=self.output, preparation=self.preparation, repository='gaofeng21cn/one-person-lab',
-            package_id=None,
+            package_id=package_ids,
         )
         with patch.dict(detector.os.environ, {'GITHUB_SHA': CONTROLLER, 'GITHUB_RUN_ID': '42'}), \
              patch.object(detector, 'git', side_effect=[LEGACY, CATALOG]), \
@@ -148,6 +148,8 @@ class MixedPackageChannelTests(unittest.TestCase):
         self.assertEqual(plan['framework_source_commit'], LEGACY)
         self.assertEqual(plan['workflow_source_commit'], CONTROLLER)
         self.assertEqual(plan['catalog_source_commit'], CATALOG)
+        self.assertEqual(plan['selection_scope'], 'all')
+        self.assertNotIn('selected_package_ids', plan)
         entries = {row['package_id']: row for row in plan['packages']}
         self.assertEqual(set(entries), {'classic', 'modern', 'restricted', 'restricted-v2'})
         self.assertEqual(entries['classic']['expected_framework_source_commit'], LEGACY)
@@ -208,3 +210,11 @@ class MixedPackageChannelTests(unittest.TestCase):
         self.assertEqual(len(private_v2_calls), 1)
         self.assertNotIn('expected_framework_source_commit', private_v2_calls[0])
         self.assertEqual(private_v2_calls[0]['expected_catalog_source_commit'], CATALOG)
+
+    def test_selected_package_plan_records_its_exact_scope(self):
+        self.write_package('classic')
+        self.write_package('modern', v2=True)
+        plan = self.make_plan(package_ids=['modern'])
+        self.assertEqual(plan['selection_scope'], 'selected')
+        self.assertEqual(plan['selected_package_ids'], ['modern'])
+        self.assertEqual([row['package_id'] for row in plan['packages']], ['modern'])

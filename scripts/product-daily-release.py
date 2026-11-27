@@ -58,6 +58,10 @@ def settings(root):
         for command in value.get(stage, []):
             if not isinstance(command, list) or not command or not all(isinstance(x, str) for x in command):
                 raise ReleaseError('Release commands must be argument arrays')
+    title = value.get('publisher_title_from_tag')
+    if title is not None and (not isinstance(title, str) or title.count('{tag}') != 1
+                              or not re.fullmatch(r'[^{}]+\{tag\}[^{}]*', title)):
+        raise ReleaseError('Recovery publisher title must contain one product tag placeholder')
     for key in ('tag_prefix', 'tag_suffix'):
         if not re.fullmatch(r'[A-Za-z0-9._-]*', value.get(key, '')):
             raise ReleaseError('Invalid product tag format')
@@ -123,6 +127,25 @@ def delivery_changed(root, base, config):
     return result.returncode == 1
 
 
+def preceding_candidate(root, config, channel, version):
+    prefix = re.escape(config.get('tag_prefix', 'v'))
+    suffix = re.escape(config.get('tag_suffix', ''))
+    number = r'(?:0|[1-9][0-9]*)'
+    pattern = re.compile(prefix + '(' + r'\.'.join([number] * 3) + ')' + suffix)
+    lower = version_tuple(channel['version']) if channel else (-1, -1, -1)
+    upper = version_tuple(version)
+    candidates = []
+    for tag in git(root, 'tag', '--list', '--merged', 'HEAD').splitlines():
+        if match := pattern.fullmatch(tag):
+            current = version_tuple(match[1])
+            if lower < current < upper:
+                candidates.append((current, tag))
+    if candidates:
+        _, tag = max(candidates)
+        return {'tag': tag, 'source_commit': git(root, 'rev-parse', f'refs/tags/{tag}^{{commit}}')}
+    return None
+
+
 def plan(root, config, channel):
     source = git(root, 'rev-parse', 'HEAD')
     current = current_version(root, config)
@@ -143,6 +166,7 @@ def plan(root, config, channel):
         existing = run(['git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{commit}}'], cwd=root, check=False)
         if existing.returncode:
             result = {'status': 'needs_release', 'version': current, 'tag': tag, 'source_commit': source}
+            previous_candidate = previous_candidate or preceding_candidate(root, config, channel, current)
             if previous_candidate:
                 result['previous_candidate'] = previous_candidate
             return result
