@@ -11,7 +11,7 @@ const timeoutMs = 8_000;
 
 type VersionCheck = { signature: string; version: string | null };
 let lastVersionCheck: VersionCheck | undefined;
-const startupChecks = new Set<string>();
+const startupChecks = new Map<string, Promise<boolean>>();
 
 function binarySignature(binaryPath: string): string | undefined {
   const stat = fs.statSync(binaryPath, { bigint: true, throwIfNoEntry: false });
@@ -29,13 +29,26 @@ export function codexStartupReady(env: NodeJS.ProcessEnv = process.env): boolean
     if (!signature) return false;
     if (lastVersionCheck?.signature === signature) return lastVersionCheck.version !== null;
     if (!startupChecks.has(signature)) {
-      startupChecks.add(signature);
-      void checkCodexExecutable(candidate.path, env).catch(() => false).finally(() => startupChecks.delete(signature));
+      const pending = checkCodexExecutable(candidate.path, env)
+        .catch(() => false)
+        .finally(() => startupChecks.delete(signature));
+      startupChecks.set(signature, pending);
     }
     return false;
   } catch {
     return false;
   }
+}
+
+export async function waitForCodexStartupProbe(env: NodeJS.ProcessEnv): Promise<void> {
+  let signature: string | undefined;
+  try {
+    const candidate = resolveCodexBinary(undefined, env);
+    if (candidate) signature = binarySignature(candidate.path);
+  } catch {
+    // An invalid executable cannot have started a version probe for this selection.
+  }
+  if (signature) await startupChecks.get(signature);
 }
 
 export function observedCodexVersion(binaryPath: string): string | null {

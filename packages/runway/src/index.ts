@@ -74,7 +74,7 @@ export {
   type TerminateProcessResult,
 } from './executors/spi.ts';
 
-export { codexStartupReady, observedCodexVersion } from './executors/codex/runtime-probe.ts';
+export { codexStartupReady, observedCodexVersion, waitForCodexStartupProbe } from './executors/codex/runtime-probe.ts';
 export { activateCodexRuntime, ensureCodexRuntime, readActiveCodexPath } from './executors/codex/runtime-install.ts';
 
 export { ExecutorRegistry } from './executors/registry.ts';
