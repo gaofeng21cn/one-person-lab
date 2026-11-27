@@ -46,6 +46,10 @@ OPL Link companion server 只由 Studio 的 `opl-host-core` 托管。Framework �
 
 当活跃 Catalog Package 全部完成 `opl.package.v2` 迁移后，删除固定的 pre-v2 发布工具提交和 runtime v1→v2 adapter。过渡实现不能成为永久的 resolver、currentness 或发布入口。
 
+## 跨产品发布编排与 Framework 解耦
+
+`one-person-lab`（Framework v2）、`opl-catalog`（只读消费者软件目录信任根，仅保存静态目录数据与 attestation，不挂载跨仓写私钥）与 `opl-release`（横向发布交付平台：统一 `.opl-release.json`、`opl.release-receipt.v1` 标准回执、可复用发布工作流与纯只读全景状态回读）分属三个正交职责。`one-person-lab` 只负责自身运行时及其 `publish-framework.yml` 发布通道，禁止继续在 Framework 内新增各产品私有的状态特判（例如按 `product_id` 硬编码分支）、跨产品发布工作流或固定产品清单；现存暂驻脚本待活跃包完成 `opl.package.v2` 收口后整批迁出。
+
 ## 退役的产品面
 
 Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback 和旧工作流 `provider_*` 控制不属于 v2 产品面。

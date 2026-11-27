@@ -62,6 +62,7 @@
 35. OPL Link companion 的 server owner 是 Studio `opl-host-core`；Framework 与 `@opl/connect` 只维护 Gateway companion authorization，不得创建第二 companion host。
 36. 活跃 Catalog Package 完成 `opl.package.v2` 迁移后，必须删除 pre-v2 发布工具 pin 和 v1→v2 runtime adapter，不保留永久双轨执行链。
 37. v2 只保留只读 `opl_base` 当前版本投影和公共 Catalog `source_refresh`；Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback 及旧工作流 `provider_*` 控制不属于受支持的 Framework surface。
+38. `one-person-lab` 只持有 Framework 自身运行时与发布（`publish-framework.yml`），不再吸纳新的跨产品发布编排、产品私有回执解析或固定产品发布清单；横向发布流水线与全景状态回读归专职交付平台 `opl-release`，软件目录数据归只读信任根 `opl-catalog`。
 
 共同生命周期与保留规则由[知识来源与记忆政策](./policies/knowledge-source-and-memory-policy.md)持有。
 
