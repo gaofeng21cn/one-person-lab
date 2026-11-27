@@ -36,7 +36,7 @@ env:
 jobs:
   detect-package-channel-change:
     name: Prepare owner versions and detect independent channels
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.OPL_RELEASE_CENTRAL_DAILY != 'true')
     concurrency:
       group: opl-daily-main-${{ github.repository }}
       cancel-in-progress: false

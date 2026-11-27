@@ -174,7 +174,7 @@ annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库
 把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
-`product-release.json` 的 `package` lane 声明中央每日派发入口。Framework 核对 Package Release GitHub App 的数字身份、`opl-release` 主线定时任务的首次运行及历史派发，再进入现有完整扫描。切换中央调度前，Framework 定时入口继续运行；按包指定的手动恢复也沿用同一工作流。
+`product-release.json` 的 `package` lane 声明中央每日派发入口。Framework 核对 Package Release GitHub App 的数字身份、`opl-release` 主线定时任务的首次运行及历史派发，再进入现有完整扫描。中央派发验收后，将 Framework 仓库变量 `OPL_RELEASE_CENTRAL_DAILY` 设为 `true`，即可跳过本地定时运行。按包指定的手动恢复沿用同一工作流。
 
 `publication_channel_admission=retired` 停止该 Package 的新发布、默认注册和安装来源，
 同时保留已有安装的身份、私有访问策略及原生 carrier 管理。退休元数据不形成新的

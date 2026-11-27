@@ -13,7 +13,7 @@ CONTROLLER_REPOSITORY = 'gaofeng21cn/opl-release'
 CONTROLLER_WORKFLOW = '.github/workflows/control-daily-releases.yml'
 RECEIVER_REPOSITORY = 'gaofeng21cn/one-person-lab'
 RECEIVER_WORKFLOW = 'daily-package-channel.yml'
-RELEASE_BOT_ID = 173561466
+RELEASE_BOT_ID = 356454848
 
 
 def verify_dispatch(environ):

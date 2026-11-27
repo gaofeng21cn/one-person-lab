@@ -64,14 +64,14 @@ class PackageDailyControlTests(unittest.TestCase):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
         self.payload = Path(directory.name) / 'event.json'
-        self.payload.write_text(json.dumps({'sender': {'id': 173561466}}))
+        self.payload.write_text(json.dumps({'sender': {'id': 356454848}}))
         self.env = {
             'OPL_RELEASE_CONTROL_RUN_ID': '21',
             'GITHUB_EVENT_NAME': 'workflow_dispatch',
             'GITHUB_REPOSITORY': 'gaofeng21cn/one-person-lab',
             'GITHUB_REF': 'refs/heads/main',
             'GITHUB_RUN_ATTEMPT': '1',
-            'GITHUB_ACTOR_ID': '173561466',
+            'GITHUB_ACTOR_ID': '356454848',
             'GITHUB_EVENT_PATH': str(self.payload),
             'GITHUB_RUN_NUMBER': '8',
         }
@@ -90,7 +90,7 @@ class PackageDailyControlTests(unittest.TestCase):
         self.receiver = {
             'run_number': 8,
             'display_title': 'Daily OPL Package Channel [opl-release:21]',
-            'actor': {'id': 173561466},
+            'actor': {'id': 356454848},
         }
 
     def github_responses(self, *runs):
@@ -114,12 +114,12 @@ class PackageDailyControlTests(unittest.TestCase):
                 daily_control.verify_dispatch(self.env)
 
     def test_rejects_untrusted_delivery_context_before_api_calls(self):
-        self.payload.write_text(json.dumps({'sender': {'id': 5626387}}))
+        self.payload.write_text(json.dumps({'sender': {'id': 173561466}}))
         with patch.object(daily_control, 'run') as api:
             with self.assertRaisesRegex(ReleaseError, 'GitHub App'):
                 daily_control.verify_dispatch(self.env)
-            self.payload.write_text(json.dumps({'sender': {'id': 173561466}}))
-            for key, value in {'GITHUB_ACTOR_ID': '5626387', 'GITHUB_RUN_ATTEMPT': '2',
+            self.payload.write_text(json.dumps({'sender': {'id': 356454848}}))
+            for key, value in {'GITHUB_ACTOR_ID': '173561466', 'GITHUB_RUN_ATTEMPT': '2',
                                'GITHUB_REF': 'refs/heads/topic', 'SELECTED_PACKAGE': 'example'}.items():
                 with self.subTest(key=key), self.assertRaises(ReleaseError):
                     daily_control.verify_dispatch(dict(self.env, **{key: value}))
