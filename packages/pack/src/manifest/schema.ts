@@ -164,6 +164,7 @@ export const PackageDependencySchema = z.strictObject({
   optional: z.boolean().optional(),
   presence: z.enum(['required', 'optional']).optional(),
   required_capabilities: z.array(ScopedIdSchema).optional(),
+  required_module_ids: z.array(ScopedIdSchema).optional(),
 });
 
 export const RuntimeDependencySchema = z.strictObject({
@@ -285,6 +286,7 @@ export const OplPackageManifestV2Schema = z
       .optional(),
     provides: z
       .strictObject({
+        module_ids: z.array(ScopedIdSchema).optional(),
         agent: z
           .strictObject({
             stages_ref: RelativePosixPathSchema.optional(),

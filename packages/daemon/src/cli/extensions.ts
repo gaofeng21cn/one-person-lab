@@ -60,10 +60,8 @@ async function listInstalledEnabledPackages(stateDir?: string): Promise<RawInsta
 }
 
 export async function discoverCliExtensions(stateDir?: string): Promise<CliExtensionDescriptor[]> {
-  let pkgs = await listInstalledEnabledPackages(stateDir);
-  if (pkgs.length === 0 && stateDir) {
-    pkgs = await listInstalledEnabledPackages(undefined);
-  }
+  const pkgs = await listInstalledEnabledPackages(stateDir);
+  const env = extensionEnvironment(stateDir);
   const discovered: CliExtensionDescriptor[] = [];
 
   for (const pkg of pkgs) {
@@ -111,7 +109,7 @@ export async function discoverCliExtensions(stateDir?: string): Promise<CliExten
           const probed = (await runEsmEntrypoint(pkg.install_path, ext.entrypoint, 'probe_cli_ext', {
             package_id: pkg.package_id,
             namespace: ext.namespace,
-          })) as Record<string, unknown>;
+          }, { env })) as Record<string, unknown>;
           if (Array.isArray(probed.commands)) {
             commands = probed.commands.filter((c): c is string => typeof c === 'string');
           }
@@ -137,13 +135,19 @@ export async function discoverCliExtensions(stateDir?: string): Promise<CliExten
   return discovered;
 }
 
+function extensionEnvironment(stateDir?: string): NodeJS.ProcessEnv {
+  return stateDir ? { ...process.env, OPL_STATE_DIR: resolveStatePaths({ stateDir }).state_dir } : process.env;
+}
+
 export async function invokeCliExtension(
   ext: CliExtensionDescriptor,
   command: string,
   args: readonly string[],
   options: Record<string, unknown>,
+  stateDir?: string,
 ): Promise<unknown> {
   const callerCwd = process.cwd();
+  const env = extensionEnvironment(stateDir);
   if (ext.entrypoint.kind === 'cli') {
     return runCliEntrypoint(
       ext.install_path,
@@ -156,7 +160,7 @@ export async function invokeCliExtension(
       },
       {
         extraArgs: [command, ...args],
-        env: { ...process.env, OPL_CALLER_CWD: callerCwd },
+        env: { ...env, OPL_CALLER_CWD: callerCwd },
       },
     );
   }
@@ -174,5 +178,5 @@ export async function invokeCliExtension(
     command,
     args: [...args],
     options,
-  });
+  }, { env });
 }

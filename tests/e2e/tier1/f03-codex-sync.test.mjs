@@ -7,6 +7,7 @@ import { runCliJson } from "../lib/cli.mjs";
 import {
   buildV2Package,
   createLocalPackageArchive,
+  assertCodexPluginPayload,
   readCodexMarketplaceProjection,
 } from "../lib/fixtures.mjs";
 import { createSandbox } from "../lib/sandbox.mjs";
@@ -37,7 +38,7 @@ afterEach(async () => {
 });
 
 describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () => {
-  it("T1-F3-01: opl pack link creates .codex-plugin/plugin.json and zero-copy skills & assets symlinks", async () => {
+  it("T1-F3-01: opl pack link creates .codex-plugin/plugin.json with cacheable skill and icon files", async () => {
     const sb = trackSandbox();
     await sb.startDaemon();
 
@@ -58,10 +59,7 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
       "Expected marketplace.json to include med-autoscience"
     );
     assert.ok(proj.pluginJson, "Expected .codex-plugin/plugin.json to exist");
-    assert.equal(proj.skillsIsSymlink, true, "skills must be a zero-copy symlink");
-    assert.equal(proj.skillsRealPath, fs.realpathSync(pkg.skillsDir));
-    assert.equal(proj.assetsIsSymlink, true, "assets must be a zero-copy symlink");
-    assert.equal(proj.assetsRealPath, fs.realpathSync(pkg.assetsDir));
+    assertCodexPluginPayload(proj, pkg.dir);
     assert.equal(fs.existsSync(path.join(pkg.dir, "plugins")), false, "Source repo must have zero plugins/ mirror");
   });
 

@@ -132,3 +132,17 @@ export type {
 } from './types.ts';
 
 export * from './channels/index.ts';
+
+export {
+  authorizeOplLinkCompanion,
+  completeOplGatewaySetup,
+  disconnectOplGatewayAccount,
+  loginOplGatewayAccount,
+  readOplGatewayAccount,
+  refreshOplGatewayAccount,
+  repairOplGatewayAccount,
+  useOplGatewayForModelAccess,
+  withGatewayStateDirectory,
+} from './gateway/account.ts';
+
+export { configureGatewayCodexProvider, readLocalCodexAccessState, resolveCodexHome, withClientCodexHome } from './gateway/codex-binding.ts';

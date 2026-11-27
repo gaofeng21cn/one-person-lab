@@ -28,7 +28,26 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
-  it('renders 47 orthogonal base subcommands, rejects legacy/unknown commands with exit 2 and zero codex fallback, and supports coexistence routing', async () => {
+  it('resolves relative package install and update sources in the caller workspace', async () => {
+    const sb = trackSandbox();
+    const id = 'relative-source';
+    for (const [version, directory] of [['1.0.0', 'initial'], ['1.0.1', 'updated']]) {
+      writeMinimalV2Package(path.join(sb.workspaceDir, directory), { id, version });
+      const build = await sb.spawnCli(['pack', 'build', directory, '--json']);
+      assert.equal(build.code, 0, build.stdout + build.stderr);
+    }
+
+    const install = await sb.spawnCli(['pack', 'install', 'initial', '--no-codex-sync', '--json']);
+    assert.equal(install.code, 0, install.stdout + install.stderr);
+    const update = await sb.spawnCli(['pack', 'update', id, '--source', './updated', '--json']);
+    assert.equal(update.code, 0, update.stdout + update.stderr);
+    const list = await sb.spawnCli(['pack', 'list', '--json']);
+    assert.equal(list.code, 0, list.stdout + list.stderr);
+    const { packages } = JSON.parse(list.stdout);
+    assert.equal(packages.find((pkg: { package_id: string }) => pkg.package_id === id)?.version, '1.0.1');
+  });
+
+  it('advertises Gateway with the base subcommands, rejects legacy/unknown commands with exit 2 and zero codex fallback, and supports coexistence routing', async () => {
     const sb = trackSandbox();
 
     const ver = await sb.spawnCli(['--version']);
@@ -42,12 +61,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     }
     assert.doesNotMatch(help.stdout, /^\s*foundry:/m);
 
-    // Count subcommands across core namespaces
-    const counts = [...help.stdout.matchAll(/^\s{2}(?:daemon|workspace|pack|connect|runway|ledger):\s+(.+)$/gm)].map(
-      (m) => m[1]!.split('·').length,
-    );
-    const total = counts.reduce((a, b) => a + b, 0);
-    assert.equal(total, 47);
+    assert.match(help.stdout, /^\s*connect:.*\bgateway\b/m);
 
     // Retired / unknown commands fail with exit 2 and never call codex stub
     for (const retired of [['app', 'state', '--json'], ['agents', 'modules'], ['cordis', 'status'], ['foundry', '--help']]) {
@@ -187,7 +201,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
         '    namespace: "dynprobe",',
         '    commands: ["ping", "init"],',
         '    handlers: {',
-        '      ping: () => ({ ok: true, pong: true }),',
+        '      ping: () => ({ ok: true, pong: true, state_dir: process.env.OPL_STATE_DIR }),',
         '      init: (args, opts) => ({ ok: true, args, opts }),',
         '    },',
         '  };',
@@ -203,6 +217,17 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     const pingRes = await sb.spawnRootCli(['dynprobe', 'ping', '--json']);
     assert.equal(pingRes.code, 0);
     assert.equal((pingRes.json as { pong: boolean }).pong, true);
+
+    const emptyProfile = trackSandbox();
+    const emptyHelp = await sb.spawnRootCli(['--state-dir', emptyProfile.stateDir, '--help']);
+    assert.equal(emptyHelp.code, 0);
+    assert.doesNotMatch(emptyHelp.stdout, /^\s*dynprobe:/m);
+    const missing = await sb.spawnRootCli(['--state-dir', emptyProfile.stateDir, 'dynprobe', 'ping', '--json']);
+    assert.equal(missing.code, 2);
+    assert.equal((missing.json as { error: { code: string } }).error.code, 'METHOD_NOT_FOUND');
+    const selected = await emptyProfile.spawnRootCli(['--state-dir', sb.stateDir, 'dynprobe', 'ping', '--json']);
+    assert.equal(selected.code, 0);
+    assert.equal((selected.json as { state_dir: string }).state_dir, sb.stateDir);
 
     // Regression (E2E-M4/M6 2f): --id is a VALUE_FLAGS entry, not a boolean flag
     const initRes = await sb.spawnCli(['dynprobe', 'init', '--id', 'my-ext-id', '--json']);

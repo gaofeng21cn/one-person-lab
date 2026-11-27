@@ -10,6 +10,10 @@ Framework只提供通用workspace/source locator、scope、freshness和refs tran
 - App/operator refs-only view；
 - missing input和owner action。
 
+## 已登记工作区升级
+
+Framework v2 启动时读取同一状态目录的 `workspace-registry.json`。仍可访问的 active 和 inactive 工作区能在 `opl workspace list --json` 中找到。一个物理目录对应一个 v2 工作区，多个旧绑定保存在该行的 `metadata_json.legacy_workspace_bindings`。已有 v2 工作区继续使用原 ID，新导入工作区优先沿用 active 绑定 ID。已归档的绑定保留在旧登记文件中，暂时离线的目录会在下次启动时再检查。升级只读取原登记，工作文件和领域任务继续由原工作区及其领域工具持有。
+
 ## Domain owner
 
 - 读取和解释source body；

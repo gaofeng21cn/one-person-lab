@@ -5,7 +5,7 @@
 ## 选择产品
 
 - 需要桌面体验：安装 One Person Lab App；App installer负责其 bundled runtime和shell。
-- 需要 headless/CLI：安装 OPL Framework。
+- 需要 headless/CLI：安装 OPL Framework，启动并检查本机 v2 daemon。
 - 需要专业 Agent/capability：在 Base 就绪后，通过对应 owner声明的 native carrier安装 Package。
 
 ## 安装 Framework
@@ -29,12 +29,11 @@ npm link
 
 ```bash
 opl --help
-opl install --json
-opl system initialize --json
-opl app state --profile fast --json
+opl daemon doctor --include-first-run --json
+opl pack list --json
 ```
 
-`opl install` 负责 Base/runtime prerequisites，不静默安装全部 Agent Packages。
+安装器验证新链接的 CLI 和本机 daemon。按需安装工作所需的 Agent Packages。
 
 ## 安装 App
 
@@ -54,31 +53,27 @@ Full 可向 Framework 首装提供 `OPL_FIRST_RUN_CODEX_PACKAGE_TARBALL` 和
 
 ## 安装 Packages
 
-先按 Package owner说明配置唯一 native marketplace/carrier，再执行：
+`opl pack list` 查看本机 Package。按 Package owner 的说明取得 v2 制品或 OCI 引用后安装，并回读已安装的 Package：
 
 ```bash
-opl packages status --json
-opl packages install <package-id> --json
-opl packages status --package-id <package-id> --json
+opl pack install <owner-package-source> --json
+opl pack inspect <package-id> --json
 ```
 
-App official profile、用户选择和 installed carrier readback决定实际 Package 集合。安装后，Framework 从 installed descriptor 发现 Agent、Skill、Tool、Plugin、MCP 和 entrypoint，并向 App 投影入口；产品线示例不决定安装集合。
+App official profile 和用户选择决定实际 Package 集合。Framework 根据已安装的描述符发现 Agent、Skill、Tool、Plugin、MCP 和 entrypoint，并向 App 投影入口。
 
 ## 完成标准
 
 分别验证：
 
-1. `opl --help` 和 `opl system initialize --json`；
-2. provider/worker 的真实 readiness；
-3. 每个需要的 Package installed、enabled、callable；
-4. App installed build 与真实启动；
+1. `opl --help`、安装目录和 `opl daemon doctor --include-first-run --json`；
+2. 所选任务使用的 executor 可用性，见 `opl runway executors health --json`；
+3. 每个所需 Package 的已安装版本、启用和可调用状态；
+4. 桌面场景下的 App 版本与实际启动；
 5. 至少一个目标 Package 的实际 entrypoint/contribution。
-
-`opl app state --profile fast --json` 是聚合读面，不替代上述 owner readback。
 
 ## 常见问题
 
-- 找不到 Package：检查 native marketplace/carrier，而不是新增 Framework catalog。
-- App 状态 unknown：运行 full/owner-specific readback，不从 Framework source推断。
-- provider unavailable：使用 `opl family-runtime ... --help` 找到当前 install/repair/status命令。
-- 权限、签名或 credential 缺失：回到对应 App/Package/provider owner，不把本机 token 写入 repo。
+- 找不到 Package：从 [OPL Catalog](https://github.com/gaofeng21cn/opl-catalog) 或 Package owner 核对产品身份、权限及制品入口。
+- daemon 未运行：执行 `opl daemon start --detached` 后重新运行 doctor。
+- executor 不可用：根据 `opl runway executors health --json` 的结果检查对应 CLI 和授权。

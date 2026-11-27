@@ -100,7 +100,7 @@ One Person Lab 的优势在于，它既让用户看得见“现在做到哪一�
 
 | 产品 | 用户理解 | 内部权威 |
 | --- | --- | --- |
-| **OPL Base** | 让长期工作可以运行、恢复和审计的基础。 | `one-person-lab` 实现 OPL Framework，并持有 Framework runtime、Package graph 与 App projection 范围内唯一的 Cordis Host。 |
+| **OPL Base** | 让长期工作可以运行、恢复和审计的基础。 | `one-person-lab` 运行本地 Framework 守护进程，管理 Package、任务执行和面向 App 的状态投影。 |
 | **OPL App** | 选择工作、查看进度、打开文件和处理阻塞的本地工作台。 | `one-person-lab-app` 持有产品、GUI ABI、Shell 选择和发布。 |
 | **OPL Packages** | 可安装的 Agent、Skill、Tool、Plugin 和 Workflow，为系统增加专业能力。 | 每个 Package owner 持有身份和发布；Framework 发现并投影已安装能力。 |
 | **OPL Cloud** | 在线 Workspace、账号治理、托管资源、协作与 Agent 服务。 | `one-person-lab-cloud` 持有 Cloud 产品与服务。 |
@@ -110,11 +110,7 @@ authority domain。它们继续持有自己的质量、产物与交付判断；�
 也不因为被 Framework 托管就天然等于 Cordis plugin。
 
 App 选择的 [`opl-studio`](https://github.com/gaofeng21cn/opl-studio) 实现提供当前 Desktop、
-WebUI 和 Docker 的构建来源。它为 DSH profile、插件生命周期、原生 Codex 后端和
-delivery transport 运行独立的 DeepSeek Harness/Cordis Application Host。它只消费 Framework/App 公开
-合同，不创建第二套 OPL runtime、Package registry/currentness、App state/action、产品
-或发布 authority。机器边界见
-[`cordis-architecture-profile.json`](./contracts/opl-framework/cordis-architecture-profile.json)。
+WebUI 和 Docker 的构建来源。Studio 的 DSH/Cordis Application Host 管理插件、原生 Codex 会话和交付载体，并通过本机 Framework 守护进程读取 Package 和任务、执行已投影动作。[宿主职责](./docs/architecture.md#host-scope-boundary)
 
 如果只是使用产品，不需要理解仓库分工。对开发者来说：`one-person-lab` 维护
 Base/Framework，`one-person-lab-app` 维护 App 产品与发布体验，各 Package 仓维护可安装
@@ -164,32 +160,29 @@ Base/Framework，`one-person-lab-app` 维护 App 产品与发布体验，各 Pac
 
 ### 常用命令
 
-本仓源码开发入口：
+使用 Node.js 26 运行源码开发环境。
 
 提交贡献前请先阅读 [贡献指南](./CONTRIBUTING.md)，确认 Issue 与 PR 的准入要求。
 
 ```bash
 git clone https://github.com/gaofeng21cn/one-person-lab.git
 cd one-person-lab
-npm install
-npm link
+npm ci
 ```
 
-常用框架命令：
+核对当前源码对应的 CLI、本机守护进程，以及已安装的软件包、工作区、任务与连接。
 
 ```bash
-opl help --text
-opl app state --profile fast --json
-opl packages status --json
-opl connect modules
-opl connect sync-skills
-opl family-runtime status
-opl family-runtime repair
-opl family-runtime provider repair --provider temporal
-opl family-runtime attempt list
+./bin/opl --version --json
+./bin/opl --help
+./bin/opl daemon doctor --include-first-run --json
+./bin/opl pack list --json
+./bin/opl workspace list --json
+./bin/opl runway list --json
+./bin/opl connect list --json
 ```
 
-自动化集成应优先读取 `opl help --json`、`contracts/` 下的机器可读合同，以及各领域智能体导出的投影数据。
+自动化集成按需读取对应子命令的 JSON 输出。App 通过本地 JSON-RPC 的 `app.state.get` 获取状态，领域集成也可使用 [Python SDK](./sdks/python-client/) 访问同一守护进程。
 
 Framework 持有通用运行、Package 发现和 App 投影；领域仓持有专业事实与裁决，App 持有 GUI 和发布事实。具体分工见 [架构](./docs/architecture.md)，执行语义见 [Runtime](./docs/runtime/README.md)。
 

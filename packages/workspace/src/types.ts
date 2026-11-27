@@ -257,6 +257,7 @@ export interface CommitWritebackResult {
 }
 
 export interface WorkspaceServiceOptions {
+  readonly stateDir?: string;
   readonly db: WorkspaceDb;
   readonly onMutate?: () => void;
   readonly onLedgerAppended?: (entries: readonly unknown[]) => void;

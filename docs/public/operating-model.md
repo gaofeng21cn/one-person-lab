@@ -26,7 +26,7 @@ OPL 把复杂知识工作组织为一组可恢复、可审阅、可交接的 Sta
 
 ### OPL Framework
 
-提供 Workspace、Stage/Attempt、Package discovery、runtime provider adapter、Cordis Host、evidence refs、恢复和 operator projection。Framework 不替专业 Agent 作 verdict。
+提供 Workspace、Stage/Attempt、Package discovery、Runway 执行器适配、opld、evidence refs、恢复和 operator projection。Framework 不替专业 Agent 作 verdict。
 
 ### OPL App 与 Cloud
 

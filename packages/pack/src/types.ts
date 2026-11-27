@@ -102,6 +102,10 @@ export interface InstallSourceSpec {
   readonly expected_digest?: string;
 }
 
+export type PackageUpdateSource =
+  | InstallSourceSpec
+  | { readonly kind: 'official'; readonly package_id: string };
+
 export interface BuildPackageResult {
   readonly package_root: string;
   readonly manifest: OplPackageManifestV2;

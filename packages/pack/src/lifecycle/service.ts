@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import semver from 'semver';
 import {
   assertTrustedHost,
   newId,
@@ -20,17 +21,18 @@ import {
 } from '../build/build-package.ts';
 import { verifyManifestPathsExist } from '../build/content-lock.ts';
 import {
+  codexPluginPresenceProblem,
   discoverExternalCodexPlugins,
   syncPackageToCodex,
   unsyncPackageFromCodex,
 } from '../carriers/codex-sync/sync.ts';
-import { resolveCodexPluginName } from '../carriers/codex-sync/project.ts';
-import type { CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
+import { resolveCodexMarketplaceRoot, resolveCodexPluginName, shouldSyncToCodex } from '../carriers/codex-sync/project.ts';
+import { createProcessCodexRunner, type CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
 import { extractPackageSourceArchive, packageSourceArchiveDigest } from '../distribution/archive.ts';
-import { downloadPackageArchive, type DownloadTransport } from '../distribution/download-worker.ts';
+import type { DownloadTransport } from '../distribution/download-worker.ts';
+import { copyDirectoryPhysical, downloadOciSource } from '../distribution/source-files.ts';
 import {
   resolveNpmTarball,
-  resolveOciArtifact,
   type RegistryFetch,
 } from '../distribution/registry-client.ts';
 import { migrateV1Package, type MigrateV1Result } from '../migrate/migrate-v1.ts';
@@ -40,6 +42,7 @@ import type {
   BuildPackageResult,
   CodexSyncProjectionResult,
   InstallSourceSpec,
+  PackageUpdateSource,
   InstalledPackageRecord,
   PackEventBus,
   PackageIntent,
@@ -52,7 +55,16 @@ import { assertRequiredPackageDependency } from './dependency.ts';
 import { PackStore } from './pack-store.ts';
 import { classifyReloadMode, combineReloadModes } from './reload-mode.ts';
 
+import { managedUpdateProjection, type PackageUpdateFailure, type PackageUpdateRow } from './managed-update-projection.ts';
+
+type OfficialUpdateResolver = (packageId: string) => Promise<{
+  readonly manifest: OplPackageManifestV2;
+  readonly source: InstallSourceSpec;
+  dispose(): Promise<void> | void;
+}>;
+
 export interface CreatePackServiceOptions {
+  readonly resolveOfficialUpdate?: OfficialUpdateResolver;
   readonly db: SqliteDb;
   readonly stateDir?: string;
   readonly marketplaceRoot?: string;
@@ -168,48 +180,6 @@ function verifyExpectedArchiveIntegrity(
   }
 }
 
-function copyDirectoryPhysical(srcDir: string, destDir: string): void {
-  const realSrc = fs.realpathSync(srcDir);
-  fs.rmSync(destDir, { recursive: true, force: true });
-  fs.mkdirSync(destDir, { recursive: true });
-  const copyWalk = (curSrc: string, curDest: string): void => {
-    for (const entry of fs.readdirSync(curSrc, { withFileTypes: true })) {
-      if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.DS_Store') {
-        continue;
-      }
-      const fromPath = path.join(curSrc, entry.name);
-      const toPath = path.join(curDest, entry.name);
-      const lstat = fs.lstatSync(fromPath);
-      if (lstat.isSymbolicLink()) {
-        throw new PackError(
-          'PACK_SYMLINK_ESCAPE',
-          `Release package source contains forbidden symlink '${fromPath}'.`,
-        );
-      }
-      if (lstat.isDirectory()) {
-        if (
-          entry.name === '.codegraph' ||
-          entry.name === '.tsbuildinfo' ||
-          entry.name === '__pycache__' ||
-          entry.name === '.pytest_cache' ||
-          entry.name === '.ruff_cache' ||
-          entry.name === '.venv'
-        ) {
-          continue;
-        }
-        fs.mkdirSync(toPath, { recursive: true });
-        copyWalk(fromPath, toPath);
-      } else if (lstat.isFile()) {
-        if (entry.name.endsWith('.pyc') || entry.name.endsWith('.tsbuildinfo')) {
-          continue;
-        }
-        fs.copyFileSync(fromPath, toPath);
-      }
-    }
-  };
-  copyWalk(realSrc, destDir);
-}
-
 function resolveExtractedPackageRoot(extractRoot: string): string {
   if (fs.existsSync(path.join(extractRoot, 'opl-package.json'))) {
     return extractRoot;
@@ -238,6 +208,8 @@ export class PackService {
   readonly #codexRunner?: CodexCarrierRunner;
   readonly #fetchImpl?: RegistryFetch;
   readonly #downloadTransport?: DownloadTransport;
+  readonly #resolveOfficialUpdate?: OfficialUpdateResolver;
+  readonly #packageMutations = new Map<string, Promise<void>>();
   readonly #activeControllers = new Map<string, AbortController>();
 
   constructor(options: CreatePackServiceOptions) {
@@ -254,7 +226,22 @@ export class PackService {
     this.marketplaceRoot = options.marketplaceRoot;
     this.#codexRunner = options.codexRunner;
     this.#fetchImpl = options.fetchImpl;
+    this.#resolveOfficialUpdate = options.resolveOfficialUpdate;
     this.#downloadTransport = options.downloadTransport;
+  }
+
+  // Serialize changes to a package across the async carrier call and the database
+  // write. A concurrent disable or uninstall must see the installed version it acts on.
+  private async acquirePackageMutation(packageId: string): Promise<() => void> {
+    const previous = this.#packageMutations.get(packageId);
+    let release!: () => void;
+    const active = new Promise<void>(resolve => { release = resolve; });
+    this.#packageMutations.set(packageId, active);
+    await previous;
+    return () => {
+      if (this.#packageMutations.get(packageId) === active) this.#packageMutations.delete(packageId);
+      release();
+    };
   }
 
   get eventBus(): PackEventBus {
@@ -293,7 +280,7 @@ export class PackService {
 
   private async materializeSourceToStaging(input: {
     readonly source: InstallSourceSpec;
-    readonly opId: string;
+    readonly opId?: string;
     readonly signal: AbortSignal;
   }): Promise<{ stagingDir: string; cleanup: () => void }> {
     const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-stage-'));
@@ -331,35 +318,17 @@ export class PackService {
         if (!input.source.ref) {
           throw new PackError('INVALID_INPUT', 'OCI source requires ref.');
         }
-        this.store.transitionOperation(input.opId, {
+        if (input.opId) this.store.transitionOperation(input.opId, {
           status: 'downloading',
           progress: { stage: 'resolving_oci', bytes_done: 0 },
         });
-        const resolved = await resolveOciArtifact({
-          ociRef: input.source.ref,
-          version: input.source.version,
-          fetchImpl: this.#fetchImpl,
-          signal: input.signal,
-        });
-        if (input.source.expected_digest && resolved.digest !== input.source.expected_digest) {
-          throw new PackError(
-            'PACK_LOCK_MISMATCH',
-            `OCI digest mismatch: expected ${input.source.expected_digest}, got ${resolved.digest}.`,
-          );
-        }
-        const archivePath = await downloadPackageArchive({
-          url: resolved.blob_url,
-          token: resolved.token,
-          digest: resolved.digest,
-          size: resolved.size,
-          packageId: input.source.package_id ?? resolved.repository,
+        const archivePath = await downloadOciSource(input.source, {
           cacheRoot: this.cacheRoot,
-          allowInsecureHttp: resolved.blob_url.startsWith('http://127.0.0.1')
-            || resolved.blob_url.startsWith('http://localhost'),
+          fetchImpl: this.#fetchImpl,
           signal: input.signal,
           transport: this.#downloadTransport,
           onProgress: (progress) => {
-            this.store.transitionOperation(input.opId, {
+            if (input.opId) this.store.transitionOperation(input.opId, {
               status: progress.stage === 'verifying' ? 'verifying' : 'downloading',
               progress,
             });
@@ -374,7 +343,7 @@ export class PackService {
         if (!input.source.ref) {
           throw new PackError('INVALID_INPUT', 'npm source requires package name in ref.');
         }
-        this.store.transitionOperation(input.opId, {
+        if (input.opId) this.store.transitionOperation(input.opId, {
           status: 'downloading',
           progress: { stage: 'resolving_npm', bytes_done: 0 },
         });
@@ -421,6 +390,8 @@ export class PackService {
   private async installOrUpdateFromSource(input: {
     readonly source: InstallSourceSpec;
     readonly action: 'install' | 'update';
+    readonly updateSource?: PackageUpdateSource;
+    readonly expectedUpdate?: { installedVersion: string; installedDigest: string; availableVersion: string; background?: boolean };
     readonly batchId?: string | null;
     readonly syncCodex?: boolean;
     readonly clientContext?: ClientContext;
@@ -442,6 +413,7 @@ export class PackService {
     });
 
     let cleanupStaging: (() => void) | undefined;
+    let releaseMutation: (() => void) | undefined;
     try {
       const staged = await this.materializeSourceToStaging({
         source: input.source,
@@ -467,6 +439,19 @@ export class PackService {
           { expected_package_id: input.source.package_id, actual_package_id: manifest.identity.id },
         );
       }
+      releaseMutation = await this.acquirePackageMutation(manifest.identity.id);
+      const installedBefore = this.store.getInstalledPackage(manifest.identity.id);
+      if (input.action === 'update' && !installedBefore) {
+        throw new PackError('PACK_NOT_FOUND', 'Package was removed before the update.');
+      }
+      if (input.expectedUpdate && (installedBefore?.version !== input.expectedUpdate.installedVersion
+        || installedBefore?.content_digest !== input.expectedUpdate.installedDigest
+        || (input.expectedUpdate.background && !installedBefore.enabled)
+        || installedBefore.origin !== 'opl' || installedBefore.install_mode !== 'release'
+        || manifest.identity.version !== input.expectedUpdate.availableVersion)) {
+        throw new PackError('PACK_OPERATION_BUSY', 'Package or source version changed during update. Check for updates again.');
+      }
+      const enabled = installedBefore?.enabled ?? true;
       verifyManifestPathsExist(staged.stagingDir, manifest, { allowSymlinks: false });
       this.assertDependenciesSatisfied(manifest);
 
@@ -515,7 +500,7 @@ export class PackService {
           codexSync = await syncPackageToCodex({
             manifest,
             installPath: destDir,
-            enabled: true,
+            enabled,
             action: input.action,
             marketplaceRoot: this.marketplaceRoot,
             stateDir: this.stateDir,
@@ -529,8 +514,10 @@ export class PackService {
           install_mode: 'release',
           install_path: fs.realpathSync(destDir),
           content_digest: digest,
-          enabled: true,
+          enabled,
           carrier_synced: codexSync.synced,
+          source: input.updateSource ?? (input.source.path
+            ? { ...input.source, path: path.resolve(input.source.path) } : input.source),
         });
         if (backupDest) {
           fs.rmSync(backupDest, { recursive: true, force: true });
@@ -574,18 +561,21 @@ export class PackService {
       });
       throw error;
     } finally {
+      releaseMutation?.();
       this.#activeControllers.delete(opId);
       cleanupStaging?.();
     }
   }
 
   async install(input: {
+    readonly updateSource?: PackageUpdateSource;
     readonly source: InstallSourceSpec;
     readonly syncCodex?: boolean;
     readonly clientContext?: ClientContext;
   }): Promise<InstallPackageResult> {
     return this.installOrUpdateFromSource({
       source: input.source,
+      updateSource: input.updateSource,
       action: 'install',
       syncCodex: input.syncCodex,
       clientContext: input.clientContext,
@@ -618,6 +608,7 @@ export class PackService {
   }
 
   async update(input: {
+    readonly updateSource?: PackageUpdateSource;
     readonly packageId: string;
     readonly source: InstallSourceSpec;
     readonly syncCodex?: boolean;
@@ -629,39 +620,113 @@ export class PackService {
     }
     return this.installOrUpdateFromSource({
       source: { ...input.source, package_id: input.packageId },
+      updateSource: input.updateSource,
       action: 'update',
       syncCodex: input.syncCodex,
       clientContext: input.clientContext,
     });
   }
 
+  // Use the original installation source. The installed copy alone cannot establish
+  // ownership of a remote package that happens to have the same ID.
+  private async visitManagedUpdates(
+    apply?: { batchId: string; syncCodex?: boolean; clientContext?: ClientContext; background?: boolean },
+  ) {
+    const packages: PackageUpdateRow[] = [];
+    const failures: PackageUpdateFailure[] = [];
+    const results: InstallPackageResult[] = [];
+    for (const pkg of this.store.listInstalledPackages()) {
+      const row = { package_id: pkg.package_id, installed_version: pkg.version };
+      const provenance = this.store.getInstallSource(pkg.package_id);
+      if (pkg.install_mode === 'dev_link' || pkg.origin !== 'opl' || !provenance) {
+        packages.push({ ...row, available_version: null, status: 'unmanaged',
+          reason: pkg.install_mode === 'dev_link' ? 'development_link' : 'no_managed_source' });
+        continue;
+      }
+      let cleanup: (() => Promise<void> | void) | undefined;
+      try {
+        let source: InstallSourceSpec;
+        let manifest: OplPackageManifestV2;
+        if (provenance.kind === 'official') {
+          if (!this.#resolveOfficialUpdate || provenance.package_id !== pkg.package_id) {
+            throw new PackError('PACK_NOT_FOUND', 'Official update source is unavailable.');
+          }
+          const resolved = await this.#resolveOfficialUpdate(pkg.package_id);
+          cleanup = () => resolved.dispose();
+          source = resolved.source;
+          manifest = resolved.manifest;
+        } else if (provenance.kind === 'local_dir' && provenance.path) {
+          source = provenance;
+          manifest = readPackageManifestFromDir(provenance.path).manifest;
+        } else {
+          const staged = await this.materializeSourceToStaging({
+            source: provenance, signal: AbortSignal.timeout(120_000),
+          });
+          cleanup = staged.cleanup;
+          source = { kind: 'local_dir', path: staged.stagingDir };
+          manifest = readPackageManifestFromDir(staged.stagingDir).manifest;
+        }
+        if (manifest.identity.id !== pkg.package_id) {
+          throw new PackError('INVALID_MANIFEST', 'Update source contains a different package.');
+        }
+        const version = manifest.identity.version;
+        const available = semver.gt(version, pkg.version);
+        if (available && apply && (!apply.background || pkg.enabled)) {
+          const result = await this.installOrUpdateFromSource({
+            action: 'update', source: { ...source, package_id: pkg.package_id }, updateSource: provenance,
+            expectedUpdate: { installedVersion: pkg.version, installedDigest: pkg.content_digest, availableVersion: version, background: apply.background },
+            batchId: apply.batchId, syncCodex: apply.syncCodex, clientContext: apply.clientContext,
+          });
+          results.push(result);
+          packages.push({ ...row, installed_version: result.package.version, available_version: version, status: 'current' });
+        } else {
+          packages.push({ ...row, available_version: version, status: available ? 'available' : 'current',
+            ...(!pkg.enabled ? { background_eligible: false, reason: 'user_disabled_package' } : {}) });
+        }
+      } catch (error) {
+        const code = error instanceof PackError ? error.code : 'PACK_OPERATION_FAILED';
+        failures.push({ package_id: pkg.package_id, code, message: error instanceof Error ? error.message : String(error) });
+        packages.push({ ...row, available_version: null, status: 'unavailable', reason: code });
+      } finally {
+        await cleanup?.();
+      }
+    }
+    return { packages, failures, results };
+  }
+
+  async updatePlan() {
+    const { packages, failures } = await this.visitManagedUpdates();
+    return { packages, failures, managed_update: managedUpdateProjection(packages, failures) };
+  }
+
   async updateAll(input: {
-    readonly updates: ReadonlyArray<{ readonly packageId: string; readonly source: InstallSourceSpec }>;
+    readonly updates?: ReadonlyArray<{ readonly packageId: string; readonly source: InstallSourceSpec }>;
     readonly syncCodex?: boolean;
+    readonly background?: boolean;
     readonly clientContext?: ClientContext;
-  }): Promise<BatchOperationResult> {
+  }) {
     assertTrustedIfProvided(input.clientContext, 'pack.updateAll');
     const batchId = newId('packbatch');
+    if (input.updates === undefined) {
+      const batch = await this.visitManagedUpdates({ ...input, batchId });
+      const mode = combineReloadModes(batch.results.map(result => result.reload_mode));
+      return { batch_id: batchId, reload_mode: mode, ...batch,
+        managed_update: managedUpdateProjection(batch.packages, batch.failures, mode) };
+    }
     const results: InstallPackageResult[] = [];
     for (const item of input.updates) {
-      const existing = this.store.getInstalledPackage(item.packageId);
-      if (!existing) {
-        throw new PackError('PACK_NOT_FOUND', `Package '${item.packageId}' is not installed.`);
-      }
       const res = await this.installOrUpdateFromSource({
-        source: { ...item.source, package_id: item.packageId },
-        action: 'update',
-        batchId,
-        syncCodex: input.syncCodex,
-        clientContext: input.clientContext,
+        source: { ...item.source, package_id: item.packageId }, action: 'update', batchId,
+        syncCodex: input.syncCodex, clientContext: input.clientContext,
       });
       results.push(res);
     }
-    return {
-      batch_id: batchId,
-      reload_mode: combineReloadModes(results.map((r) => r.reload_mode)),
-      results,
-    };
+    const rows: PackageUpdateRow[] = results.map(({ package: pkg }) => ({
+      package_id: pkg.package_id, installed_version: pkg.version, available_version: pkg.version, status: 'current',
+    }));
+    const mode = combineReloadModes(results.map(result => result.reload_mode));
+    return { batch_id: batchId, reload_mode: mode, packages: rows, failures: [], results,
+      managed_update: managedUpdateProjection(rows, [], mode) };
   }
 
   async link(input: {
@@ -683,6 +748,7 @@ export class PackService {
       progress: { stage: 'linking' },
     });
 
+    const release = await this.acquirePackageMutation(manifest.identity.id);
     try {
       const { digest } = computeLiveDirectoryContentDigest(realRoot, { allowSymlinks: true });
       let codexSync: CodexSyncProjectionResult = {
@@ -739,6 +805,8 @@ export class PackService {
         },
       });
       throw error;
+    } finally {
+      release();
     }
   }
 
@@ -765,15 +833,24 @@ export class PackService {
     readonly clientContext?: ClientContext;
   }): Promise<UninstallPackageResult> {
     assertTrustedIfProvided(input.clientContext, 'pack.uninstall');
-    const existing = this.store.getInstalledPackage(input.packageId);
+    const release = await this.acquirePackageMutation(input.packageId);
+    try {
+      return await this.uninstallInstalledPackage(input.packageId);
+    } finally {
+      release();
+    }
+  }
+
+  private async uninstallInstalledPackage(packageId: string): Promise<UninstallPackageResult> {
+    const existing = this.store.getInstalledPackage(packageId);
     if (!existing) {
-      throw new PackError('PACK_NOT_FOUND', `Package '${input.packageId}' is not installed.`);
+      throw new PackError('PACK_NOT_FOUND', `Package '${packageId}' is not installed.`);
     }
 
     const opId = newId('packop');
     this.store.createOperation({
       op_id: opId,
-      package_id: input.packageId,
+      package_id: packageId,
       action: 'uninstall',
       target_version: existing.version,
       status: 'installing',
@@ -790,7 +867,7 @@ export class PackService {
       });
 
       const { removed, revoked_grants } = this.store.deleteInstalledPackageAndRevokeGrants(
-        input.packageId,
+        packageId,
       );
 
       // Critical safety invariant: NEVER delete dev_link source directories!
@@ -842,7 +919,7 @@ export class PackService {
       });
 
       return {
-        package_id: input.packageId,
+        package_id: packageId,
         removed: Boolean(removed),
         revoked_grants,
         reload_mode: reloadMode,
@@ -866,21 +943,26 @@ export class PackService {
     readonly clientContext?: ClientContext;
   }): Promise<{ readonly package: InstalledPackageRecord; readonly reload_mode: ReloadMode }> {
     assertTrustedIfProvided(input.clientContext, 'pack.toggle');
-    const updated = this.store.setPackageEnabled(input.packageId, input.enabled);
-    const syncResult = await syncPackageToCodex({
-      manifest: updated.manifest,
-      installPath: updated.install_path,
-      enabled: updated.enabled,
-      action: 'sync',
-      marketplaceRoot: this.marketplaceRoot,
-      stateDir: this.stateDir,
-      runner: this.#codexRunner,
-    });
-    const finalRecord = this.store.setPackageCarrierSynced(input.packageId, syncResult.synced);
-    return {
-      package: finalRecord,
-      reload_mode: classifyReloadMode(finalRecord.manifest, { action: 'toggle' }),
-    };
+    const release = await this.acquirePackageMutation(input.packageId);
+    try {
+      const updated = this.store.setPackageEnabled(input.packageId, input.enabled);
+      const syncResult = await syncPackageToCodex({
+        manifest: updated.manifest,
+        installPath: updated.install_path,
+        enabled: updated.enabled,
+        action: 'sync',
+        marketplaceRoot: this.marketplaceRoot,
+        stateDir: this.stateDir,
+        runner: this.#codexRunner,
+      });
+      const finalRecord = this.store.setPackageCarrierSynced(input.packageId, syncResult.synced);
+      return {
+        package: finalRecord,
+        reload_mode: classifyReloadMode(finalRecord.manifest, { action: 'toggle' }),
+      };
+    } finally {
+      release();
+    }
   }
 
   list(filter: {
@@ -896,9 +978,34 @@ export class PackService {
     return this.store.getInstalledPackage(packageId);
   }
 
+  async readInstalledPackagePresence(packageId: string): Promise<{ files_present: boolean; carrier_ready: boolean }> {
+    const pkg = this.inspect(packageId);
+    const missing = { files_present: false, carrier_ready: false };
+    if (!pkg) return missing;
+
+    try {
+      const { manifest } = readPackageManifestFromDir(pkg.install_path);
+      if (manifest.identity.id !== pkg.package_id || manifest.identity.version !== pkg.version) return missing;
+      verifyManifestPathsExist(pkg.install_path, pkg.manifest, { allowSymlinks: pkg.install_mode === 'dev_link' });
+    } catch (error) {
+      if (error instanceof PackError && ['PACK_NOT_FOUND', 'PACK_MISSING_PATH'].includes(error.code)) return missing;
+      throw error;
+    }
+    if (!pkg.enabled || !shouldSyncToCodex(pkg.manifest)) {
+      return { files_present: true, carrier_ready: pkg.enabled };
+    }
+    const problem = await codexPluginPresenceProblem({
+      manifest: pkg.manifest,
+      marketplaceRoot: resolveCodexMarketplaceRoot({ marketplaceRoot: this.marketplaceRoot, stateDir: this.stateDir }),
+      runner: this.#codexRunner ?? createProcessCodexRunner(),
+    });
+    return { files_present: true, carrier_ready: problem === null };
+  }
+
   async codexSync(input: {
     readonly packageId?: string;
     readonly importExternal?: boolean;
+    readonly requireReadback?: boolean;
   } = {}): Promise<{
     readonly synced: readonly CodexSyncProjectionResult[];
     readonly imported_external: readonly InstalledPackageRecord[];
@@ -927,7 +1034,7 @@ export class PackService {
         action: 'sync',
         marketplaceRoot: this.marketplaceRoot,
         stateDir: this.stateDir,
-        runner: this.#codexRunner,
+        runner: this.#codexRunner ?? (input.requireReadback ? createProcessCodexRunner() : undefined),
       });
       this.store.setPackageCarrierSynced(pkg.package_id, res.synced);
       synced.push(res);

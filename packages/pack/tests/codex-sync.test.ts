@@ -29,7 +29,7 @@ function createTempPackage(dir: string, manifestObj: Record<string, unknown>, cu
   fs.writeFileSync(path.join(dir, 'opl-package.json'), JSON.stringify(manifestObj, null, 2));
 }
 
-test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, and marketplace manifests', async () => {
+test('carriers/codex-sync projects installable skill and icon files, mcp.json absolute paths, and marketplace manifests', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-codex-'));
   const pkgDir = path.join(tmpDir, 'pkg');
   const marketplaceRoot = path.join(tmpDir, 'marketplace');
@@ -124,13 +124,12 @@ test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, 
     assert.equal(syncRes.verified_by_readback, true);
     assert.ok(syncRes.plugin_dir);
 
-    // Non-standard skill path creates per-skill zero-copy symlink under skills/
-    const skillLink = path.join(syncRes.plugin_dir, 'skills', 'my-skill');
-    assert.equal(fs.lstatSync(skillLink).isSymbolicLink(), true);
-    assert.equal(fs.realpathSync(skillLink), fs.realpathSync(path.join(pkgDir, 'custom', 'my-skill')));
-
-    const assetsLink = path.join(syncRes.plugin_dir, 'assets');
-    assert.equal(fs.lstatSync(assetsLink).isSymbolicLink(), true);
+    const skillFile = path.join(syncRes.plugin_dir, 'skills', 'my-skill', 'SKILL.md');
+    assert.ok(fs.lstatSync(path.dirname(skillFile)).isDirectory());
+    assert.deepEqual(fs.readFileSync(skillFile), fs.readFileSync(path.join(pkgDir, 'custom/my-skill/SKILL.md')));
+    const icon = path.join(syncRes.plugin_dir, 'assets/icon.png');
+    assert.ok(fs.lstatSync(path.dirname(icon)).isDirectory());
+    assert.deepEqual(fs.readFileSync(icon), fs.readFileSync(path.join(pkgDir, 'assets/icon.png')));
 
     // Verify plugin.json and mcp.json absolute path resolution
     const pluginJson = JSON.parse(
@@ -180,12 +179,66 @@ test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, 
   }
 });
 
+test('linked Codex plugins expose only declared skills as the checkout changes', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-linked-skills-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const pkgDir = path.join(root, 'pkg');
+  const manifest = parsePackageManifestV2({
+    schema_version: 'opl.package.v2',
+    identity: {
+      id: 'linked', version: '1.0.0', intent: 'extension', publisher: 'example',
+      name: { 'zh-CN': '技能', 'en-US': 'Skills' },
+      summary: { 'zh-CN': '技能包', 'en-US': 'Skills package' },
+    },
+    provides: { skills: [{ id: 'selected', path: './skills/selected' }] },
+  });
+  createTempPackage(pkgDir, manifest, 'skills/selected');
+  const projected = projectPackageToCodexMarketplace({
+    manifest, installPath: pkgDir, marketplaceRoot: path.join(root, 'marketplace'),
+  });
+  const added = path.join(pkgDir, 'skills', 'work-in-progress');
+  fs.mkdirSync(added);
+  fs.writeFileSync(path.join(added, 'SKILL.md'), '# Unlisted skill');
+  const skillsDir = path.join(projected.plugin_dir, 'skills');
+  assert.deepEqual(fs.readdirSync(skillsDir), ['selected']);
+  assert.ok(fs.lstatSync(path.join(skillsDir, 'selected')).isDirectory());
+  assert.equal(fs.readFileSync(path.join(skillsDir, 'selected/SKILL.md'), 'utf8'), '# My Skill\n');
+  const outside = path.join(root, 'outside');
+  fs.writeFileSync(outside, 'outside package');
+  fs.symlinkSync(outside, path.join(pkgDir, 'skills/selected/reference.md'));
+  assert.throws(() => projectPackageToCodexMarketplace({
+    manifest, installPath: pkgDir, marketplaceRoot: path.join(root, 'marketplace'),
+  }), (err: unknown) => err instanceof PackError && err.code === 'PACK_SYMLINK_ESCAPE');
+  assert.equal(fs.readFileSync(path.join(skillsDir, 'selected/SKILL.md'), 'utf8'), '# My Skill\n');
+  assert.equal(fs.existsSync(path.join(skillsDir, 'selected/reference.md')), false);
+
+});
+
 test('codex-sync imports external Codex plugins and handles marketplace transient retry & rollback', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-ext-'));
   const stateDir = path.join(tmpDir, 'state');
   const marketplaceRoot = path.join(tmpDir, 'marketplace');
 
   try {
+    // Codex canonicalizes local sources, including macOS /var and junctions.
+    const realSource = path.join(tmpDir, 'real-marketplace');
+    const sourceAlias = path.join(tmpDir, 'marketplace-alias');
+    fs.mkdirSync(realSource);
+    fs.symlinkSync(realSource, sourceAlias, 'junction');
+    await ensureMarketplaceAvailable({
+      marketplaceName: 'opl-local',
+      marketplaceSource: sourceAlias,
+      action: 'sync',
+      runner: {
+        async runCli(args) {
+          assert.deepEqual(args, ['plugin', 'marketplace', 'list', '--json']);
+          const entry = { name: 'opl-local', marketplaceSource: { sourceType: 'local', source: fs.realpathSync(realSource) } };
+          return { status: 0, stdout: JSON.stringify({ marketplaces: [entry] }), stderr: '', error: null };
+        },
+        async listPlugins() { throw new Error('Unexpected plugin read'); },
+      },
+    });
+
     // 1. Test ensureMarketplaceAvailable transient retry (ECONNRESET -> success)
     let upgradeCalls = 0;
     const retryRunner: CodexCarrierRunner = {
@@ -715,4 +768,62 @@ test('syncPackageToCodex invokes codex plugin add (succeeds) rather than depreca
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test('installed presence reads the configured carrier and files without writing either', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-presence-'));
+  const marketplaceRoot = path.join(root, 'marketplace');
+  const stateDir = path.join(root, 'state');
+  const source = path.join(root, 'pkg');
+  const id = 'live-proof';
+  const pluginDir = path.join(marketplaceRoot, 'plugins', id);
+  fs.mkdirSync(stateDir);
+  const db = openSqliteStore(path.join(stateDir, 'opl.db'));
+  t.after(() => { db.close(); fs.rmSync(root, { recursive: true, force: true }); });
+
+  createTempPackage(source, {
+    schema_version: 'opl.package.v2',
+    identity: {
+      id, version: '1.0.0', intent: 'extension', publisher: 'test',
+      name: { 'zh-CN': id, 'en-US': id }, summary: { 'zh-CN': id, 'en-US': id },
+    },
+    provides: { skills: [{ id, path: './skills/my-pkg' }] },
+  });
+  let listed = true;
+  let offline = false;
+  let ownerPath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
+  let reads = 0;
+  let loadErrorSource = path.join(root, 'other', 'marketplace.json');
+  const service = createPackService({ db, stateDir, marketplaceRoot, codexRunner: {
+    async runCli() { throw new Error('presence must only read'); },
+    async listPlugins() {
+      reads++;
+      if (offline) throw new PackError('PACK_CODEX_SYNC_FAILED', 'carrier unavailable');
+      return {
+        marketplaceLoadErrors: [{ marketplacePath: loadErrorSource, message: 'unavailable' }],
+        marketplaces: [{ name: 'opl-local', path: ownerPath, plugins: [{
+          id: id + '@opl-local', name: id, version: null, localVersion: '1.0.0',
+          installed: listed, enabled: listed, interface: null,
+          source: { type: 'local', path: pluginDir }, marketplaceName: 'opl-local', marketplacePath: ownerPath,
+        }] }],
+      };
+    },
+  } });
+  const linked = await service.link({ dir: source, syncCodex: false });
+  projectPackageToCodexMarketplace({ manifest: linked.package.manifest, installPath: source, marketplaceRoot });
+  const inspect = () => service.readInstalledPackagePresence(id);
+  assert.deepEqual(await inspect(), { carrier_ready: true, files_present: true });
+  loadErrorSource = ownerPath;
+  await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
+  loadErrorSource = path.join(root, 'other', 'marketplace.json');
+  listed = false;
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: true });
+  listed = true;
+  ownerPath = path.join(root, 'other', 'marketplace.json');
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: true });
+  offline = true;
+  await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
+  fs.unlinkSync(path.join(source, 'skills/my-pkg/SKILL.md'));
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: false });
+  assert.equal(reads, 5);
 });

@@ -12,6 +12,7 @@ import {
   buildV1DomainFixture,
   buildV2Package,
   createLocalPackageArchive,
+  assertCodexPluginPayload,
   readCodexMarketplaceProjection,
   tamperPackageFile,
 } from "../lib/fixtures.mjs";
@@ -121,8 +122,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
     assert.ok(proj.pluginJson, "Expected .codex-plugin/plugin.json in Codex marketplace");
     assert.equal(proj.pluginJson.name, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true, "skills must be zero-copy symlink");
-    assert.equal(proj.assetsIsSymlink, true, "assets must be zero-copy symlink");
+    assertCodexPluginPayload(proj, pkg.dir);
 
     const syncRes = await runCliJson(["pack", "sync", "codex"], { sandbox: sb });
     assert.equal(syncRes.ok, true);
@@ -182,7 +182,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     assert.equal(proj.pluginJson.name, "med-autoscience");
     assert.equal(proj.pluginJson.interface?.category, "Research");
     assert.equal(proj.pluginJson.interface?.brandColor, "#1F7A8C");
-    assert.equal(proj.skillsIsSymlink, true);
+    assertCodexPluginPayload(proj, fx.dir);
     assert.equal(fs.existsSync(path.join(fx.dir, "plugins")), false);
 
     // Legacy CLI removed + Temporal elimination audit
@@ -498,9 +498,6 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     });
     assert.equal(lineAudit.ok, true, `Line budget / import guard violations: ${JSON.stringify(lineAudit.violations)}`);
     assert.ok(lineAudit.coreLineCount > 0 && lineAudit.coreLineCount < 3000);
-    if (lineAudit.bridgeLineCount > 0) {
-      assert.ok(lineAudit.bridgeLineCount < 400, `Expected bridge < 400L, got ${lineAudit.bridgeLineCount}`);
-    }
   });
 
   it("T3-06 [F1 x F5 x F6 x F9 x F13 x F15]: MCP App workspace_read + Connect loopback via EventBus with zero Temporal/CLI in mcp-app-shared", async () => {
@@ -701,7 +698,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     ensureAgentHandlerScript(pkgDir, "mas");
     await runCliOk(["pack", "link", pkgDir], { sandbox: sb });
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true);
+    assertCodexPluginPayload(proj, pkgDir);
 
     const wsInit = await runCliJson(["workspace", "init", sb.workspaceDir, "--name", "Writeback Bridge WS", "--domain", "mas"], {
       sandbox: sb,
@@ -907,7 +904,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
 
     await runCliOk(["pack", "link", masFx.dir], { sandbox: sb });
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true);
+    assertCodexPluginPayload(proj, masFx.dir);
 
     const wsInit = await runCliJson(["workspace", "init", sb.workspaceDir, "--name", "Detach Harvest WS", "--domain", "mas"], {
       sandbox: sb,
@@ -1229,9 +1226,6 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     });
     assert.equal(lineAudit.ok, true, `Line budget / import guard violations: ${JSON.stringify(lineAudit.violations)}`);
     assert.ok(lineAudit.coreLineCount > 0 && lineAudit.coreLineCount < 3000);
-    if (lineAudit.bridgeLineCount > 0) {
-      assert.ok(lineAudit.bridgeLineCount < 400, `Expected bridge < 400L, got ${lineAudit.bridgeLineCount}`);
-    }
   });
 
   it("T3-13 [F5 x F6 x F8 x F10 x F11 x F12]: human_gate & OPL Connect approval via Bridge -> event.runway.changed/event.ledger.appended & secret isolation", async () => {

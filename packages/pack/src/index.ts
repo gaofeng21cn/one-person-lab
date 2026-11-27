@@ -5,6 +5,7 @@ export type {
   CodexSyncProjectionResult,
   ExternalCodexPluginSummary,
   InstallSourceSpec,
+  PackageUpdateSource,
   InstalledPackageRecord,
   PackContextOptions,
   PackEventBus,
@@ -132,6 +133,8 @@ export {
   type PackageDownloadPlan,
 } from './distribution/download-plan.ts';
 
+export { stageOfficialPackageSource } from './distribution/stage-official-source.ts';
+
 export {
   acceptsCurlChunkRange,
   downloadPackageArchive,
@@ -228,3 +231,13 @@ export {
   type InstallPackageResult,
   type UninstallPackageResult,
 } from './lifecycle/service.ts';
+
+export {
+  officialPackageInstallSource,
+  officialPackageRuntimeRoot,
+  readOfficialPackageCatalog,
+  type OfficialPackageCatalogEntry,
+  type OfficialPackageCatalogOptions,
+} from './distribution/official-package-catalog.ts';
+export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
+export { ensurePackage, type ResolvedPackageForInstall } from './lifecycle/ensure-package.ts';

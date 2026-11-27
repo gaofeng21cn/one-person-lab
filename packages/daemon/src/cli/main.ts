@@ -3,6 +3,8 @@ import path from 'node:path';
 import { resolveStatePaths } from '@opl/core';
 import { buildPackage, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
+import { coerceInstallSourceSpec } from '../utils/normalize.ts';
+import { prepareGatewayCommand } from './gateway-account.ts';
 import { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError } from '../errors.ts';
 import {
   callDaemonRpc,
@@ -15,6 +17,7 @@ import { discoverCliExtensions, invokeCliExtension } from './extensions.ts';
 interface ParsedCliArgs {
   readonly positionals: string[];
   readonly flags: Map<string, string | boolean>;
+  readonly extensionStateDir?: string;
   readonly json: boolean;
   readonly quiet: boolean;
   readonly help: boolean;
@@ -42,6 +45,8 @@ const VALUE_FLAGS = new Set([
   '--account-label',
   '--secret',
   '--credential-handle',
+  '--credential-file',
+  '--group-id',
   '--endpoint',
   '--input',
   '--agent',
@@ -96,6 +101,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
   let quiet = false;
   let help = false;
   let version = false;
+  let extensionStateDir: string | undefined;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]!;
@@ -118,11 +124,16 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
     if (arg.startsWith('--')) {
       const eqIdx = arg.indexOf('=');
       if (eqIdx !== -1) {
-        flags.set(arg.slice(0, eqIdx), arg.slice(eqIdx + 1));
+        const key = arg.slice(0, eqIdx);
+        const value = arg.slice(eqIdx + 1);
+        flags.set(key, value);
+        if (key === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
       if (VALUE_FLAGS.has(arg) && i + 1 < argv.length) {
-        flags.set(arg, argv[++i]!);
+        const value = argv[++i]!;
+        flags.set(arg, value);
+        if (arg === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
       flags.set(arg, true);
@@ -131,7 +142,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
     positionals.push(arg);
   }
 
-  return { positionals, flags, json, quiet, help, version };
+  return { positionals, flags, extensionStateDir, json, quiet, help, version };
 }
 
 function getStringFlag(parsed: ParsedCliArgs, name: string): string | undefined {
@@ -280,6 +291,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'list', usage: 'list [--intent <intent>] [--origin <origin>] [--query <q>]' },
     { name: 'inspect', usage: 'inspect <packageIdOrDir>' },
     { name: 'install', usage: 'install <source> [--no-codex-sync]' },
+    { name: 'ensure', usage: 'ensure <packageId> [--dry-run]' },
     { name: 'update', usage: 'update [<packageId>] [--source <spec>] [--all]' },
     { name: 'uninstall', usage: 'uninstall <packageId>' },
     { name: 'enable', usage: 'enable <packageId>' },
@@ -292,6 +304,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
   ],
   connect: [
     { name: 'mcp-app-stdio', usage: 'mcp-app-stdio [--read-only]' },
+    { name: 'gateway', usage: 'gateway <status|login|refresh|complete-setup|repair|use-for-model-access|authorize-companion|disconnect> ...' },
     { name: 'list', usage: 'list [--provider-type <t>] [--status <s>]' },
     { name: 'add', usage: 'add --provider-type <t> --display-name <n> [--connection-id <id>] [--secret <s>]' },
     { name: 'check', usage: 'check <connectionId>' },
@@ -432,7 +445,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
   if (parsed.version && parsed.positionals.length === 0) {
     const ver = readCliVersion();
     if (parsed.json) {
-      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0' })}\n`);
+      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0', features: ['pack.ensure'] })}\n`);
     } else {
       process.stdout.write(`${ver}\n`);
     }
@@ -723,26 +736,43 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           emitOutput(await rpc('pack.unlink', { package_id: packageId }), parsed);
           return 0;
         }
+        if (sub === 'ensure') {
+          const packageId = rest[0];
+          if (!packageId || rest.length !== 1) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack ensure requires one Package ID.');
+          }
+          // Downloading a closure can take longer than an ordinary status RPC.
+          const result = await callDaemonRpc('pack.ensure', {
+            package_id: packageId,
+            dry_run: getBoolFlag(parsed, '--dry-run'),
+            // A previously started daemon has the environment of its first client.
+            runtime_root: process.env.OPL_FULL_RUNTIME_HOME?.trim() || null,
+          }, { stateDir, timeoutMs: 840_000 });
+          emitOutput(result, parsed);
+          return 0;
+        }
         if (sub === 'install') {
           const source = rest[0];
           if (!source) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack install requires <source>.');
           }
           const syncCodex = !getBoolFlag(parsed, '--no-codex-sync');
-          emitOutput(await rpc('pack.install', { source, sync_codex: syncCodex }), parsed);
+          emitOutput(await rpc('pack.install', { source: coerceInstallSourceSpec(source), sync_codex: syncCodex }), parsed);
           return 0;
         }
         if (sub === 'update') {
           if (getBoolFlag(parsed, '--all')) {
-            emitOutput(await rpc('pack.updateAll', { updates: [] }), parsed);
-            return 0;
+            const method = getBoolFlag(parsed, '--dry-run') ? 'pack.updatePlan' : 'pack.updateAll';
+            const result = await rpc(method, { sync_codex: !getBoolFlag(parsed, '--no-codex-sync') }) as { failures?: unknown[] };
+            emitOutput(result, parsed);
+            return result.failures?.length ? 1 : 0;
           }
           const packageId = rest[0];
           const source = getStringFlag(parsed, '--source') ?? rest[1];
           if (!packageId || !source) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack update requires <packageId> --source <spec>.');
           }
-          emitOutput(await rpc('pack.update', { package_id: packageId, source }), parsed);
+          emitOutput(await rpc('pack.update', { package_id: packageId, source: coerceInstallSourceSpec(source, packageId) }), parsed);
           return 0;
         }
         if (sub === 'uninstall') {
@@ -779,6 +809,11 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       }
 
       case 'connect': {
+        if (sub === 'gateway') {
+          const { method, params } = await prepareGatewayCommand(rest, parsed.flags);
+          emitOutput(await callDaemonRpc(method, params, { stateDir, timeoutMs: 60_000 }), parsed);
+          return 0;
+        }
         if (!sub || !(NAMESPACE_SUBCOMMANDS.connect?.some((c) => c.name === sub))) {
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect subcommand '${sub ?? ''}'.`);
         }
@@ -1141,7 +1176,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
 
       default: {
         // Dynamic CLI extensions lookup (only enabled installed packages)
-        const extensions = await discoverCliExtensions(stateDir);
+        // After the extension subcommand, --state-dir belongs to its own arguments
+        // (for example, the output directory for "opl foundry eval").
+        const extensions = await discoverCliExtensions(parsed.extensionStateDir);
         const match = extensions.find((e) => e.namespace === ns);
         if (!match) {
           throw new DaemonRpcError(
@@ -1168,7 +1205,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           );
         }
         const extParsed = extractExtensionArgsAndOpts(argv, ns!, sub, parsed.help);
-        const out = await invokeCliExtension(match, sub, extParsed.args, extParsed.opts);
+        const out = await invokeCliExtension(match, sub, extParsed.args, extParsed.opts, parsed.extensionStateDir);
         if (
           parsed.help
           && !parsed.json

@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import { openSqliteStore, runMigrations, txImmediate } from '../src/index.ts';
+import { MIGRATION_0001_INITIAL_V2, openSqliteStore, runMigrations, txImmediate } from '../src/index.ts';
 
 const EXPECTED_TABLES = [
   'schema_migrations',
@@ -57,13 +57,13 @@ test('runMigrations creates all 13 tables, 4 indexes, trigger, and is idempotent
   const db = openSqliteStore(dbPath);
   try {
     const first = runMigrations(db);
-    assert.deepEqual(first.applied, [1]);
+    assert.deepEqual(first.applied, [1, 1001]);
     assert.deepEqual(first.skipped, []);
-    assert.equal(first.current_version, 1);
+    assert.equal(first.current_version, 1001);
 
     const second = runMigrations(db);
     assert.deepEqual(second.applied, []);
-    assert.deepEqual(second.skipped, [1]);
+    assert.deepEqual(second.skipped, [1, 1001]);
 
     const tables = db
       .prepare(
@@ -91,17 +91,38 @@ test('runMigrations creates all 13 tables, 4 indexes, trigger, and is idempotent
     // Extra migration support
     const third = runMigrations(db, [
       {
-        version: 2,
-        name: '0002_test_extra',
+        version: 1002,
+        name: '1002_test_extra',
         sql: 'CREATE TABLE IF NOT EXISTS test_extra (id TEXT PRIMARY KEY);',
       },
     ]);
-    assert.deepEqual(third.applied, [2]);
-    assert.deepEqual(third.skipped, [1]);
-    assert.equal(third.current_version, 2);
+    assert.deepEqual(third.applied, [1002]);
+    assert.deepEqual(third.skipped, [1, 1001]);
+    assert.equal(third.current_version, 1002);
   } finally {
     db.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('migrating a pre-update-source database preserves existing installs with an unknown source', () => {
+  const db = openSqliteStore(':memory:');
+  try {
+    db.exec(MIGRATION_0001_INITIAL_V2.sql);
+    db.exec(`
+      INSERT INTO schema_migrations VALUES (1, '0001_initial_v2', '2026-01-01');
+      INSERT INTO installed_packages (package_id, version, intent, origin, install_mode, install_path,
+        content_digest, manifest_json, enabled, carrier_synced, installed_at, updated_at)
+      VALUES ('installed-before-migration', '1.2.0', 'app', 'opl', 'release', '/example/package',
+        'test-digest', '{}', 0, 0, '2026-01-01', '2026-01-01');
+    `);
+    assert.deepEqual(runMigrations(db).applied, [1001]);
+    const row = db.prepare('SELECT version, enabled, update_source_json FROM installed_packages').get();
+    assert.equal(row?.version, '1.2.0');
+    assert.equal(row?.enabled, 0);
+    assert.equal(row?.update_source_json, null);
+  } finally {
+    db.close();
   }
 });
 

@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -53,14 +54,6 @@ const DEFAULT_LOCK_EXCLUDES = new Set([
   "opl-release.lock.json",
   ".DS_Store",
 ]);
-
-function lstatSafe(p) {
-  try {
-    return fs.lstatSync(p);
-  } catch {
-    return null;
-  }
-}
 
 function collectFilesRecursively(rootDir, prefix = "", excludeRealDirs = [], { includeLockFile = false } = {}) {
   const out = [];
@@ -774,34 +767,6 @@ export function readCodexMarketplaceProjection(oplHome, pluginName) {
   const mcpJsonPath = path.join(pluginDir, "mcp.json");
   const mcpJson = fs.existsSync(mcpJsonPath) ? JSON.parse(fs.readFileSync(mcpJsonPath, "utf8")) : null;
 
-  const skillsLinkPath = path.join(pluginDir, "skills");
-  const skillsLstat = lstatSafe(skillsLinkPath);
-  const skillsIsSymlink = Boolean(skillsLstat?.isSymbolicLink());
-  let skillsTarget = null;
-  let skillsRealPath = null;
-  if (skillsIsSymlink) {
-    skillsTarget = fs.readlinkSync(skillsLinkPath);
-    try {
-      skillsRealPath = fs.realpathSync(skillsLinkPath);
-    } catch {
-      skillsRealPath = null;
-    }
-  }
-
-  const assetsLinkPath = path.join(pluginDir, "assets");
-  const assetsLstat = lstatSafe(assetsLinkPath);
-  const assetsIsSymlink = Boolean(assetsLstat?.isSymbolicLink());
-  let assetsTarget = null;
-  let assetsRealPath = null;
-  if (assetsIsSymlink) {
-    assetsTarget = fs.readlinkSync(assetsLinkPath);
-    try {
-      assetsRealPath = fs.realpathSync(assetsLinkPath);
-    } catch {
-      assetsRealPath = null;
-    }
-  }
-
   return {
     marketplaceRoot,
     marketplacePath,
@@ -811,15 +776,25 @@ export function readCodexMarketplaceProjection(oplHome, pluginName) {
     pluginJson,
     mcpJsonPath,
     mcpJson,
-    skillsLinkPath,
-    skillsIsSymlink,
-    skillsTarget,
-    skillsRealPath,
-    assetsLinkPath,
-    assetsIsSymlink,
-    assetsTarget,
-    assetsRealPath,
   };
+}
+
+// Codex skips symlinks when materializing a local plugin in its cache.
+export function assertCodexPluginPayload(projection, packageDir) {
+  const manifest = JSON.parse(fs.readFileSync(path.join(packageDir, "opl-package.json"), "utf8"));
+  const checkFile = (projectedPath, sourcePath) => {
+    const target = path.join(projection.pluginDir, projectedPath);
+    assert.equal(fs.realpathSync(target), path.join(fs.realpathSync(projection.pluginDir), projectedPath),
+      `Codex cache must be able to copy ${projectedPath}`);
+    assert.deepEqual(fs.readFileSync(target), fs.readFileSync(path.join(packageDir, sourcePath)));
+  };
+  for (const skill of manifest.provides?.skills ?? []) {
+    checkFile(path.join("skills", skill.id, "SKILL.md"), path.join(skill.path, "SKILL.md"));
+  }
+  if (manifest.identity.icon) {
+    assert.ok(projection.pluginJson.interface?.logo, "Codex plugin must advertise the Package icon");
+    checkFile(projection.pluginJson.interface.logo, manifest.identity.icon);
+  }
 }
 
 export function buildV1DomainFixture(targetDir, presetName, overrides = {}) {

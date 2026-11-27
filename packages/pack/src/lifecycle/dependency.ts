@@ -27,6 +27,17 @@ export function assertRequiredPackageDependency(
       { package_id: consumerId, dependency: id, installed_version: provider.identity.version, required_version: requirement.version },
     );
   }
+  if (requirement.required_module_ids?.length) {
+    const modules = new Set(provider.provides?.module_ids);
+    const missing = requirement.required_module_ids.filter(moduleId => !modules.has(moduleId));
+    if (missing.length > 0) {
+      throw new PackError(
+        'PACK_DEPENDENCY_MISSING',
+        `Dependency '${id}' does not export required modules for '${consumerId}': ${missing.join(', ')}.`,
+        { package_id: consumerId, dependency: id, missing_module_ids: missing },
+      );
+    }
+  }
   if (!requirement.required_capabilities?.length) return;
 
   // Legacy required export IDs include skill IDs. Connection providers also
