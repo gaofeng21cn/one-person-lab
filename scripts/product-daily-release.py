@@ -13,6 +13,7 @@ import urllib.request
 from pathlib import Path
 from package_release.common import ReleaseError, gh, git, read, run, safe_path, version_tuple, write
 from package_release.owner import merge_release_changes, update_version_files, wait_for_checks
+from package_release.product_status import observe_lanes
 
 FRAMEWORK = Path(__file__).resolve().parents[1]
 
@@ -36,6 +37,16 @@ def settings(root):
             or not all(isinstance(name, str) and re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', name) for name in workflows)
             or len(set(workflows)) != len(workflows)):
         raise ReleaseError('Source check workflows must be unique owner workflow filenames')
+    observed = value.get('observed_publishers', [])
+    if not isinstance(observed, list) or any(
+            not isinstance(item, dict) or
+            not re.fullmatch(r'[a-z0-9][a-z0-9-]*', item.get('lane', '')) or
+            not re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', item.get('workflow', ''))
+            for item in observed):
+        raise ReleaseError('Observed publisher lanes are invalid')
+    lanes = [value.get('primary_lane', 'stable'), *(item['lane'] for item in observed)]
+    if len(set(lanes)) != len(lanes):
+        raise ReleaseError('Product publisher lane identities must be unique')
     if value['strategy'] == 'owner_schedule':
         return value
     paths = value.get('release_paths')
@@ -138,17 +149,22 @@ def plan(root, config, channel):
         current = f'{a}.{b}.{c + 1}'
 
 
-def publisher_status(config, tag, source):
-    runs = gh(f"repos/{config['repository']}/actions/workflows/{config['publisher_workflow']}/runs?head_sha={source}&per_page=100")['workflow_runs']
+def _publisher_run(config, workflow, source, tag):
+    runs = gh(f"repos/{config['repository']}/actions/workflows/{workflow}/runs?head_sha={source}&per_page=100")['workflow_runs']
     matches = [r for r in runs if r['head_sha'] == source and r['head_branch'] == tag and r['event'] in ('push', 'workflow_dispatch')]
     if not matches:
-        return {'status': 'tag_submitted'}
+        return None
     item = max(matches, key=lambda row: row['id'])
     status = 'publisher_' + (item['conclusion'] if item['status'] == 'completed' else item['status'])
-    if status == 'publisher_success' and config.get('publication_stage') == 'candidate_until_device_qualification':
-        status = 'qualification_pending'
-    return {'status': status,
-            'run_id': item['id'], 'run_url': item['html_url']}
+    return {'status': status, 'run_id': item['id'], 'run_url': item['html_url']}
+
+
+def publisher_status(config, tag, source):
+    primary = _publisher_run(config, config['publisher_workflow'], source, tag)
+    result = primary or {'status': 'tag_submitted'}
+    if result['status'] == 'publisher_success' and config.get('publication_stage') == 'candidate_until_device_qualification':
+        result['status'] = 'qualification_pending'
+    return result
 
 
 def prepare(root, config, *, apply):
@@ -161,8 +177,7 @@ def prepare(root, config, *, apply):
     if gh(f'repos/{repo}')['archived']:
         raise ReleaseError('Product owner is archived')
     if config['strategy'] == 'owner_schedule':
-        runs = gh(f"repos/{repo}/actions/workflows/{config['publisher_workflow']}/runs?event=schedule&per_page=1")['workflow_runs']
-        return {'status': 'owner_schedule', 'latest_run': {k: runs[0][k] for k in ('id', 'status', 'conclusion', 'html_url')} if runs else None}
+        return {'status': 'owner_schedule'}
     if git(root, 'status', '--porcelain'):
         raise ReleaseError('Product release checkout must be clean')
     git(root, 'fetch', 'origin', 'main', '--tags', '--quiet')
@@ -171,8 +186,12 @@ def prepare(root, config, *, apply):
         raise ReleaseError('Product release requires fresh canonical main')
     channel = published(root, config)
     result = plan(root, config, channel)
-    if not apply or result['status'] == 'unchanged':
-        return result
+    if result['status'] == 'unchanged':
+        return {**result, 'tag': channel.get('tag', tag_for(config, channel['version'])), 'published_channel': channel}
+    if not apply:
+        if result['status'] == 'resume':
+            result.update(publisher_status(config, result['tag'], result['source_commit']))
+        return {**result, 'published_channel': channel}
     if result['status'] != 'resume':
         # Framework publishes itself: its current controller check is not source
         # verification and must not wait for its own completion.
@@ -204,8 +223,10 @@ def prepare(root, config, *, apply):
             gh(f"repos/{repo}/actions/runs/{state['run_id']}/rerun", method='POST')
             state['status'] = 'qualification_recheck_submitted'
         result.update(state)
+        result['published_channel'] = published(root, config) if state['status'] == 'publisher_success' else channel
         return result
     result.update(publisher_status(config, result['tag'], result['source_commit']))
+    result['published_channel'] = published(root, config) if result['status'] == 'publisher_success' else channel
     return result
 
 
@@ -213,13 +234,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--owner-root', type=Path, required=True)
     parser.add_argument('--apply', action='store_true')
+    parser.add_argument('--cohort-id', default='')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     report = {'schema_version': 'opl.product-release-result.v1', 'applied': args.apply}
+    if expected := os.getenv('EXPECTED_PRODUCT'):
+        report.update(product_id=expected, repository=os.getenv('EXPECTED_REPOSITORY'))
+    if args.cohort_id:
+        if not re.fullmatch(r'opl-daily-[1-9][0-9]*', args.cohort_id):
+            raise SystemExit('Invalid release cohort id')
+        report['cohort_id'] = args.cohort_id
     try:
         config = settings(args.owner_root)
         report.update(product_id=config['product_id'], repository=config['repository'])
+        report['main_commit'] = git(args.owner_root, 'rev-parse', 'HEAD')
         report.update(prepare(args.owner_root, config, apply=args.apply))
+        report['lanes'] = observe_lanes(config, report)
     except Exception as exc:
         report.update(status='blocked', reason=str(exc)[-3000:])
     write(args.output, report)

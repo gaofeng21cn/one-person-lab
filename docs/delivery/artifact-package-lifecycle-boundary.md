@@ -125,8 +125,9 @@ Agent Reach 由其 CLI 维护，Framework 读取 `version` 和 `doctor` 的结�
 
 publication完成至少需要owner workflow、immutable ref/digest、可见性和consumer readback。本地build、task branch或Framework catalog不能替代。
 
-发布入口按 owner 分离：Framework 维护 Framework channel，App 维护 App
-release channel，每个 Package 维护自己的 package channel。不生成跨 owner 的组合发布清单、冻结集合或备案指针。App 安装包自身的
+Framework 维护 Framework channel，App 维护 App release channel，每个 Package 维护自己的
+package channel。每日观察报告汇总这些入口的运行与公开回读；发布版本、冻结候选和
+更新指针由各自的 owner 管理。App 安装包自身的
 构建来源、签名、公证和制品校验只描述该安装包，不规定外部 Framework
 与 Package 的安装组合，也不能成为其发布前置。
 
@@ -140,7 +141,8 @@ App Cask 消费 App 的发布结果，两者独立推进。
 
 `daily-product-channel.yml` 每日独立处理 `product-release-owners.json` 登记的
 第一方产品；它是发布路由，不是 Package 注册表或安装状态。已准入的 Package
-继续由原有每日 Package 流程动态发现，不重复登记。App Stable 沿用其产品发布入口。
+继续由原有每日 Package 流程动态发现。App 与 DSH 的每日运行由各自的 owner 调度，
+Framework 以只读方式回读。App Stable 和 Stable Full 沿用各自的受保护操作。
 
 产品根目录的 `product-release.json` 声明交付路径、版本文件、tag 格式及原生发布
 workflow。共用准备器比较已发布源码与 main，只对交付变化分配补丁版本，
@@ -165,9 +167,14 @@ Package 由该工作流指定的固定 Framework 提交提供生成、校验和�
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
 不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。
 
-每日 Actions artifact 分别记录各产品的发布进度、原生 run 或阻塞原因；提交 tag、
-候选构建成功与 stable 发布成功分别回读。该流程不安装用户软件、不部署生产实例、
-不更新真实设备。
+每天的 Actions 汇总使用 Framework 运行 ID 关联各产品准备结果。产品结果记录观察时
+的 main、已冻结的 tag 和源码、原生 workflow 与公开渠道回读；额外渠道由 owner 的
+`observed_publishers` 声明。提交 tag、候选完成、资格失败、发布与实际渠道回读是
+不同阶段。产品发布任务可以在汇总之后继续推进，报告保留当时观测值和原生运行链接。
+
+同一北京时间日内的 Package 检测与派发按原始运行 ID 关联，公开 OCI 渠道按精确
+版本和 owner 源码回读。手动使用 `observe_only` 可刷新当前报告。产品发布器继续
+持有签名、资格、公开发布与安装或部署的权限。
 
 ## 软件包的发布入口
 

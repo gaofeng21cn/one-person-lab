@@ -9,6 +9,10 @@ on:
         required: false
         default: ''
         type: string
+      observe_only:
+        description: Read current channels and owner runs without preparing versions or retrying publishers
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -20,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       products: ${{ steps.inventory.outputs.products }}
+      cohort_id: ${{ steps.inventory.outputs.cohort_id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -39,6 +44,7 @@ jobs:
                   raise SystemExit('Unknown product selection')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
               stream.write('products=' + json.dumps(products) + '\n')
+              stream.write('cohort_id=opl-daily-' + os.environ['GITHUB_RUN_ID'] + '\n')
           PY
   release:
     needs: inventory
@@ -59,6 +65,7 @@ jobs:
           path: controller
           persist-credentials: false
       - name: Create owner release identity
+        if: ${{ !matrix.product.observe_only && !inputs.observe_only }}
         id: publisher
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc
         with:
@@ -79,19 +86,26 @@ jobs:
           ref: main
           path: owner
           fetch-depth: 0
-          token: ${{ steps.publisher.outputs.token }}
+          token: ${{ steps.publisher.outputs.token || github.token }}
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      - if: steps.publisher.outputs.token != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '26'
       - name: Prepare or resume the owner release
         env:
-          GH_TOKEN: ${{ steps.publisher.outputs.token }}
+          GH_TOKEN: ${{ steps.publisher.outputs.token || github.token }}
+          APPLY_RELEASE: ${{ steps.publisher.outputs.token != '' }}
           EXPECTED_PRODUCT: ${{ matrix.product.product_id }}
           EXPECTED_REPOSITORY: ${{ matrix.product.repository }}
+          RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
+        shell: bash
         run: |
+          args=()
+          if [ "$APPLY_RELEASE" = true ]; then args+=(--apply); fi
           python3 controller/scripts/product-daily-release.py \
-            --owner-root "$GITHUB_WORKSPACE/owner" --apply \
+            --owner-root "$GITHUB_WORKSPACE/owner" "${args[@]}" \
+            --cohort-id "$RELEASE_COHORT_ID" \
             --output "$RUNNER_TEMP/product-release-result.json"
       - name: Retain the independent product result
         if: always()
@@ -100,3 +114,39 @@ jobs:
           name: opl-product-release-${{ matrix.product.product_id }}-${{ github.run_id }}
           path: ${{ runner.temp }}/product-release-result.json
           if-no-files-found: warn
+          overwrite: true
+  cohort:
+    name: Reconcile release cohort
+    if: always() && needs.inventory.result == 'success'
+    needs: [inventory, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout release controller
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Download product results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: opl-product-release-*-${{ github.run_id }}
+          path: results
+      - name: Write cohort matrix
+        env:
+          RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
+          EXPECTED_PRODUCTS: ${{ needs.inventory.outputs.products }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/product-release-cohort.py \
+            --cohort-id "$RELEASE_COHORT_ID" \
+            --results-root results \
+            --output "$RUNNER_TEMP/product-release-cohort.json"
+      - name: Retain cohort matrix
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: opl-product-release-cohort-${{ github.run_id }}
+          path: ${{ runner.temp }}/product-release-cohort.json
+          if-no-files-found: error
+          overwrite: true

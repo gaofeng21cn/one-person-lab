@@ -15,7 +15,8 @@
     {
       "product_id": "opl-dsh",
       "repository": "gaofeng21cn/opl-dsh",
-      "repository_name": "opl-dsh"
+      "repository_name": "opl-dsh",
+      "observe_only": true
     },
     {
       "product_id": "opl-fleet-cockpit",
@@ -31,6 +32,12 @@
       "product_id": "opl-netfleet",
       "repository": "gaofeng21cn/opl-netfleet",
       "repository_name": "opl-netfleet"
+    },
+    {
+      "product_id": "opl-app",
+      "repository": "gaofeng21cn/one-person-lab-app",
+      "repository_name": "one-person-lab-app",
+      "observe_only": true
     },
     {
       "product_id": "u60-pro-companion",
