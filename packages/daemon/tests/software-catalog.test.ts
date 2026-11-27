@@ -3,6 +3,8 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import type { InstalledPackageRecord, PackStore } from '@opl/pack';
+import { projectPackageDirectory } from '../src/state/package-projection.ts';
 import { OfficialSoftwareCatalog, isOfficialCatalogPackage, projectCatalogEntries } from '../src/state/package-catalog.ts';
 
 function catalogEntry(id: string, restricted = false) {
@@ -70,6 +72,44 @@ test('fast reads share a single pending catalog and expose only discoverable row
   assert.equal(freshRows[0]?.selected_version, undefined);
   assert.ok(!JSON.stringify(freshRows).includes('internal description'));
   assert.equal(requests, 1);
+});
+
+test('installed official releases keep their selected catalog version after the rows are combined', async () => {
+  const ready = Promise.withResolvers<void>();
+  const catalog = new OfficialSoftwareCatalog(ready.resolve, { runtimeRoot: null, fetchImpl: async () => Response.json(index) });
+  catalog.read();
+  await ready.promise;
+  const installed = (id: string, repository: string): InstalledPackageRecord => {
+    const version = '1.0.0';
+    const label = { 'en-US': id, 'zh-CN': id };
+    const identity = { id, repository, version, intent: 'agent' as const, name: label, summary: label, publisher: 'OPL' };
+    const manifest = { schema_version: 'opl.package.v2' as const, identity };
+    return {
+      package_id: id, version, intent: 'agent', origin: 'opl', install_mode: 'release', install_path: '/example/' + id,
+      content_digest: 'sha256:' + 'c'.repeat(64), manifest, manifest_json: JSON.stringify(manifest),
+      enabled: true, carrier_synced: false, codex_synced: false, installed_at: '', updated_at: '',
+    };
+  };
+  const records = [
+    installed('v2-published', v2Published.manifest.source_repo),
+    installed('guarded', guarded.manifest.source_repo),
+    installed('published', 'https://github.com/other/published'),
+  ];
+  const rowFor = (
+    records: InstalledPackageRecord[], id: string,
+    getInstallSource: PackStore['getInstallSource'] = package_id => ({ kind: 'official', package_id }),
+  ) => {
+    const { directory } = projectPackageDirectory(records, { enabled: new Map(), shortcuts: new Map() }, catalog.read(), { getInstallSource });
+    return directory.entries.find(entry => entry.package_id === id);
+  };
+  const official = rowFor(records, 'v2-published');
+  assert.equal(official && 'installed_version' in official && official.installed_version, '1.0.0');
+  assert.equal(official?.selected_version, '1.2.4');
+  assert.equal(rowFor(records, 'v2-published', () => ({ kind: 'local_dir', path: '/local' }))?.selected_version, undefined);
+  assert.equal(rowFor(records, 'guarded')?.selected_version, undefined);
+  assert.equal(rowFor(records, 'published')?.selected_version, undefined);
+  assert.equal(rowFor([{ ...records[0]!, origin: 'external' }], 'v2-published')?.selected_version, undefined);
+  assert.equal(rowFor([{ ...records[0]!, install_mode: 'dev_link' }], 'v2-published')?.selected_version, undefined);
 });
 
 test('Full keeps unbundled catalog products discoverable without projecting installs that require absent sources', async (t) => {

@@ -1,5 +1,5 @@
 import { sharedPanelEntry } from '@opl/mcp-app-shared/bridge';
-import { resolveCodexPluginName, type InstalledPackageRecord } from '@opl/pack';
+import { resolveCodexPluginName, type InstalledPackageRecord, type PackStore } from '@opl/pack';
 
 import { isOfficialCatalogPackage, projectCatalogEntries, type SoftwareCatalogSnapshot } from './package-catalog.ts';
 import type { readAppPackagePreferences } from './app-package-preferences.ts';
@@ -65,7 +65,10 @@ function projectHomeShortcuts(pkg: InstalledPackageRecord, prefs: AppPreferences
   });
 }
 
-export function projectPackageDirectory(installed: readonly InstalledPackageRecord[], prefs: AppPreferences, catalog: SoftwareCatalogSnapshot) {
+export function projectPackageDirectory(
+  installed: readonly InstalledPackageRecord[], prefs: AppPreferences, catalog: SoftwareCatalogSnapshot,
+  store: Pick<PackStore, 'getInstallSource'>,
+) {
   const entries = installed.map(pkg => {
     const { identity, ui } = pkg.manifest;
     const appEnabled = prefs.enabled.get(pkg.package_id) ?? true;
@@ -82,6 +85,10 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
     if (pkg.origin !== 'external') availableActions.push(rowAction(uninstall, 'uninstall', { package_id: pkg.package_id }));
     const description = identity.description ?? identity.summary;
     const official = isOfficialCatalogPackage(catalog, pkg.package_id, identity.repository);
+    const updateSource = official && pkg.origin === 'opl' && pkg.install_mode === 'release'
+      ? store.getInstallSource(pkg.package_id) : null;
+    const selectedVersion = updateSource?.kind === 'official' && updateSource.package_id === pkg.package_id
+      ? catalog.entries.get(pkg.package_id)?.selected_version : undefined;
     return {
       package_id: pkg.package_id,
       display_name: identity.name['en-US'] ?? pkg.package_id,
@@ -92,6 +99,7 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
       publisher: identity.publisher,
       installed: true,
       installed_version: pkg.version,
+      ...(selectedVersion && { selected_version: selectedVersion }),
       activated: pkg.enabled,
       app_enabled: appEnabled,
       install_state: 'installed',

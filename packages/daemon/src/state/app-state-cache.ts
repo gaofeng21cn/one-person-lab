@@ -250,7 +250,7 @@ export class AppStateCache {
       schedules,
       app_state: {
         operator: { workbench: buildRunwayWorkbench(this.#db, packages, generatedAt, inventory) },
-        agent_packages: projectPackageDirectory(installed, preferences, catalog),
+        agent_packages: projectPackageDirectory(installed, preferences, catalog, this.#packService.store),
         ui_contributions: projectUiContributions(appPackages),
         actions: [...packageActions, {
           action_id: 'work_item_visibility_set', label: 'Change work item visibility',
