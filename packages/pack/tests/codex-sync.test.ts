@@ -180,6 +180,31 @@ test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, 
   }
 });
 
+test('linked Codex plugins expose only declared skills as the checkout changes', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-linked-skills-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const pkgDir = path.join(root, 'pkg');
+  const manifest = parsePackageManifestV2({
+    schema_version: 'opl.package.v2',
+    identity: {
+      id: 'linked', version: '1.0.0', intent: 'extension', publisher: 'example',
+      name: { 'zh-CN': '技能', 'en-US': 'Skills' },
+      summary: { 'zh-CN': '技能包', 'en-US': 'Skills package' },
+    },
+    provides: { skills: [{ id: 'selected', path: './skills/selected' }] },
+  });
+  createTempPackage(pkgDir, manifest, 'skills/selected');
+  const projected = projectPackageToCodexMarketplace({
+    manifest, installPath: pkgDir, marketplaceRoot: path.join(root, 'marketplace'),
+  });
+  const added = path.join(pkgDir, 'skills', 'work-in-progress');
+  fs.mkdirSync(added);
+  fs.writeFileSync(path.join(added, 'SKILL.md'), '# Unlisted skill');
+  const skillsDir = path.join(projected.plugin_dir, 'skills');
+  assert.deepEqual(fs.readdirSync(skillsDir), ['selected']);
+  assert.equal(fs.realpathSync(path.join(skillsDir, 'selected')), fs.realpathSync(path.join(pkgDir, 'skills/selected')));
+});
+
 test('codex-sync imports external Codex plugins and handles marketplace transient retry & rollback', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-ext-'));
   const stateDir = path.join(tmpDir, 'state');

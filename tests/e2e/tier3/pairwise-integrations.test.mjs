@@ -121,7 +121,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
     assert.ok(proj.pluginJson, "Expected .codex-plugin/plugin.json in Codex marketplace");
     assert.equal(proj.pluginJson.name, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true, "skills must be zero-copy symlink");
+    assert.equal(fs.lstatSync(path.join(proj.skillsLinkPath, "mas")).isSymbolicLink(), true);
     assert.equal(proj.assetsIsSymlink, true, "assets must be zero-copy symlink");
 
     const syncRes = await runCliJson(["pack", "sync", "codex"], { sandbox: sb });
@@ -182,7 +182,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     assert.equal(proj.pluginJson.name, "med-autoscience");
     assert.equal(proj.pluginJson.interface?.category, "Research");
     assert.equal(proj.pluginJson.interface?.brandColor, "#1F7A8C");
-    assert.equal(proj.skillsIsSymlink, true);
+    assert.equal(fs.lstatSync(path.join(proj.skillsLinkPath, "med-autoscience")).isSymbolicLink(), true);
     assert.equal(fs.existsSync(path.join(fx.dir, "plugins")), false);
 
     // Legacy CLI removed + Temporal elimination audit
@@ -698,7 +698,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
     ensureAgentHandlerScript(pkgDir, "mas");
     await runCliOk(["pack", "link", pkgDir], { sandbox: sb });
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true);
+    assert.equal(fs.lstatSync(path.join(proj.skillsLinkPath, "mas")).isSymbolicLink(), true);
 
     const wsInit = await runCliJson(["workspace", "init", sb.workspaceDir, "--name", "Writeback Bridge WS", "--domain", "mas"], {
       sandbox: sb,
@@ -904,7 +904,7 @@ describe("Tier 3: Cross-Feature Pairwise Integrations (T3-01..T3-20, 105/105 Fea
 
     await runCliOk(["pack", "link", masFx.dir], { sandbox: sb });
     const proj = readCodexMarketplaceProjection(sb.oplHome, "med-autoscience");
-    assert.equal(proj.skillsIsSymlink, true);
+    assert.equal(fs.lstatSync(path.join(proj.skillsLinkPath, "med-autoscience")).isSymbolicLink(), true);
 
     const wsInit = await runCliJson(["workspace", "init", sb.workspaceDir, "--name", "Detach Harvest WS", "--domain", "mas"], {
       sandbox: sb,

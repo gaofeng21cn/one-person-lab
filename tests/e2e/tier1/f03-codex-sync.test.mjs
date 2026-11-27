@@ -58,8 +58,11 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
       "Expected marketplace.json to include med-autoscience"
     );
     assert.ok(proj.pluginJson, "Expected .codex-plugin/plugin.json to exist");
-    assert.equal(proj.skillsIsSymlink, true, "skills must be a zero-copy symlink");
-    assert.equal(proj.skillsRealPath, fs.realpathSync(pkg.skillsDir));
+    for (const skill of pkg.manifest.provides.skills) {
+      const link = path.join(proj.skillsLinkPath, skill.id);
+      assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+      assert.equal(fs.realpathSync(link), fs.realpathSync(path.join(pkg.dir, skill.path)));
+    }
     assert.equal(proj.assetsIsSymlink, true, "assets must be a zero-copy symlink");
     assert.equal(proj.assetsRealPath, fs.realpathSync(pkg.assetsDir));
     assert.equal(fs.existsSync(path.join(pkg.dir, "plugins")), false, "Source repo must have zero plugins/ mirror");

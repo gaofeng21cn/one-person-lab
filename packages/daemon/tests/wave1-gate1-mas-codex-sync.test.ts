@@ -269,7 +269,7 @@ async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
   assert.equal(pluginJson.name, 'med-autoscience');
   assert.ok(pluginJson.interface?.defaultPrompt && pluginJson.interface.defaultPrompt.length > 0);
 
-  const skillsLink = path.join(pluginDir, 'skills');
+  const skillsLink = path.join(pluginDir, 'skills', 'med-autoscience');
   const assetsLink = path.join(pluginDir, 'assets');
   assert.equal(fs.lstatSync(skillsLink).isSymbolicLink(), true);
   assert.equal(fs.lstatSync(assetsLink).isSymbolicLink(), true);

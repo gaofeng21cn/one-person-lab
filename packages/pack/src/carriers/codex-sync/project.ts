@@ -325,39 +325,14 @@ export function projectPackageToCodexMarketplace(input: {
     );
   }
 
-  // Zero-copy skills symlink(s)
-  const skills = input.manifest.provides?.skills ?? [];
-  if (skills.length > 0) {
-    const rootSkillsDir = path.join(realInstall, 'skills');
-    const allUnderStandardSkillsDir =
-      fs.existsSync(rootSkillsDir)
-      && fs.statSync(rootSkillsDir).isDirectory()
-      && skills.every((s) => {
-        const clean = normalizeRelativePosixPath(s.path).replace(/\/+$/, '');
-        return clean === `skills/${s.id}`;
-      });
-
-    if (allUnderStandardSkillsDir) {
-      for (const skill of skills) {
-        resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
-          allowSymlinks,
-        });
-      }
-      createZeroCopySymlink(rootSkillsDir, path.join(pluginDir, 'skills'), 'dir');
-    } else {
-      const skillsContainer = path.join(pluginDir, 'skills');
-      fs.mkdirSync(skillsContainer, { recursive: true });
-      for (const skill of skills) {
-        const resolvedSkillDir = resolveSafePackagePath(realInstall, skill.path, { allowSymlinks });
-        resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
-          allowSymlinks,
-        });
-        if (!isWithinDirectory(realInstall, resolvedSkillDir)) {
-          throw new PackError('PACK_SYMLINK_ESCAPE', `Skill path '${skill.path}' escapes package root.`);
-        }
-        createZeroCopySymlink(resolvedSkillDir, path.join(skillsContainer, skill.id), 'dir');
-      }
-    }
+  // A linked checkout can gain new skill directories between syncs. Link only
+  // the skills listed in the installed manifest, including for standard paths.
+  for (const skill of input.manifest.provides?.skills ?? []) {
+    const skillDir = resolveSafePackagePath(realInstall, skill.path, { allowSymlinks });
+    resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
+      allowSymlinks,
+    });
+    createZeroCopySymlink(skillDir, path.join(pluginDir, 'skills', skill.id), 'dir');
   }
 
   // Zero-copy assets / icon symlink(s)

@@ -470,8 +470,11 @@ describe("Tier 4 — Real-World Application Scenarios & Wave Gates", { concurren
       typeof (proj.pluginJson.interface.logo ?? proj.pluginJson.interface.icon) === "string",
       `Expected logo/icon in projected plugin.json interface: ${JSON.stringify(proj.pluginJson.interface)}`
     );
-    assert.equal(proj.skillsIsSymlink, true, "skills must be zero-copy symlink");
-    assert.equal(proj.skillsRealPath, fs.realpathSync(pkg.skillsDir));
+    for (const skill of pkg.manifest.provides.skills) {
+      const link = path.join(proj.skillsLinkPath, skill.id);
+      assert.equal(fs.lstatSync(link).isSymbolicLink(), true);
+      assert.equal(fs.realpathSync(link), fs.realpathSync(path.join(pkg.dir, skill.path)));
+    }
     assert.equal(proj.assetsIsSymlink, true, "assets must be zero-copy symlink");
     assert.equal(proj.assetsRealPath, fs.realpathSync(pkg.assetsDir));
 
