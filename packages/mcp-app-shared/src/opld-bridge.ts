@@ -398,6 +398,19 @@ export function createMcpAppOpldBridge(
   return new OpldContributionBridge(transport);
 }
 
+export const SHARED_WORKBENCH_URI = 'ui://opl/apps.html';
+
+export function sharedPanelEntry(pkg: Pick<ProjectedPackageSummary, 'enabled' | 'package_id' | 'ui'>) {
+  if (!pkg.enabled) return undefined;
+  const panels = pkg.ui?.declarative?.views?.filter(view => view.slot === 'workbench.panel');
+  if (!panels?.length) return undefined;
+  const navigation = [...(pkg.ui?.declarative?.navigation ?? [])]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const entry = navigation.find(item => panels.some(view => view.id === item.view_id));
+  const viewId = entry?.view_id ?? [...panels].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]!.id;
+  return { resource_uri: SHARED_WORKBENCH_URI, arguments: { package_id: pkg.package_id, view_id: viewId } };
+}
+
 export function buildCatalogFromAppState(
   appState: AppStateSnapshotLike,
   options: {
