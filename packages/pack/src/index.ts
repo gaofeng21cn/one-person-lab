@@ -244,3 +244,10 @@ export {
 } from './distribution/official-package-catalog.ts';
 export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
 export { ensurePackage, type ResolvedPackageForInstall } from './lifecycle/ensure-package.ts';
+
+export {
+  checkPrivatePackageSource,
+  configurePrivatePackageSource,
+  disconnectPrivatePackageSource,
+  listPrivatePackageSources,
+} from './distribution/private-package-sources.ts';

@@ -30,7 +30,12 @@ Framework 通过 owner projection、native carrier 和当前身份的软件源�
 
 运行组件来自 `managed_update.components[opl_base].current.dependency_catalog.dependencies`，快速状态与完整状态保留相同的身份、版本、管理归属和路径摘要。App 自有运行目录可由原维护入口更新；系统 PATH、Homebrew 或其他产品提供的工具按原安装者维护，不能因被 OPL 使用就变成可静默覆盖的 OPL 安装。Python/uv 由既有 `opl env` 按项目锁文件准备环境、复用缓存，软件中心不全局升级所有项目的解释器；具体环境通过 `opl env inspect` 和 `opl env cache inventory` 回读。
 
-## CLI 操作
+## v2 中配置私有软件源
+
+首次使用私有 Package 时，在软件中心的软件源设置选择 GitHub 命名空间，连接已登录的 GitHub CLI 账户，或在高级设置中选择 Docker 登录或受控环境凭据。也可以使用下列 `opl sources` 命令配置和断开来源。v2 在 CLI、Studio 和 Flow 发布工具之间共用此处的凭据引用。
+
+`configure` 启用来源后立即检查 GitHub 账户。此后可用 `check` 再次检查。账户通过验证后，具体 Package 的下载和发布还需要对应的仓库和 GHCR 权限。仅列出软件源时不会联系 GitHub。
+
 
 先查看来源和当前访问状态：
 
@@ -38,7 +43,7 @@ Framework 通过 owner projection、native carrier 和当前身份的软件源�
 opl sources list --json
 ```
 
-检查单个来源。检查会通过同一 provider 验证登录/凭证，并刷新该来源中可见 Package 的真实读取权限：
+检查指定来源当前选定凭据对应的 GitHub 身份。
 
 ```bash
 opl sources check --source-id github-packages:gaofeng21cn --json
@@ -64,9 +69,9 @@ Flow 手工发布私有 Package 时，Framework 发布工具从该文件读取�
 opl sources disconnect --source-id github-packages:gaofeng21cn --json
 ```
 
-断开后，已安装的私有条目仍显示最小本地安装事实，并允许停用、修复本地 carrier 或卸载；需要远端 manifest、payload 或更新的动作会显示授权失效并保持不可用。重新 `configure` 后再 `check`，目录和可更新状态才恢复。
+断开后，已安装的私有条目仍显示最小本地安装事实，并允许停用、修复本地 carrier 或卸载；需要远端 manifest、payload 或更新的动作会显示授权失效并保持不可用。重新连接并通过身份检查后，Flow 可以使用同一引用读取发布回执。
 
-## 刷新官方目录
+## v1 刷新官方目录
 
 从官方源刷新目录版本。该动作刷新目录索引，安装和更新继续在各软件条目执行。
 
@@ -74,7 +79,7 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 opl sources refresh --source-id public-registry:opl --json
 ```
 
-## Homebrew 原生软件
+## v1 Homebrew 原生软件
 
 公开 tap 的物理入口是 [gaofeng21cn/homebrew-one-person-lab](https://github.com/gaofeng21cn/homebrew-one-person-lab)，Homebrew 名称为 `gaofeng21cn/one-person-lab`。首次接入、检查和联网刷新各自有明确动作：
 
