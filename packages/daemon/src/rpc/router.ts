@@ -29,6 +29,7 @@ import { configureCodexApiKey } from './configure-codex-api-key.ts';
 import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts';
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { executeAppPackageAction } from './app-package-actions.ts';
+import { readSystemInitialize } from '../state/initialize.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
 import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
 import { readCodexPersonalization, restoreCodexUserInstructions } from '../state/codex-personalization.ts';
@@ -152,11 +153,13 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
   handlers.set('app.initialize.get', (_params, conn) => {
-    const doc = runtime.doctor(true);
+    const doc = runtime.doctor(true, { repairPermissions: false });
     const state = appState('fast', conn);
+    const model = state.app_state.settings_control_center?.app_settings_read_model.codex_model_policy;
     return {
       ...doc,
       state,
+      ...(model && { system_initialize: readSystemInitialize(runtime.paths.state_dir, model.model_access_ready) }),
     };
   });
 

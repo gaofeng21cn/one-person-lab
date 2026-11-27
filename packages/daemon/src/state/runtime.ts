@@ -1175,7 +1175,7 @@ export class DaemonRuntime {
     });
   }
 
-  doctor(includeFirstRun = false): Record<string, unknown> {
+  doctor(includeFirstRun = false, { repairPermissions = true } = {}): Record<string, unknown> {
     const jmRow = this.db.prepare('PRAGMA journal_mode').get() as { journal_mode?: string } | undefined;
     const fkRow = this.db.prepare('PRAGMA foreign_keys').get() as { foreign_keys?: number } | undefined;
     const btRow = this.db.prepare('PRAGMA busy_timeout').get() as { timeout?: number; busy_timeout?: number } | undefined;
@@ -1217,7 +1217,7 @@ export class DaemonRuntime {
       }
       const prevMode = fs.statSync(targetPath).mode & 0o777;
       const prevStr = prevMode.toString(8).padStart(4, '0');
-      if (prevMode !== 0o600) {
+      if (repairPermissions && prevMode !== 0o600) {
         try {
           fs.chmodSync(targetPath, 0o600);
           permissions.push({
