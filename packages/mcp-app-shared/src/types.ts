@@ -117,6 +117,11 @@ export interface AppStateSnapshotLike {
   readonly tasks?: readonly Record<string, unknown>[];
   readonly schedules?: readonly Record<string, unknown>[];
   readonly app_state?: {
+    readonly agent_packages?: {
+      readonly directory?: {
+        readonly entries?: readonly { readonly package_id: string; readonly app_enabled?: boolean }[];
+      };
+    };
     readonly operator?: {
       readonly workbench?: {
         readonly work_item_projection_v2?: {

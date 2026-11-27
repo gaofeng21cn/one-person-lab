@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { McpServer } from '@modelcontextprotocol/server';
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { registerAppResource, registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
-import { buildCatalogFromAppState, createMcpAppOpldBridge, SHARED_WORKBENCH_URI } from '@opl/mcp-app-shared/bridge';
+import { buildCatalogFromAppState, createMcpAppOpldBridge, RUNTIME_PACKAGE_ID, RUNTIME_DOMAIN_DETAIL_REF, SHARED_WORKBENCH_URI } from '@opl/mcp-app-shared/bridge';
 import { z } from 'zod';
 import { callDaemonRpc } from './client.ts';
 
@@ -12,7 +12,7 @@ const viewMeta = { ui: { resourceUri: SHARED_WORKBENCH_URI } };
 const operationMeta = { ui: { resourceUri: SHARED_WORKBENCH_URI, visibility: ['app'] as ['app'] } };
 const viewHtml = new URL('../../../mcp-app-shared/dist/mcp-app-view.html', import.meta.url);
 
-function toolResult(payload: Record<string, unknown>, isError = false) {
+function toolResult(payload: Record<string, unknown>, isError = payload.ok === false) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }], structuredContent: payload, isError };
 }
 
@@ -44,7 +44,7 @@ function createServer(stateDir: string | undefined, version: string, readOnly: b
     annotations: { readOnlyHint: true }, _meta: operationMeta,
   }, async ({ package_id, ref, input }) => {
     const catalog = buildCatalogFromAppState(await bridge.getAppState('fast'));
-    if (!(package_id === 'opl-runtime' && ref === 'opl.runtime.v1#domain-detail')
+    if (!(package_id === RUNTIME_PACKAGE_ID && ref === RUNTIME_DOMAIN_DETAIL_REF)
       && !catalog.views.some(view => view.package_id === package_id && view.data_ref === ref)) {
       return toolResult({ error: { code: 'VIEW_NOT_FOUND', message: 'The selected Package does not expose this view.' } }, true);
     }
@@ -57,7 +57,7 @@ function createServer(stateDir: string | undefined, version: string, readOnly: b
     title: 'Execute a workbench action', inputSchema: z.strictObject({ ...target, confirmed: z.boolean() }),
     annotations: { readOnlyHint: false, idempotentHint: false }, _meta: operationMeta,
   }, async ({ package_id, ref, input, confirmed }) => {
-    if (package_id === 'opl-runtime') {
+    if (package_id === RUNTIME_PACKAGE_ID) {
       return toolResult(await bridge.executeContribution({ packageId: package_id, actionId: ref, payload: input, confirmed }));
     }
     const receipt = await rpc<Record<string, unknown>>('app.action.execute', {

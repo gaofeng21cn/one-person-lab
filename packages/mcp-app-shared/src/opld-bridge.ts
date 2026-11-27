@@ -249,7 +249,6 @@ export class OpldContributionBridge {
     readonly confirmed?: boolean;
     readonly payload?: Record<string, unknown>;
     readonly dryRun?: boolean;
-    readonly confirmed?: boolean;
     readonly mode?: string;
   }): Promise<Record<string, unknown>> {
     if (input.packageId === RUNTIME_PACKAGE_ID) {
@@ -408,6 +407,8 @@ export function createMcpAppOpldBridge(
   return new OpldContributionBridge(transport);
 }
 
+export { RUNTIME_PACKAGE_ID, RUNTIME_DOMAIN_DETAIL_REF } from './runtime-views.ts';
+
 export const SHARED_WORKBENCH_URI = 'ui://opl/apps.html';
 
 export function sharedPanelEntry(pkg: Pick<ProjectedPackageSummary, 'enabled' | 'package_id' | 'ui'>) {
@@ -435,9 +436,14 @@ export function buildCatalogFromAppState(
     ?? appState.app_state?.installed_packages
     ?? [];
 
+  const appDisabled = new Set(
+    (appState.app_state?.agent_packages?.directory?.entries ?? [])
+      .filter(entry => entry.app_enabled === false)
+      .map(entry => entry.package_id),
+  );
   const packages = options.includeDisabled
     ? rawPackages
-    : rawPackages.filter((pkg) => pkg.enabled !== false);
+    : rawPackages.filter(pkg => pkg.enabled !== false && !appDisabled.has(pkg.package_id));
 
   const products: CatalogProductSummary[] = [];
   const views: CatalogViewDescriptor[] = [];
@@ -666,7 +672,7 @@ export function createOpldMcpAppHostAdapter(
             sessionId,
           });
           return {
-            isError: false,
+            isError: res.ok === false,
             structuredContent: res,
           };
         }
@@ -701,11 +707,10 @@ export function createOpldMcpAppHostAdapter(
             payload: asRecord(args.input ?? args.payload) ?? {},
             confirmed: args.confirmed === true,
             dryRun,
-            confirmed: args.confirmed === true,
             mode: typeof args.mode === 'string' ? args.mode : undefined,
           });
           return {
-            isError: false,
+            isError: res.ok === false,
             structuredContent: res,
           };
         }

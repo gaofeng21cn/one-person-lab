@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
-import { createDaemonSandbox, ROOT_OPL_BIN, writeMinimalV2Package } from './helpers/sandbox.ts';
+import { connectTestRpc, createDaemonSandbox, ROOT_OPL_BIN, writeMinimalV2Package } from './helpers/sandbox.ts';
 
 test('the installed CLI serves the interactive shared workbench over MCP stdio', { timeout: 25_000 }, async t => {
   const sandbox = createDaemonSandbox();
@@ -14,13 +14,19 @@ test('the installed CLI serves the interactive shared workbench over MCP stdio',
   const pkg = writeMinimalV2Package(path.join(sandbox.workspaceDir, 'panel'), {
     id: 'shared-panel', intent: 'extension', extraManifest: {
       provides: { contribution_handler: { kind: 'cli', argv: ['node', './handler.mjs'], transport: 'stdin_json_stdout_json' } },
-      ui: { declarative: { views: [{ id: 'inbox', view_type: 'list_detail', title, slot: 'workbench.panel', data_ref: 'panel.inbox' }] } },
+      ui: { declarative: { views: [{ id: 'inbox', view_type: 'list_detail', title, slot: 'workbench.panel', data_ref: 'panel.inbox',
+        actions: [{ id: 'edit', label: title, action_ref: 'panel.edit', confirm: true }] }] } },
     },
   });
   fs.writeFileSync(path.join(pkg, 'handler.mjs'), `
     let json = '';
     for await (const chunk of process.stdin) json += chunk;
     const { operation, ref, input } = JSON.parse(json);
+    if (input.marker === 'unavailable') {
+      console.log(JSON.stringify({ schema_version: 'opl-package-app-contribution-response.v1', ok: false, operation, ref,
+        error: { code: 'UNAVAILABLE', message: 'Inbox is unavailable.' } }));
+      process.exit(0);
+    }
     console.log(JSON.stringify({ schema_version: 'opl-package-app-contribution-response.v1', ok: true, operation, ref, result: { seen: input.marker } }));
   `);
   const link = await sandbox.spawnRootCli(['pack', 'link', pkg, '--no-codex-sync', '--json']);
@@ -44,6 +50,22 @@ test('the installed CLI serves the interactive shared workbench over MCP stdio',
   const read = await client.callTool({ name: 'opl_app_contribution_read', arguments: { package_id: 'shared-panel', ref: 'panel.inbox', input: { marker: 'owner' } } });
   assert.equal(read.isError, false);
   assert.deepEqual(read.structuredContent?.result, { seen: 'owner' });
+  const failedRead = await client.callTool({ name: 'opl_app_contribution_read', arguments: { package_id: 'shared-panel', ref: 'panel.inbox', input: { marker: 'unavailable' } } });
+  assert.equal(failedRead.isError, true);
+  assert.deepEqual(failedRead.structuredContent?.error, { code: 'UNAVAILABLE', message: 'Inbox is unavailable.' });
+  const edit = { package_id: 'shared-panel', ref: 'panel.edit', input: { marker: 'changed' } };
+  const refused = await client.callTool({ name: 'opl_app_contribution_execute', arguments: { ...edit, confirmed: false } });
+  assert.equal(refused.isError, true);
+  const edited = await client.callTool({ name: 'opl_app_contribution_execute', arguments: { ...edit, confirmed: true } });
+  assert.equal(edited.isError, false);
+  assert.deepEqual((edited.structuredContent?.result as { result: unknown }).result, { seen: 'changed' });
+  const app = await connectTestRpc(sandbox.sessionPath, 'opl_app', '2.0');
+  t.after(() => app.close());
+  for (const enabled of [false, true]) {
+    await app.call('app.action.execute', { action_id: 'package_app_set_enabled', payload: { package_id: 'shared-panel', enabled }, dry_run: false });
+    const toggled = await client.callTool({ name: 'open_opl_apps', arguments: focus });
+    assert.equal(toggled.isError, !enabled);
+  }
   const missing = await client.callTool({ name: 'open_opl_apps', arguments: { package_id: 'missing', view_id: 'inbox' } });
   assert.equal(missing.isError, true);
   const reader = new Client({ name: 'opl-read-only-workbench-test', version: '1.0.0' });
