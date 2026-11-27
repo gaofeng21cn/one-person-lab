@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '@opl/core';
-import { isSafeRelativePosixPath, isWithinDirectory, resolveSafePackagePath } from '@opl/pack';
+import { isSafeRelativePosixPath, resolveSafePackagePath } from '@opl/pack';
+import { declaredDomainTaskViews, type DomainViewLocator } from './domain-task-detail.ts';
 import type { ProjectedPackageSummary } from './app-state-cache.ts';
 
 type InventoryPackage = Pick<ProjectedPackageSummary, 'package_id' | 'intent' | 'enabled' | 'install_path'>;
@@ -19,6 +20,7 @@ export interface DomainInventoryTask {
   current_stage_id: string | null;
   work_item_root: string | null;
   observed_at: string;
+  domain_detail_views?: DomainViewLocator[];
 }
 
 type Diagnostic = { package_id: string; workspace_id: string; reason: string };
@@ -60,7 +62,7 @@ function declaration(value: unknown, packageId: string) {
       || !isRecord(fields) || !stringValue(fields.work_item_id)) return null;
   const runtime = iface.runtime;
   const runtimeDomain = isRecord(runtime) ? stringValue(runtime.runtime_domain_id) : null;
-  return { packageId, domain, runtimeDomain, inventoryPath, pointer, fields };
+  return { packageId, domain, runtimeDomain, inventoryPath, pointer, fields, views: declaredDomainTaskViews(value, packageId) };
 }
 
 function pointerItems(value: unknown, pointer: string): unknown[] | null {
@@ -102,13 +104,9 @@ function readJson(cache: Map<string, JsonFile>, root: string, relative: string):
 }
 
 function itemRoot(workspace: string, relative: string | null): string | null {
-  if (!relative || !isSafeRelativePosixPath(relative)) return null;
-  try {
-    const resolved = fs.realpathSync(path.join(workspace, relative));
-    return isWithinDirectory(fs.realpathSync(workspace), resolved) ? resolved : null;
-  } catch {
-    return null;
-  }
+  // The index can precede the creation of the task directory. Keep its
+  // declared location and resolve it against the workspace when opening it.
+  return relative && isSafeRelativePosixPath(relative) ? path.resolve(workspace, relative) : null;
 }
 
 export function createDomainTaskInventoryReader() {
@@ -166,6 +164,7 @@ export function createDomainTaskInventoryReader() {
           if (!id || seen.has(id)) continue;
           seen.add(id);
           const status = field('business_status');
+          const workItemRoot = itemRoot(workspacePath, field('work_item_root'));
           items.push({
             workspace_id: workspaceId, workspace_path: workspacePath,
             package_id: owner.packageId, domain_id: owner.domain, work_item_id: id,
@@ -173,7 +172,8 @@ export function createDomainTaskInventoryReader() {
             business_status: status,
             business_state: businessStates.get(status?.toLowerCase().replace(/[\s-]+/g, '_') ?? '') ?? 'unknown',
             current_stage_id: field('current_stage_id'),
-            work_item_root: itemRoot(workspacePath, field('work_item_root')),
+            work_item_root: workItemRoot,
+            domain_detail_views: owner.views.map(({ locator }) => ({ ...locator, availability: workItemRoot ? 'unread' : 'missing' })),
             observed_at: file.observedAt,
           });
         }

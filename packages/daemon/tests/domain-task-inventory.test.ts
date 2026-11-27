@@ -40,7 +40,7 @@ test('declared inventories remain bound to their workspace and refresh after own
   assert.equal(item.package_id, owner.package_id);
   assert.equal(item.title, record.title);
   assert.equal(item.business_state, 'delivered_paused');
-  assert.equal(item.work_item_root, fs.realpathSync(path.join(workspace, record.location)));
+  assert.equal(item.work_item_root, path.join(workspace, record.location));
   assert.strictEqual(read(), expected);
   setInventory([{ ...record, phase: 'new owner state' }]);
   assert.equal(read().items[0].business_state, 'unknown');
