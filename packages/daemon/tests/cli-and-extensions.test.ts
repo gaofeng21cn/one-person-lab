@@ -28,6 +28,25 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
+  it('resolves relative package install and update sources in the caller workspace', async () => {
+    const sb = trackSandbox();
+    const id = 'relative-source';
+    for (const [version, directory] of [['1.0.0', 'initial'], ['1.0.1', 'updated']]) {
+      writeMinimalV2Package(path.join(sb.workspaceDir, directory), { id, version });
+      const build = await sb.spawnCli(['pack', 'build', directory, '--json']);
+      assert.equal(build.code, 0, build.stdout + build.stderr);
+    }
+
+    const install = await sb.spawnCli(['pack', 'install', 'initial', '--no-codex-sync', '--json']);
+    assert.equal(install.code, 0, install.stdout + install.stderr);
+    const update = await sb.spawnCli(['pack', 'update', id, '--source', './updated', '--json']);
+    assert.equal(update.code, 0, update.stdout + update.stderr);
+    const list = await sb.spawnCli(['pack', 'list', '--json']);
+    assert.equal(list.code, 0, list.stdout + list.stderr);
+    const { packages } = JSON.parse(list.stdout);
+    assert.equal(packages.find((pkg: { package_id: string }) => pkg.package_id === id)?.version, '1.0.1');
+  });
+
   it('advertises Gateway with the base subcommands, rejects legacy/unknown commands with exit 2 and zero codex fallback, and supports coexistence routing', async () => {
     const sb = trackSandbox();
 
