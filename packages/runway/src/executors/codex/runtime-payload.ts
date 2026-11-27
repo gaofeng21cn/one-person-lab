@@ -50,26 +50,33 @@ function copyFullArchive(seed: ReturnType<typeof readFullSeed>, kind: 'package' 
 }
 
 async function downloadNpmArchive(destination: string, version?: string) {
-  const signal = AbortSignal.timeout(180_000);
-  const resolved = await resolveNpmTarball({ packageName: codexPackage, version, signal });
+  const resolved = await resolveNpmTarball({ packageName: codexPackage, version, signal: AbortSignal.timeout(60_000) });
   const url = new URL(resolved.tarball_url);
   if (url.origin !== 'https://registry.npmjs.org' || !/^sha512-[A-Za-z0-9+/]+=*$/.test(resolved.integrity ?? '')) {
     throw new Error('Invalid official Codex npm archive source or integrity.');
   }
-  const response = await fetch(url, { signal, redirect: 'error' });
-  if (!response.ok || !response.body) throw new Error(`Codex archive download failed with HTTP ${response.status}.`);
-  const hash = crypto.createHash('sha512');
-  const reader = response.body.getReader();
-  async function* hashedChunks() {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) return;
-      hash.update(value);
-      yield value;
+  const download = new AbortController();
+  const idleTimeout = setTimeout(() => download.abort(new Error('Codex npm archive transfer stopped making progress.')), 60_000);
+  try {
+    const response = await fetch(url, { signal: download.signal, redirect: 'error' });
+    if (!response.ok || !response.body) throw new Error(`Codex archive download failed with HTTP ${response.status}.`);
+    const hash = crypto.createHash('sha512');
+    const reader = response.body.getReader();
+    async function* hashedChunks() {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) return;
+        idleTimeout.refresh();
+        hash.update(value);
+        yield value;
+      }
     }
+    await fs.promises.writeFile(destination, hashedChunks(), { flag: 'wx', mode: 0o600 });
+    if (`sha512-${hash.digest('base64')}` !== resolved.integrity) throw new Error('Codex npm archive integrity mismatch.');
+  } finally {
+    clearTimeout(idleTimeout);
+    download.abort();
   }
-  await fs.promises.writeFile(destination, hashedChunks(), { flag: 'wx', mode: 0o600 });
-  if (`sha512-${hash.digest('base64')}` !== resolved.integrity) throw new Error('Codex npm archive integrity mismatch.');
   return resolved.version;
 }
 
