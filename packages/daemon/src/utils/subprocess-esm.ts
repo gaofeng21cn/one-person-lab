@@ -177,7 +177,7 @@ export async function runEsmEntrypoint(
   entrypoint: { readonly module: string; readonly export: string },
   mode: 'probe_cli_ext' | 'invoke_cli_ext' | 'call',
   payload: unknown,
-  options: { readonly timeoutMs?: number } = {},
+  options: { readonly timeoutMs?: number; readonly env?: NodeJS.ProcessEnv } = {},
 ): Promise<unknown> {
   const modPath = resolveSafePackagePath(packageRoot, entrypoint.module, { allowSymlinks: true });
   if (!fs.existsSync(modPath)) {
@@ -195,6 +195,7 @@ export async function runEsmEntrypoint(
       cwd: packageRoot,
       stdinText: JSON.stringify(payload ?? {}),
       timeoutMs: options.timeoutMs,
+      env: options.env,
     },
   );
 
