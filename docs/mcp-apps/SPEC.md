@@ -91,19 +91,16 @@ model context; appending a composer draft and actually starting work are distinc
 operations.
 
 Connection identity, consumer authorization and connection repair belong to OPL
-Connect's public Framework/App surfaces. Its machine contract is
-`contracts/opl-framework/connection-authorization-contract.json`, with the
-connection owner explanation in `docs/specs/connection-authorization.md`.
-The trusted host activates a fresh installed descriptor through
-`createOplConnectionContextHost(...).activate(installedDescriptor)` from
-`opl-framework/connection-authorization-host`. Its private `context.connect`
-port exposes `listConnections()`, `requestAccess(connectionId, capabilityIds)`
-and `invoke(connectionId, capabilityId, input)`. Requesting access is
-distinct from approving it. These capabilities are exposed through the existing
-host/MCP tool boundary, not by accepting a Package identity from page input.
+Connect's public Framework/App surfaces (`packages/connect/src/` and `opld`
+`connect.*` RPCs), with the connection owner explanation in
+`docs/specs/connection-authorization.md`.
+The daemon and trusted host resolve active installed descriptors via Pack and
+verify grants through `@opl/connect` (`ConnectService`), never by trusting an
+unverified `package_id` supplied by page input.
 Every invocation rechecks the installed descriptor, grant, connection revision
 and provider capability; grant approval and revocation use the owner App action.
-Mini Apps consume connection references
+Mini Apps consume connection references and authorized owner operations, never
+copy provider credentials or authorize a caller from a UI-supplied identity.
 and authorized owner operations, never copy provider credentials or authorize a
 caller from a UI-supplied identity. Provider/carrier owners retain credential
 storage and renewal. The Connect implementation is coordinated independently of

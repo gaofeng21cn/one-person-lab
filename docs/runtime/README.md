@@ -2,7 +2,7 @@
 
 Runtime 文档只解释当前运行对象和运维边界。
 
-- [Runtime 命名与边界](./opl-runtime-naming-and-boundary-contract.md)，含[从 Temporal 升级时交接在途工作](./opl-runtime-naming-and-boundary-contract.md#从-temporal-升级时交接在途工作)
+- [Runtime 命名与边界](./opl-runtime-naming-and-boundary-contract.md)，含[从 v1 升级时只读检查遗留运行](./opl-runtime-naming-and-boundary-contract.md#从-v1-升级时只读检查遗留运行)
 - [Stage graph 与 AI route](./stage-graph-route-transition-runtime.md)
 - [Foundry Kernel control plane](./opl-foundry-kernel-control-plane.md)
 

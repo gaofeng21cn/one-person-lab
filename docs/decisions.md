@@ -26,6 +26,30 @@ Package owner 声明身份、依赖和公开的能力。Pack 管理本机安装�
 
 Studio 使用 DSH/Cordis 装配客户端插件和 Codex 会话。Framework 将任务、Package 与连接状态集中在本机 `opld`，让 GUI、CLI 和 SDK 可使用相同的读写入口。两者通过带会话握手的本地 RPC 协作。[Host scope boundary](./architecture.md#host-scope-boundary)
 
+## 本机持久状态只有 `opld` 一个写入入口
+
+CLI、Studio 和 SDK 对 Framework 持久状态统一调用 `opld` 的 JSON-RPC。`opld` 将配置和运行状态写入 SQLite `opl.db`；CLI 子命令（包括 `opl sources`）不能绕过 RPC 写独立 flat JSON，也不能在非 macOS 主机回写 `~/Library/Application Support/OPL/state/...`。现有 JSON 只允许由一次性只读迁移消费，迁移完成后由数据库继续持有事实。
+
+## Catalog 先发布再晋升
+
+Catalog 的 `v2_release` 只有在不可变 OCI 制品发布并完成 manifest 与摘要回读后才能晋升。客户端和 Package resolver 找不到 Catalog 选定的 GHCR manifest 时必须 fail closed；HTTP 404 不能把 v2 选择静默降级为 v1。
+
+## Full 离线 seed 只加速公开字节
+
+`OPL_FULL_RUNTIME_HOME` 只为版本与 commit 匹配的公开 Package 提供已验证字节的离线加速。在线可用时，seed 不屏蔽 `authorized_only` 私有 Package，也不替代目录可见性、授权检查和线上更新。
+
+## OPL Link companion 由 Studio 托管
+
+OPL Link companion server 只由 Studio 的 `opl-host-core` 托管。Framework 及 `@opl/connect` 只提供 Gateway companion authorization（包括 `opl connect gateway authorize-companion` 与对应 RPC），不再承载第二个 companion server。
+
+## v2 完成后移除双轨工具
+
+当活跃 Catalog Package 全部完成 `opl.package.v2` 迁移后，删除固定的 pre-v2 发布工具提交和 runtime v1→v2 adapter。过渡实现不能成为永久的 resolver、currentness 或发布入口。
+
+## 退役的产品面
+
+Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback 和旧工作流 `provider_*` 控制不属于 v2 产品面。
+
 ## 长任务由 Runway 持久化
 
 Runway 将工作状态、执行尝试与调度记录保存到相应状态目录的 SQLite 数据库。守护进程恢复时依据任务状态和租约协调重启，任务可保留人工暂停。领域负责人和人工评审保留产物验收和发布决定。

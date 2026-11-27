@@ -1,15 +1,14 @@
 # OPL Package Directory 与统一安装管理
 
-本文定义 OPL 软件目录、软件源、安装实例和当前生效来源的统一管理模型，以及它们与原生安装器的边界。机器字段以 [`cli-command-registry.json`](../../contracts/opl-framework/cli-command-registry.json) 中的 `packages_list`、Package manifest schema 和实际 owner projection 为准；本文不保存动态安装数量或版本。
+本文定义 OPL 软件目录、软件源和当前生效来源的统一管理模型，以及它们与原生安装器的边界。机器字段以 [Package manifest schema](../../contracts/opl-package.v2.schema.json)、[Package 投影实现](../../packages/daemon/src/state/package-projection.ts) 和实际 owner projection 为准；本文不保存动态安装数量或版本。
 
 ## 目录是谁的真相
 
 Framework 将软件源目录与本机安装事实投影为 OPL Package Directory。官方源条目以同一 Package identity 关联公开展示、下载权限、安装状态和维护动作。可通过以下入口查看。
 
 ```bash
-opl packages list --json
-opl app state --profile fast --json
-opl app state --profile full --json
+opl pack list --json
+opl daemon doctor --include-first-run --json
 ```
 
 App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Package 状态，通过软件源和安装 owner 投影消费原生产品状态。目录条目必须能同时说明软件 identity、类型、来源/载体、安装回读、就绪状态、来源版本和 owner action。没有实时回读时显示 `unknown` 或“尚未检查”，不能把仓库存在、历史版本或一个可用按钮推断为已安装、可调用或有更新。
@@ -89,7 +88,7 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 | 公开 Homebrew tap | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Formula/Cask、宿主和原生依赖的安装更新 |
 | 公开 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和匿名读取回读 |
 | 私有 Package 制品 | 发行制品使用 descriptor 的 `publication_ref`，第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/` | OCI 包级权限、签名和授权回读；不提供源码安装路径 |
-| 当前用户的目录与状态 | `opl packages list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
+| 当前用户的目录与状态 | `opl pack list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
 
 官方目录可显示需授权软件已获准公开的名称、说明、版本和产品分类。受保护元数据随授权来源提供，Framework 以同一 Package identity 合并。软件源凭证由 provider 管理，制品由实际安装来源交付。
 
@@ -106,15 +105,13 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 
 `visibility`、`access_policy_ref` 和 `credential_provider` 是来源声明。访问状态、授权修订和校验时间由可信安装器及 provider 回读产生，descriptor 自称 authorized 不构成授权。目录显示已公开的条目及授权状态。下载、安装、更新和其他远端读取取决于独立的制品授权。本地已安装项保留管理事实与卸载入口。快速 App state 使用只读缓存，缺少快照或过期时通过 `access_refresh_required=true` 请求 `source_check` 刷新。运行时连接规则见 [Connect 连接授权](./connection-authorization.md)。
 
-## Homebrew 的位置
+## Carrier 与宿主位置
 
-Homebrew 是 OPL 的一个 carrier（负责宿主工具、CLI、原生运行依赖与已声明支持的 OPL App 载体），不是 Agent 目录。拥有 OCI 渠道的 Agent 复用 registry 权限与原 carrier 动作，不另生成 Formula 版本真相；公开 App 插件也可声明 `codex_surface.public_payload_delivery=pinned_files` 读取锁定载荷。具体 Homebrew 配置与命令行操作见 [软件源控制面](./software-sources.md#homebrew-原生软件)。
+Codex 原生载体负责 Agent Package 的实际插件安装与回读；OPL App 桌面安装包由 App updater 或发行载体维护。Homebrew Tap 原生软件管理与多安装切换已退役，不再属于 v2 软件目录与设置产品面。
 
 ## 下载进度与后台安装
 
-安装、更新和修复可通过 [`package-install-operation-contract.json`](../../contracts/opl-framework/package-install-operation-contract.json) 使用同一套后台操作。`package_operation_start --dry-run` 调用既有 lifecycle 预检查并读取发布制品元数据，返回版本、下载量、可用缓存、位置与磁盘余量。依赖沿既有 required dependency 结果展开；没有解压大小的旧制品保持未知，下载后从归档头计算并检查实际暂存空间。
-
-确认后，后台 worker 仍执行原来的 `agent_package_install/update/repair`。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
+安装、更新和修复通过 [Package 后台操作贡献](../../packages/daemon/src/contributions/package-operations.ts) 和 `PackService` 共享同一套操作与进度机制。确认后，后台 worker 执行相应的 `agent_package_install` / `agent_package_update` / `agent_package_repair`。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
 
 系统 curl 继续持有 HTTP、重定向与 Range。剩余归档达到 16 MiB 时，worker 默认并行发起 4 个有界 Range 请求，最多 8 个；只有每个响应都返回精确的 HTTP 206、Content-Range 和分片长度时才合并。任何不支持 Range、状态或长度不匹配的响应都会安全回退到既有单连接断点路径。Framework 只补齐当前 OCI 到原生 marketplace 的缺口：digest 命名的私有缓存目录、完整内容校验、暂存与进度投影。此缓存不决定版本、不替代 carrier registry。重复安装先重新验证缓存；断线重试保留 partial，取消和失败均不将 partial 激活。取消安装不会撤销此前已经成功安装的必需依赖。
 
@@ -203,5 +200,5 @@ OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现
 1. 先确认软件 owner、稳定 identity、产品类型和真实调用入口；采用 OPL Package 时同时声明其技术角色。
 2. 补齐 manifest/descriptor、公开或私有可见性、发布来源、carrier 和安装后 readback；私有源还须绑定访问策略与凭证 provider。
 3. 在 Framework projection 中登记版本、访问状态、就绪、依赖和 action refs；公开目录不写入本机路径，本地安装回读只展示代码位置，不包含秘密或资料正文。
-4. 用 `opl packages list --json` 和 `opl app state --profile fast --json` 回读，再在 OPL App 的目录页完成安装、更新、停用、修复和卸载验收。私有源同时验证无权限、过期、撤权、重新授权和账号切换。
+4. 用 `opl pack list --json` 和 `app.state.get`（`fast`）回读，再在 OPL App 的目录页完成安装、更新、停用、修复和卸载验收。私有源同时验证无权限、过期、撤权、重新授权和账号切换。
 5. 用真实 carrier 的安装、更新和卸载回读验证管理能力；按运行依赖显示调用就绪状态。原型与已发行产品使用同一管理规则，开发 checkout 只作为显式开发覆盖，发行与领域业务资格仍由 owner 各自验收。

@@ -6,9 +6,8 @@
 
 ## Framework 提供
 
-- `app state` 与 `app action` machine surface；
-- `app-full` Cordis Host profile；
-- Client contribution allowlist和projection contract；
+- `app.state.get` 与 `app.action.execute` machine surface；
+- `packages/daemon` 提供的通用 state 投影与 action dispatch；
 - Package、runtime、Workspace、evidence 和 Settings 所需 read/action data；
 - 明确的 authority、currentness 和 failure semantics。
 
@@ -26,8 +25,9 @@ App 不建立第二 Package discovery、provider state 或 domain truth。Framew
 
 安装、原生 carrier 启用和 OPL App 展示是独立选择。Framework 在 App 的 Package 目录和
 状态条目投影 `app_enabled`，默认值为 `true`。`package_app_set_enabled` 接收
-`package_id` 与布尔 `enabled`，将用户选择保存到当前 OPL state 的
-`app-package-preferences.json`；这份文件只保存 App 偏好，不保存安装或版本状态。
+`package_id` 与布尔 `enabled`，将用户选择保存到当前 OPL state 的 SQLite `opl.db`
+（[`app-package-preferences.ts`](../../packages/daemon/src/state/app-package-preferences.ts)，
+启动时一次性只读导入旧 `app-package-preferences.json`）；该偏好只保存 App 展示选择，不保存安装或版本状态。
 
 关闭后，Desktop/WebUI 移除该包的导航、首页入口及各 UI contribution 槽，停止其自动
 状态读取，并拒绝来自 App action 的旧 contribution 操作。管理目录保留该包及重新启用

@@ -112,7 +112,7 @@ Persona 可以帮助整理跨领域背景和来源摘要，但各应用可以通
 
 共同机制应集中复用。能力发现、上下文传递、连接授权、知识来源、长任务观察、产物引用、主题与语言适配，都有现有负责方。领域开发者把精力放在输入与结果的语义、专业判断、真实业务操作和必要交互上。
 
-OPL Framework 就是 Agent 与 MiniApp 共用的 SDK 和运行基座，维护通用实现、合同与标准。标准智能体、其他 Agent 和 App 通过安装的 Framework 及其公开模块、命令行与服务接口复用这些能力；各领域仓继续维护自己的业务逻辑。源码维护位置与实际安装位置可以不同，宿主沿各自的安装和升级路径选择可用基座。成熟第三方能力优先直接复用：应用宿主使用 DSH/Cordis，会话使用 Codex，协作 UI 使用官方 MCP Apps SDK，持久编排使用 Temporal，知识正文使用 Obsidian/Markdown。OPL 只封装共用身份、授权、版本和回读所需接口；新增公共模块须有真实消费者和已证明的官方能力缺口。具体边界见 [Agent/MiniApp SDK](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture/agent-miniapp-sdk.md)。
+OPL Framework 就是 Agent 与 MiniApp 共用的 SDK 和运行基座，维护通用实现、合同与标准。标准智能体、其他 Agent 和 App 通过安装的 Framework 及其公开模块、命令行与服务接口复用这些能力；各领域仓继续维护自己的业务逻辑。源码维护位置与实际安装位置可以不同，宿主沿各自的安装和升级路径选择可用基座。成熟第三方能力优先直接复用：应用宿主使用 DSH/Cordis，会话使用 Codex，协作 UI 使用官方 MCP Apps SDK，持久任务编排由 Runway 基于本地 SQLite 承载，知识正文使用 Obsidian/Markdown。OPL 只封装共用身份、授权、版本和回读所需接口；新增公共模块须有真实消费者和已证明的官方能力缺口。具体边界见 [Agent/MiniApp SDK](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture/agent-miniapp-sdk.md)。
 
 共用机制也保留数据的原有归属。私人运行状态由相应运行负责方管理，知识来源的授权与绑定留在私有控制范围，Obsidian 或普通资料目录中的正文仍由用户维护，邮件、照片和其他领域数据继续由原业务负责方保存。基座连接这些来源并记录必要的运行依据；具体分工见[共用基座的物理归属](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#共用基座的物理归属)。
 

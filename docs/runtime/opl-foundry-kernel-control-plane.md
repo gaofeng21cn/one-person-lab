@@ -1,211 +1,25 @@
-# OPL Foundry Kernel 控制面边界
+# OPL Foundry 扩展与控制边界
 
 Owner: `One Person Lab`
-Purpose: `foundry_kernel_control_plane`
+Purpose: `foundry_extension_control_plane`
 State: `active_support`
-Machine boundary: 本文只解释稳定职责。当前状态必须从 Foundry contracts、事件 Ledger、版本 registry、Temporal workflow 和 fresh `opl foundry ... --json` readback 读取。
+Machine boundary: 本文说明 `extensions/foundry/`（`opl-foundry`）的职责与边界。当前实现与测试入口以 [`extensions/foundry/src/cli.mjs`](../../extensions/foundry/src/cli.mjs)、[`extensions/foundry/README.md`](../../extensions/foundry/README.md) 与 `opl foundry --help` 为准。
 
 ## 控制面模型
 
-Foundry Kernel 是 OPL Framework 内部的 durable Agent engineering control plane。它不是新的 domain agent、产品 truth store 或领域质量裁判，也不向普通用户暴露第二套建 Agent 入口。
+`opl-foundry` 是声明 `opl.package.v2`（`intent: "extension"`）的官方 CLI 扩展包，负责标准智能体与能力包的脚手架生成、静态校验、确定性冻结评测、风险比较以及 CAS 激活/回滚。它不持有领域业务真相、包安装目录权威或产品发布权威。
 
-标准链路为：
+标准命令行链路为：
 
-```text
-DesignRequest
-  -> OMA design StageRun
-  -> AgentBlueprint + EvalSpec
-  -> deterministic materialization
-  -> independent evaluation
-  -> EvidenceBundle
-  -> OMA diagnosis / EvolutionProposal when needed
-  -> qualification
-  -> risk-gated canary
-  -> CAS activation
-```
+- `opl foundry init <dir> --id <id> [--intent <agent|app|extension|channel>]`：生成符合 `opl.package.v2` 的最小包骨架；
+- `opl foundry validate <dir>`：核对 `opl-package.json` schema、安全相对路径、declared entrypoints/skills、`ui` 交叉引用及 `opl-release.lock.json` 完整性；
+- `opl foundry eval <dir> [--suite <path>] [--state-dir <dir>]`：运行确定性冻结评测，向 `${OPL_STATE_DIR}/foundry/` 追加带 SHA-256 哈希链的 `opl-foundry-run-event.v1` 事件账本与 `EvidenceBundle`，不修改目标包源码目录；
+- `opl foundry compare --baseline <dir> --candidate <dir> [--regression-tolerance <n>]`：重算风险分级（`low` / `medium` / `high`）、检查非弱化门禁并检测指标退化；
+- `opl foundry promote <targetAgentId> --run-id <runId> [--expected-revision <n>] [--authority-receipt-ref <ref>]` 与 `opl foundry rollback ...`：按显式 CAS `expected_revision` 与 owner gate（中高风险要求 `authority-receipt-ref`）推进或回滚激活指针。
 
-## 状态与持久化
+## 权限与安全边界
 
-- `FoundryRun` 的每次转换追加不可变、哈希串联事件，并令 `revision + 1`。
-- Owner decision、cancel、activation 与 rollback 使用 compare-and-swap revision。
-- Temporal 承载 durable workflow 和 activity retry；Ledger 事件与内容寻址对象是审计事实。
-- SQLite/StateIndex 只做可重建 projection，不保存另一份 authority truth。
-- 同一 target Agent 同时只允许一个写入型 Run；重复 activity 按 run/generation/phase/input digest 幂等。
-- 瞬时平台失败最多重试三次，不消耗 evolution generation；永久失败不重试。
-
-评估通过后，Kernel 在 `evaluating` 的当前 revision 上争取登记资格。Owner 先成功取消时，
-Run 停在 `cancelled`，迟到的评估结果不会出现在合格版本列表中。若资格登记先取得该 revision，
-Run 进入 `qualifying`。此时可只读查询进度；Worker 重启后用同一份已保存的评估证据继续登记。
-版本目录返回实际版本 ID 后，Run 进入 `qualified`。此后 Owner 可按最新 revision 取消后续流程，
-已取得的资格保留。
-
-生命周期 Activity（start、fail、cancel 和 Owner decision）使用独立的持久化
-Kernel，不加载语义 provider。OMA 缺失、carrier 失效或 workspace 投影冲突时，
-失败收尾仍须追加终态事件并释放目标写保留；取消与 Owner decision 继续通过原有
-OwnerGate。不得因语义 provider 不可用而让失败收尾再次依赖同一 provider。
-
-排障时同时核对 Temporal address、namespace、workflow ID 和 Run request digest。
-同名 workflow 在不同 namespace 是不同执行；切换 worker namespace 不会迁移已有
-Run。旧执行确认失败而 Ledger 未收尾时，仅能依据匹配的 durable failure 经 Kernel
-补记失败，不能直接删除锁或修改 SQLite projection。
-
-终态为：
-
-```text
-completed_active | completed_qualified | completed_unqualified
-rejected | cancelled | failed | quarantined
-```
-
-Rollback 是独立 activation transaction，不倒放历史 Run，也不修改旧版本 bytes。
-
-## 评测隔离
-
-- baseline 与 candidate 使用同一冻结测试计划。
-- 保护测试正文不进入 OMA 协议；OMA 只能看到聚合 evidence 和失败分类。
-- evaluator、independent reviewer 与 OMA designer 必须使用不同身份和 attempt refs。
-- 删除既有测试、降低保护测试数量或放宽 gate 会被 quarantine。
-- canary 回归保留原 active pointer，并记录 `canary_regression_rolled_back` 事件。
-
-新建和修订的 Blueprint 在物化前检查 `EvalSpec.gates[].metric`。通用评估运行时
-从冻结用例和保护测试聚合计算 `score` 与 `protected_pass_rate`。业务专属判定应写入
-可执行用例，其结果参与现有计分和必须通过的用例检查。遇到无法计算的指标时，Run
-记录具体 gate、指标及支持值，设计方可据此修订 Blueprint。
-
-Temporal 为执行完整测试计划的 `evaluate` 与 `canary` 提供单次执行 240 分钟、
-含排队和重试共 270 分钟的上限。其余生命周期推进使用单次执行 30 分钟、
-含排队和重试共 35 分钟的上限。评估较长时，Owner 仍可按当前 Run revision 取消。
-
-## Provider Boundary
-
-OMA provider manifest 只声明 `design` 和 `diagnose` 两个内部 operation。Foundry Kernel 通过 OPL StageRun 运行它们，并只接受一个确切 terminal protocol artifact：`AgentBlueprint` 或 `EvolutionProposal`。
-
-跨边界对象只允许 `DesignRequest`、`AgentBlueprint`、`EvidenceBundle` 和 `EvolutionProposal`。它们使用 canonical JSON + SHA-256，不得包含 repo path、命令、queue、lease、attempt、patch、work order、promotion ledger 或保护测试正文。
-
-自然语言目标的理解与 Profile 适用性判断归 OMA 设计 Stage。`opl profiles select`
-只按显式 `--profile` 或规范 `--intent-signal` 精确路由；自由文本仅作为设计依据保留，
-没有显式选择或引用来源时返回 `semantic_profile_selection_required`，由现有
-`engineer-agent` 设计入口处理。Profile 是符合性的最低约束，不是所有领域共用的设计模板。
-引用来源与 pattern packet 继续走 source-derived 路线；与显式 Profile 合用时保留 hybrid
-结果。Framework 继续持有 Profile ABI、查询、符合性验证和能力解析。
-
-## Operator Surface
-
-```text
-opl foundry status
-opl foundry approve
-opl foundry reject
-opl foundry cancel
-opl foundry versions
-opl foundry rollback
-```
-
-这些命令只用于 Owner/operator/debug。普通 Agent 创建、接管和改进统一从 `opl agents run --domain oma --action engineer-agent` 进入。
-
-## Authority Boundary
-
-- Kernel 可以写 Run state、evaluation evidence、qualification、AgentVersion、activation transaction 和 rollback transaction。
-- Kernel 不写 target domain truth、artifact body、quality acceptance、保护测试正文或生产采用决定。
-- OMA 不写 Kernel state、执行工单、文件 patch、版本或 activation pointer。
-- Target Owner 的决定以独立 authority receipt 进入 Kernel，不属于 OMA 四协议。
-
-## Provider execution identity
-
-Provider StageRun 在已注册的 provider workspace 中运行；Foundry run ID 确定
-`provider-runs/` 下的 Work Item。Workspace snapshot 绑定 project、workspace 和物理
-目录身份。初次设计、诊断和重试延续同一 run scope，不同 Run 不共享写入范围；
-缺失或歧义绑定不能降级成 domain scope。实现入口为
-[`foundry-execution-scope.ts`](../../src/adapters/execution/foundry-execution-scope.ts)。
-
-输入 closure 包含 canonical output schema、已授权 intake receipt 对应的 source bytes，
-以及 hash/size 绑定的 manifest、policy 和 rubric。Review 使用生产者选择且身份已冻结的
-输入 snapshot；缺失 snapshot 不能转成质量通过。
-
-输入内容的 CAS 身份与运行时运输目录分离：provider input 和 source bytes 写入该 Run 的
-canonical Work Item 下，launch 再核对同一 execution scope。不能将整个 Foundry storage
-root 当作 Attempt 的读取范围；不同 Work Item 即使消费相同内容也各自持有运输副本。
-
-生产者的 raw output 只有通过精确字节及来源校验后才能作为带 quality debt 的进度输入。
-dispatch 必须保留这一来源标记，不能将其改成领域结论。Reviewer 缺少合法 outcome 时，
-保留原始输出作为诊断并阻断审查收尾，不把诊断包装成完成的审查；身份接收失败前同步
-已经结束的 Attempt，使 Stage 与 Attempt 各自保留真实终态。
-
-生产 provider 将 launch、observe、read-terminal 与 cancel 分为短 Activity，以 workflow
-等待和 generation-bound cursor 延续长操作。cursor 绑定 request、generation、provider
-source 和 manifest，恢复观察不能重启语义 generation。同步 Invoker 是有界调用接口；
-它不承担生产 workflow 的跨 Stage 等待。
-
-构建验证步骤见 [Package construction acceptance](../delivery/foundry-package-construction-acceptance.md)。
-
-## Worker 评估运行时组合
-
-`buildCordisTemporalActivities({ trusted_evaluation_runtime })` 是 Foundry 评估与
-canary Activity 的正式进程内宿主入口。Host 在每个 worker 进程构造
-`FrozenPlanEvaluationRuntime`，将原对象传给 Activity builder；使用注册路径时，
-在 worker 解析 Activity projection 前调用
-`registerCordisTemporalActivities({ trusted_evaluation_runtime })`。
-不能先导入默认的 `temporal-worker-bootstrap.ts`：它已经注册不带评估器的默认
-projection，注册仍保持每个进程只有一个 owner。
-
-```ts
-import { FrozenPlanEvaluationRuntime } from '../../src/authority/evolution/index.ts';
-import { buildCordisTemporalActivities } from '../../src/host/temporal-activity-projection.ts';
-
-// 这些端口由可信 Host 提供，不能从生成的 Agent 输出中加载。
-function evaluationActivities(
-  ports: ConstructorParameters<typeof FrozenPlanEvaluationRuntime>[0],
-) {
-  const trusted_evaluation_runtime = new FrozenPlanEvaluationRuntime(ports);
-  return buildCordisTemporalActivities({ trusted_evaluation_runtime });
-}
-// 自行创建 Temporal Worker 的 Host 将 evaluationActivities(ports) 作为
-// Worker.create({ ..., activities }) 的 activities，而不是 workflow 参数。
-```
-
-生产 kernel 继续校验原运行时对象的 Framework 来源。序列化对象、复制的 capability
-标记或包装 adapter 均不能替代该对象。运行时对象、可执行路径和保护用例正文不得进入
-Temporal workflow 输入或 OMA 协议。Host 负责 worker 关闭及所注入端口持有资源的释放。
-
-`EvaluationCaseExecutor` 按冻结计划执行确切 candidate，必要时执行 baseline。
-使用 Foundry 文件存储时，Framework 在评估及灰度运行前核对候选的内容地址、索引、
-逐文件摘要、资源锁和候选记录中的清单摘要。可信 case executor 在候选
-`subject.candidate_pack` 中获得已验证的目录、清单摘要和资源锁摘要。该目录用于读取候选
-内容，执行适配仍须绑定实际启动所用的文件和依赖，并保留执行收据。
-需要运行 StageRun 的 case executor 可以调用
-[`launchFoundryCandidateStageRun`](../../src/host/foundry-evaluation-stage-run.ts)，
-传入该次 `runPublicCase` 或 `runProtectedRequirement` 的输入、独立 work item
-的执行范围、首个 Stage 和 action、稳定的调用 ID，以及用例所需的输入产物和摘要。
-同一次调用重放时复用该 StageRun。Framework 从活动 Foundry Run 中核对代次、
-评估阶段、冻结用例和候选目录，启动后用返回的 workflow ID 读取执行结果。
-保护用例正文由领域适配器保留在授权范围内，workflow 只携带用例摘要和产物引用。
-
-Host 在启动调用和 `buildCordisTemporalActivities` 的 `admitEvaluationStage`
-选项中提供同一准入实现。该实现根据冻结 Blueprint、用例、Stage、action 和
-work item 范围验证权限，返回稳定的回执引用、允许使用的就绪 provider 包 ID
-及适用的领域知识快照。可用 `bindStageKnowledgeContext` 从领域维护的 catalog
-生成快照。Framework 在流转、评审、修复和执行前重新验证候选、准入及绑定。
-常规任务继续使用已安装包解析路径。
-
-目标领域 owner 提供真实 Agent 执行适配、保护用例内容及专业验收规则，Framework Host
-负责准入和组合。公开用例返回 case identity、status、score 和 evidence refs；保护执行
-只返回聚合结果、直接 receipt ref 和聚合结果的精确 digest。资源观察来自真实执行。
-`IndependentEvaluationReviewer` 接收这些观察，返回独立 verdict、execution ref、
-findings 和 evidence refs。OMA design/diagnose 不能兼任执行者或审核者；evaluator、
-executor 和 reviewer 三个身份必须互异。
-
-`protocol.ts` 保留公开类型与校验入口。`protocol/` 将共享类型、校验值和语义边界
-置于下层，请求、蓝图、证据与演进提案按各自闭合对象维护；提案校验直接复用蓝图校验，
-内部模块不反向依赖公开入口。校验顺序、错误与内容 digest 规则由原协议继续定义。
-
-可执行接口样例见
-[`evaluation-and-protocol.ts`](../../tests/src/foundry-kernel-cases/evaluation-and-protocol.ts)，
-生产 Activity 注入验证见
-[`temporal-activity-projection.test.ts`](../../tests/src/temporal-activity-projection.test.ts)。
-这些 fixture 证明接线、隔离及拒绝边界，不证明领域质量。
-
-默认 worker 未内置领域用例执行器和独立 reviewer。没有 Host 组合时，评估在物化后
-继续如实失败；候选包字节仍可独立验证。配置 `OPL_FOUNDRY_EVALUATOR_BIN`、
-`OPL_FOUNDRY_REVIEWER_BIN` 和
-`OPL_FOUNDRY_EVALUATION_MODE=offline_projected_pack_observation.v1` 只启用离线
-投影包观察，其 `pass` 审核在 qualification 上仍被降为 `blocked`，不能使
-`qualify_only` 成功。不存在隐式 `build_only`、事后资格追认或历史失败 Run 改写；
+- **不可变评测**：`eval` 与 `compare` 不修改目标包目录，删除或弱化既有保护测试用例将在门禁校验阶段被 fail-closed 拦截。
+- **CAS 与权属隔离**：`promote` 与 `rollback` 通过 `expected_revision` 防止并发覆写，不改写历史事件账本；领域业务验收与公开发布仍由各 Package owner 独立承担。
+- **验收证据**：构建与协议验收见 [Foundry 构建验收](../delivery/foundry-package-construction-acceptance.md)；源码测试位于 [`extensions/foundry/tests/`](../../extensions/foundry/tests/foundry.test.mjs)。
 领域资格结论必须来自所组合端口的真实执行及独立审核证据。

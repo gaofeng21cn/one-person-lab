@@ -11,11 +11,11 @@ Framework 从已配置的原生 carrier 读回 Package owner 的 installed descr
 ```sh
 codex plugin marketplace add /path/to/local-marketplace --json
 codex plugin add my-agent@local-marketplace --json
-opl packages status --package-id my-agent --json
-opl app state --profile fast --json
+opl pack sync codex --json
+opl pack inspect my-agent --json
 ```
 
-用 Package 状态核对 installed、enabled 和 launch readiness，再从 App 状态核对 Agent 目录中的 `package_id`。启动时为 `opl agents run` 传入 descriptor 声明的 domain、action 和工作区。公开软件源的 Package projection 用于分发，本地安装通过原生载体读回进入动态发现。
+用 `opl pack inspect` 核对 installed、enabled 和 carrier 状态，再从 App 状态（`app.state.get`）核对 Agent 目录中的 `package_id`。公开软件源的 Package projection 用于分发，本地安装通过原生载体读回进入动态发现。
 
 ## Required descriptor
 

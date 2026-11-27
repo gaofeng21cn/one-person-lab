@@ -1,35 +1,30 @@
 # OPL 当前状态与理想目标差距
 
-本文只记录已有具体断点、明确负责人和验收方法的未完成工作。长期职责、例行维护和未验证的猜测不作为 gap；执行进度留在对应 Issue。
+本文只记录已有具体断点、明确负责人和可观察完成条件的 v2 收敛工作。完成后删除对应条目；不在这里记录完成日志、版本快照或迁移历史。
 
-## 维护方式
+## Framework core 单写入者收敛
 
-新增条目前必须给出当前断点证据、负责人和可观察完成条件。完成后删除条目，并仅在对应当前说明中更新行为；不追加完成区、测试总数或发布快照。
-
-App、Cloud、Package 的部署验收与专业质量属于各 owner，本页未列出它们不表示已就绪。通用证据限制见 [当前状态](../status.md#production-evidence)。
-
-## 私有软件源的发行与安装验收
-
-共同访问与生命周期合同见 [Package Directory](../specs/package-directory.md#私有-package-的访问与生命周期)。本机通过本地 carrier 运行私有 Agent，不能代替授权新用户从私有源安装的验收。
-
-| owner | 当前具体断点 | 下一步与完成条件 |
+| owner | 当前具体断点 | 可验证完成条件 |
 | --- | --- | --- |
-| Framework、Package 发布 owner、App/Studio | 私有分发已隔离到 `one-person-lab-private-packages`，但尚无同一发行载体的完整授权安装验收。OCC 旧公开制品不能转回私有，新 namespace 仍需正式版本、精确 owner projection、受保护签名和 Package 读取权限；现有本地安装不能证明新用户可获取 | 由 Package owner 完成私有发行，在获权与无权身份下分别验证目录、版本、安装、更新及匿名拒绝。账号切换和撤权须阻止后续远端读取；已安装条目保留停用和卸载。核对 App/Studio、Framework 与 Package 的实际安装版本；历史公开制品处置单独决定 |
-| App/Studio、Framework 发布 owner | 统一软件源、Homebrew 生命周期及共享资源配置的源码接线，不会更新用户现有 App 与 CLI；当前发行安装尚未覆盖完整功能 | 按现有发行路径交付兼容版本，回读已安装 App、Framework、原生 carrier 和页面状态；验证重开后的目录、来源配置、知识 binding、账号授权及操作结果 |
+| Framework daemon、Workspace、Pack | 软件源和 workspace root 仍有 JSON 写入路径。`opl sources` 仍由 Package source store 读写 `software-sources.json`，workspace root 仍读写 `workspace-root.json`；这使 `opl.db` 不是唯一 durable writer。 | 将 software-sources 与 workspace-root 迁入 `opl.db`，通过 `opld` JSON-RPC 和 `pack.sources.*` 暴露读写。提供一次性只读旧 JSON 迁移，迁移后 CLI、Studio、SDK 均从数据库回读；非 macOS 主机不写 `~/Library/Application Support/OPL/state/...`。补充跨平台 writer/readback 测试。 |
+| Framework Pack、Catalog 发布 owner | Package resolver 在 v2 GHCR manifest HTTP 404 时仍存在 v1 fallback。`v2_release` 的晋升必须绑定不可变 OCI publication 和 readback；`OPL_FULL_RUNTIME_HOME` seed 还需明确只加速公开匹配字节。 | 删除 PR #499 的 v1 静默降级路径。缺少选定 v2 manifest 时返回可观察错误并保持 fail closed。在线 Full 模式继续合并私有目录和更新，离线 seed 不阻塞 `authorized_only`。用 public/private、404、seed 命中与不匹配场景回读 resolver 结果。 |
+| Framework package-release owner | `scripts/sync-private-package-publishers.py` 的 v2 publisher 接线仍需覆盖 `source_root != "."` 的真实 Package。 | 修复发布投影、归档路径和 publisher 同步，使非根 `source_root` 的 Package 能完成 immutable publication、Catalog projection 与私有授权安装。用真实 descriptor、归档内容锁和远端 manifest readback 验证。 |
+| Studio、Framework Connect owner | `@opl/connect` 仍包含未挂载的 `RemoteCompanionHost` 实现，companion hosting ownership 尚未收敛到 Studio `opl-host-core`。 | 移除或断开 Framework 内 companion server 的 host 生命周期。Studio 独占 hosting，Framework 仅保留 Gateway companion authorization 与 `opl connect gateway authorize-companion`/RPC；以 connect discovery、authorization 和 Studio host readback 验证不存在第二 host。 |
+| Framework guard owner | `scripts/` 尚未完整纳入 `v2:guard` 的 v2 import/legacy hygiene 覆盖。 | `npm run v2:guard` 覆盖 `scripts/`，并对发布工具、源码路径和旧 runtime import 产生稳定失败结果；现有 v2 package 与 guard 测试保持通过。 |
 
-## Agent 原生应用的后续验收
+## Software Center 与 App settings parity
 
-设计标准见[Agent 原生应用政策](../policies/agent-native-app-policy.md)，接入与验证见[开发指南](../mcp-apps/development.md)。领域数据与决定由各 owner 持有；共享界面、来源摘要和开发样例的源码接通，不自动消除下列真实载体与业务链路的验证边界。
-
-| owner | 当前具体断点 | 下一步与完成条件 |
+| owner | 当前具体断点 | 可验证完成条件 |
 | --- | --- | --- |
-| App/Studio、Framework、Relay、MAC、Photo 发布 owner | 正式隔离安装的 Studio、官方 Codex 与领域 carrier 已完成草稿保存、媒体批注、合成照片计划应用和阶段知识来源展示；知识来源撤权后可见缺口与修复提示。这组源码候选尚未完成公开发行安装验收 | 在各自正常发行中绑定同一兼容 cohort，复验已安装版本、重开和关键恢复场景；保留现有隔离安装证据，不把源码候选当公开发行字节。阶段来源概览不代替动作特定知识与冻结快照的 owner 接口 |
-| Framework、RCA 与个人知识 writer 的安装 owner | 公共图片执行和知识退役已由真实消费者完成隔离合成联测；当前安装载体不因源码合入自动获得这些入口 | 沿各自正常安装路径配套交付 Framework 与 consumer，回读实际模块、命令和版本；图片调用以真实 provider 兼容性为准，私人知识维护只处理获授权的精确对象 |
-| OMA + Framework | Photo/Relay 样例已在隔离安装的 Framework 中完成物化、激活、发现、调用及不重复派发的重开验证；真实模型生成与具体业务验收仍需代表性新应用证明 | 复用已有样例和正式安装入口，保留生成来源、安装身份及 owner 操作回读；第二消费者直接复用公共内容，不另设 manifest 或 SDK |
-| MAS、MAG、RCA、OBF、OCC 领域 owner | MAG 同申请反馈消费已验证；MAS/RCA/OBF/OCC 已用真实本地 Temporal、真实领域包和合成 executor 验证同 Task 新 StageRun、精确决定消费及 replay。真实领域成果与模型质量仍需代表任务接受 | 沿用已验证 continuation 入口完成各领域代表任务，保留产物版本、人工决定和质量依据。合成执行保留质量债，不等于论文、申请、书稿或投资决定获得接受 |
-| NetFleet、U60、Cloud、Fleet、GLKVM 等产品 owner | 薄接口、状态与协作投影不证明当前原生应用、真实设备/账户或公开发布载体采用相同版本；部分新 connector 仍为 development-only | 沿用各产品发布与安装路径完成版本、身份、freshness 和实际调用回读。采购、设备控制、删除等动作仍由原 owner 执行；开发资格不能通过改 admission 字段冒充发布 |
-| OPL DSH + 官方 DSH MCP 客户端 | 官方 MCP 客户端的公开连接能力协商与工具投影没有保留完整 UI metadata/visibility，当前无法通过公开接口构建合规的标准 MCP Apps host | 官方公开 UI 协商、资源与元数据能力后，用 Cordis/slots 增加必要薄适配并验收同一 Framework/Relay 资源；此前提供准确的能力诊断和无 UI 交接，不复制私有客户端或会话 authority |
+| Framework Pack、App/Studio Software Center | Full 模式的私有源与在线公共 Catalog 合并、`package_currentness`、`agent_package_update`/`agent_package_repair`/`agent_package_cancel` 以及持久 Catalog cache 尚未形成同一可回读面。 | 在在线和 Full 模式分别回读 public/private entries、授权错误、currentness 与完整 action payload。`updatePlan` 对已缓存且 current 的 Package 产生 zero-download 结果；缓存重启后仍可用，实际安装与更新继续从 native carrier 回读。 |
+| Framework daemon、Python SDK owner | `ContributionDispatcher` 的 Python capability 执行仍需把 SDK `PYTHONPATH` 注入到实际 subprocess 环境，并保留调用者的显式环境。 | Python contribution 在干净环境可导入 `sdks/python-client`，显式 caller `PYTHONPATH` 与失败诊断均可回读；不依赖工作树偶然的 import path。 |
+| Framework Workspace、App/Studio settings owner | `resource_sources`、`knowledge_source_*` 以及 `connection_test`、`connection_update`、`connection_delete` 还没有完整覆盖设置读面、动作和写后 readback。 | Settings projection、CLI/RPC 和 App actions 共享同一 owner。对来源和连接分别验证 list、test/update/delete、revision、权限拒绝和重开后的持久状态，不返回凭证值。 |
+| Framework Runway、App/Studio task workbench owner | task projection 还需完整表达 `awaiting_human` 与 `agent_id=null` 的任务，避免工作台把人工等待或无 Agent 任务当作缺失数据。 | `opld` 创建、恢复和列表回读这两类任务时，projection、action route、状态过滤和 UI model 保持稳定；相关 task-projection 与 restart 测试覆盖人工决定路径。 |
 
-MAP、Link、Health 维持各自研发、冻结或试点选择边界。知识来源模型的安装与工作区验收已由其 owner 完成，见[当前状态](../status.md#长期知识与记忆)；MiniApp 仅消费其公开合同。
+## App/Studio 与 Standard Agents v2 收敛
 
-后续验收记录首次可用工作流所需工作、重复连接/知识/UI 实现减少、已绑定信息的重复询问次数及交接/冲突/恢复表现。先取得真实基线，再设数值目标。
+| owner | 当前具体断点 | 可验证完成条件 |
+| --- | --- | --- |
+| App、Framework CLI owner | App v1 CLI surface 仍有清理项，部分调用者尚未完全迁移到 `opl runway`、动态 extension CLI 和 v2 Package routes。 | 清理旧 CLI 入口及调用者，保留实际仍支持的 `opl daemon doctor --legacy-runs` 只读检查。App、CLI、SDK 通过公开 v2 RPC 和 dynamic descriptor 进行同一组 smoke/readback 验收。 |
+| Studio、Framework Connect owner | Studio 的 `channel_access` 过滤和已退役 UI 清理尚未完成，`opl-link-desktop-connector` 仍是 zombie surface。 | 修正 channel projection/filter，删除退役 UI 与 zombie connector，回读 Studio channel list、action availability 和 companion ownership；不得以隐藏菜单保留旧产品面。 |
+| Framework Pack、各 Package owner、发布 owner | 仍有 legacy Catalog Package 未完成 `opl.package.v2`，因此 `.github/workflows/daily-package-channel.yml` 的 `PACKAGE_PUBLISHER_TOOLING_COMMIT` 与 runtime `migrateV1Package` 不能删除。 | 活跃 Catalog Package 全部完成 v2 descriptor、OCI publication、carrier install/update/repair 和 clean readback 后，删除 publisher commit pin 与 `migrateV1Package` 运行时路径；v2 guard、Package migration and publication tests 证明没有双轨消费者。 |

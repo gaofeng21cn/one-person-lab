@@ -20,8 +20,7 @@
     └── knowledge-source-reviews/    原处编辑接受证据
 
 <用户选定的 Obsidian 或业务目录>/   唯一可编辑正文
-<OPL state>/family-runtime/review-transport/knowledge-context/
-                                      当次执行的不可变私有正文快照
+${OPL_STATE_DIR}/snapshots/           由 WorkspaceService 管理的阶段只读上下文快照
 ```
 
 Persona 的 `data/persona/knowledge-inputs.json` 只按角色选择知识 ID；笔记 Resource Binding 只解析允许操作的资源。Relay 的邮件记忆、Persona 的派生摘要与 Framework 的 registry 分别承担领域证据、语义上下文和知识生命周期职责。 Relay 记忆可保留 `knowledge_id`、`source_versions`、`scope`、`content_kind`、`canonical_target`、`writeback_status`、`observed_at` 和 `next_review_at`，但这些是链接与复核元数据，不是新的 registry。Relay 的 export/link/promote 只能输出证据或 review-gated proposal；正文写回仍走 Framework。来源权限和接受版本以 registry 为准，磁盘上的目录或索引不产生授权。
@@ -34,11 +33,11 @@ App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.
 
 用户在同一入口选择资料目录，或通过高级入口接入已有 registry，并明确选择使用范围与可使用的应用。首次接入复用 `<workspace>/data/knowledge-sources.json` 和既有 binding；它不自动登记、接受或复制库中的正文。`OPL_PROFILE_WORKSPACE` 的显式选择无效时直接报告错误，不换用默认个人目录。工作区以已有 registry 的不透明 ID 选择。
 
-`opl knowledge source-list`、`source-check`、`source-connect`、`source-configure`、`source-disconnect` 与 `knowledge_source_*` App actions 共用一个 owner。配置、授权修改和断开绑定要求确认及精确 revision，写后立即回读。断开只移除当前工作区对此来源的选择，保留原文、registry、其他工作区授权及必要知识声明；重新连接沿原来源身份完成。
+`opl workspace sources list|add|remove`、`opl workspace snapshot`、`opl workspace writeback` 与 `knowledge_source_*` App actions 共用 [`WorkspaceService`](../../packages/workspace/src/service.ts)。配置、授权修改和断开绑定要求确认及精确 revision，写后立即回读。断开只移除当前工作区对此来源的选择，保留原文、registry、其他工作区授权及必要知识声明；重新连接沿原来源身份完成。
 
 来源是否可用与知识条目是否仍适合召回分别呈现。授权正常、原文字节与接受版本一致的来源，不因其中历史记录到达复核期限而显示来源故障。`knowledge_health` 保留当前可用、待复核、已退役和正文不可用的数量，以及待复核条目的知识 ID 与原因；详情可据此显示“6 项可用，2 项待复核”。正文漂移、文件不可读及无效接受记录仍要求处理。来源检查不延长复核日期，不修改正文；过期条目继续被原召回流程排除，必要知识或行动前复核缺口仍阻止对应执行。
 
-简单表单保留现有授权边界：多条项目/领域/范围 grant 由来源 owner 管理；同 registry 绑定多个来源时，不允许通过编辑一个来源扩大其他来源的 scope。UI 根据 `access_editable`、`scope_expansion_allowed` 和现有范围选项说明可执行动作。机器字段与安全边界见[知识来源管理合同](../../contracts/opl-framework/knowledge-source-management-contract.json)。
+简单表单保留现有授权边界：多条项目/领域/范围 grant 由来源 owner 管理；同 registry 绑定多个来源时，不允许通过编辑一个来源扩大其他来源的 scope。UI 根据 `access_editable`、`scope_expansion_allowed` 和现有范围选项说明可执行动作。机器字段与安全边界由 [`packages/workspace/src/`](../../packages/workspace/src/index.ts) 持有。
 
 ## 文件与身份
 
@@ -48,7 +47,7 @@ App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.
 | 工作区来源绑定 | `<workspace>/shared/memory/knowledge-bindings.json` | 引用来源 registry，显式选择 `source_ids`、`scope_ids` 和必要知识 ID |
 | 来源 registry | 绑定所引用的私有本地 JSON | 一份权威来源登记，持有来源根、授权、可写状态、知识项和已接受正文哈希；可位于已有 Profile 或 Workspace 控制区 |
 | 原文 | registry 中的 `root` 加条目相对 `ref` | 用户已有个人库或工作目录内的唯一正文；无需中间全文投影 |
-| 冻结快照 | `<OPL state>/family-runtime/review-transport/knowledge-context/` | 运行时保存本次实际消费的私有正文，binding 只引用该快照 |
+| 冻结快照 | `WorkspaceService` 管理的阶段快照（`${OPL_STATE_DIR}` 工作区快照存储） | 运行时保存本次实际消费的私有正文，binding 只引用该快照 |
 | 正文登记证据 | `<workspace>/shared/memory/knowledge-registrations/` | 新知识登记的精确身份、接受依据、意图与回执 |
 | 知识退役证据 | `<workspace>/shared/memory/knowledge-retirements/` | 已审阅退役的原文字节、原 registry、原因、恢复阶段与回执；不作为新知识候选 |
 | 正文迁移证据 | `<workspace>/shared/memory/knowledge-relocations/` | 精确源/目标位置、原文字节、原 registry、目标身份、恢复阶段与回执；不作为新知识候选 |
@@ -89,12 +88,7 @@ App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.
 
 这把蓝图中的披露政策需求绑定到实际 owner 的指定知识，不能用另一位用户的同类型政策填补必要输入。需求绑定只连接语义身份与条目，来源 grant、scope 选择、适用性和有效性仍独立核验。
 
-相关机器合同：
-
-- [知识条目](../../contracts/opl-framework/durable-knowledge-item.schema.json)
-- [来源 registry](../../contracts/opl-framework/knowledge-source-registry.schema.json)
-- [工作区绑定](../../contracts/opl-framework/knowledge-source-bindings.schema.json)
-- [消费回执](../../contracts/opl-framework/durable-knowledge-recall-receipt.schema.json)
+相关机器接口由 [`packages/workspace/src/types.ts`](../../packages/workspace/src/types.ts) 和 `opl workspace sources` / `snapshot` / `writeback` 命令族持有。
 
 ## 接入与召回
 
@@ -119,87 +113,18 @@ App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.
 | `knowledge revalidate --for-action` | binding 路径 | 复核当前访问、关键知识版本及新增适用的必要或关键知识，不产生业务行动授权 |
 | `knowledge verify-dependencies` | 工作区、domain、依赖 JSON、可选项目 | 核对派生摘要所依赖知识的版本、有效性与访问范围 |
 
-直接 Skill 与托管 StageRun 共用同一快照存储和校验。直接入口示例中的路径、身份和输出文件名应替换为本次实际值：
+直接入口与托管 StageRun 共用同一快照存储和校验。命令通过 [`opl workspace`](../../packages/daemon/src/cli/main.ts) 提供：
 
 ```text
-opl knowledge prepare --repo <package> --domain <domain> --stage <stage> --task-intent <action> --workspace <workspace> --project <project> --output <new-binding.json> --json
-opl knowledge read-context --binding <new-binding.json> --json
-opl knowledge revalidate --binding <new-binding.json> --for-action --json
+opl workspace sources list --workspace <workspace> --json
+opl workspace snapshot --workspace <workspace> --stage-run <stage-run-id> [--source <source-id>] --json
+opl workspace writeback propose|commit ... --json
 ```
 
-`read-context` 的输出是私有正文，只进入获授权执行上下文；公开回读保留引用与回执。冻结正文不会因普通源文修订而悄悄变化，但后续读取仍核对访问授权。任务声明为必要的知识失效时，依赖它的工作不得通过静默默认值继续。
+`snapshot` 的输出绑定私有正文引用与当次校验结果；公开回读保留引用与回执。冻结正文不会因普通源文修订而悄悄变化，但后续读取仍核对访问授权。任务声明为必要的知识失效时，依赖它的工作不得通过静默默认值继续。
 
-## 发现与登记来源条目
+## 来源查询与修订写回
 
-`knowledge sources --workspace <workspace> --domain <domain> [--project <project>] [--id <knowledge-id>] --json` 只列出当前范围允许读取、生命周期有效且正文精确匹配接受版本的条目。`knowledge_sources.items` 保留知识条目元数据，并增加 `registry_ref`、`source_id`、`source_ref`、`sha256` 和 `can_write`；`quality_debt` 说明排除与缺口。无正文列表可供 Persona 或 Relay 建立候选索引，仍须在实际读取时重新校验。
+`opl workspace sources` 管理工作区与知识来源绑定，`opl workspace snapshot` 生成当次任务只读快照，`opl workspace writeback` 管理审阅门控的正文修订提案与提交；具体参数与返回结构以 [`packages/workspace/src/service.ts`](../../packages/workspace/src/service.ts) 与 `opl workspace --help` 为准。
 
-`knowledge search` 使用相同范围，增加 `--query <text>`、`--limit <1..20>`、`--excerpt-chars <1..1000>`。`knowledge_search.matches` 在相同来源元数据上返回有限 `excerpt`；结果是字面检索候选，不能代表语义分类、内容接受或业务授权。失效、漂移与越权正文不会通过旧索引返回。
-
-`knowledge discover` 与 search 使用相同 query 和长度限制，返回 `knowledge_discovery: {query, candidates, quality_debt, has_more, truncated, next_cursor}`。`--source <source_id>` 只选择已授权来源；`--path-prefix <relative-path>` 按来源内文件或目录边界限缩，不能扩大 grant 或绕过 include/exclude。候选按 registry、source 和相对路径的稳定顺序分页；`has_more` 和 `truncated` 表示本页之后还有命中，继续请求时传入 `--cursor <next_cursor>`，末页返回 `next_cursor: null`。每页重新核验当前授权；query、过滤条件、工作区、domain、项目、binding 或 registry 变化会拒绝旧游标，需重新开始。游标是位置而非正文快照：翻页期间新插入在当前位置之前的文件需要重新检索才会出现，后续文件按当次实际字节读取。
-
-源级 `discovery_max_bytes` 控制参与发现的单文件大小，默认 262144 字节，最大 2000000 字节；它只扩大有界候选摘录的发现范围，已接受正文的读取与注册仍受原 256 KiB 限制。它用于保留既有来源的未登记正文发现能力；按已授权的工作区、domain、可选项目和 registry 来源的 `include_globs`／`exclude_globs` 返回 `candidate: true, accepted: false` 及 `source_id`、`source_ref`、`registry_ref`、当前 `sha256` 和有限 `excerpt`。已登记正文即使失效，也继续走已接受来源的复核路径，不通过 discover 或重叠来源别名绕过。发现候选不进入 current context，也不批量登记或接受；Persona／Relay 必须逐项经用户或业务 owner 审阅，再调用 `knowledge register`。这保留搜索可发现性，同时不把旧索引内容冒充已接受知识。
-
-登记命令绑定实际审阅的原文字节：
-
-```text
-opl knowledge register --workspace <workspace> --domain <domain> --registry <bound-registry-absolute-path> --item <item-json-file> --expected-sha256 <sha256:reviewed-body-digest> --reviewer <reviewer> --review-ref <review-evidence-ref> --reviewed-at <time> --next-review-at <time> --json
-```
-
-需要项目范围时加 `--project <project>`。`--item` 使用当前知识条目 schema，正文 `body_ref` 指向已绑定来源内的现有 Markdown。调用者须持有该来源的独立写回 grant；来源须可写，工作区已选择相应来源和 scope。登记更新 registry 中的条目与接受版本，不修改原文。命令拒绝基础哈希、身份和既有条目冲突；精确相同的重试返回 `knowledge_registration` 幂等登记回执，证据位于 `shared/memory/knowledge-registrations/`。新正文的创建与目标库格式由其文档 owner 负责，随后登记写后回读的精确字节。
-
-新建正文后调用 register 时，传入 `--expected-body-path <absolute-file>`，同时核对创建目标与登记来源是同一个实际文件；相同摘要的另一文件不会代替本次创建目标。
-
-文档 writer 在普通文件编辑前可通过 `knowledge resolve-target --path <absolute-file>` 判断目标是否已登记。`knowledge_target.registered` 只表达身份存在性；返回失效或撤权条目的身份不代表读取或维护授权。已登记目标走共同修订链，避免退回普通笔记 writer 绕过接受版本。
-
-来源首次接入和新知识登记分开：前者由有权控制面确认来源根及 grants，后者只能在已授权范围内增加知识对象。通用登记能力不授予调用者新的私人目录、scope 或业务权限。
-
-### 退役与恢复证据
-
-整理工具需要移出已登记正文时，先按精确知识 ID、正文与 registry 哈希取得实际 owner 的退役审阅，再调用公共入口：
-
-```bash
-opl knowledge retire --workspace <workspace> --domain <domain> --id <knowledge-id> \
-  --expected-sha256 <sha256:body-digest> --expected-registry-sha256 <sha256:registry-digest> \
-  --reason <retirement-reason> --reviewer <owner> --review-ref <authority-ref> \
-  --reviewed-at <observed-review-time> --json
-```
-
-`knowledge_retirement` 返回 `status: retired`、`operation_id`、`recovery_path` 和 `receipt_ref`。Framework 先在工作区私有控制目录保存原字节、原 registry 和审阅依据，再以精确版本更新条目为 `deprecated`，最后核对并删除原位置的字节。稳定知识 ID、原 `body_ref` 和接受哈希保留，当前召回与依赖验证将其排除；旧 locator 仍可通过 `resolve-target` 识别为已登记。恢复正文不成为第二可编辑主源，也不会被 `discover` 当作未登记候选。
-
-回收位置由该工作区的知识 owner 管理。命令不接受任意外部移动目标；普通未登记文件继续使用原文件工具。来源写 grant、工作区、domain、项目和路径边界每次重验。缺少审阅、来源漂移或 registry 冲突时不覆盖。
-
-中断后用 `knowledge inspect-retirement --workspace <workspace> --domain <domain> --operation-id <id> --json` 只读回查：未完成时返回 `recovery_required` 及 `prepared`、`registry_retired` 或 `source_removed` 阶段。相同退役请求可继续原操作；成功后的同请求返回原回执，不重放删除。原位置已被重新创建、身份改变或恢复字节损坏时须由 owner 处理，历史请求不能覆盖或删除新内容。恢复材料保留原位置、接受版本和审阅理由，重新启用知识必须显式经 owner 维护，退役回读不会自动恢复正文或激活条目。
-
-### 保持知识身份的正文迁移
-
-`knowledge relocate` 在同一个已授权 source 内移动已登记 Markdown，保留 `knowledge_id`、正文哈希、scope、状态和原知识复核日期，只变更 `body_ref.ref`。迁移审阅时间记录在迁移回执中，不能延长知识事实的有效期。调用者须提供当前正文和 registry 的精确哈希、原相对路径、目标相对路径及实际维护授权引用：
-
-```bash
-opl knowledge relocate --workspace <workspace> --domain <domain> --id <knowledge-id> \
-  --source-ref <original.md> --target-ref <topic/current.md> \
-  --expected-sha256 <accepted-body-digest> --expected-registry-sha256 <reviewed-registry-digest> \
-  --reviewer <owner> --review-ref <review-ref> --reviewed-at <time> --json
-```
-
-两个位置都须满足当前来源过滤和写 grant，原位置只能有一个登记身份，目标不得已有文件或登记身份；每个恢复阶段重新核对所有绑定 registry 的身份。命令先保全原文和 registry，以同设备硬链接创建不覆盖目标的副本，再把原路径原子移入同目录的私有暂存目录，核对文件身份和哈希后清理。registry 同样先捕获当前文件，再以目标不存在时才成功的方式发布新版本。不同文件系统不走自动复制/覆盖降级。
-
-迁移途中，已登记来源可能暂不可读；失败不是完成，错误给出 `operation_id`，通过 `knowledge inspect-relocation --workspace <workspace> --domain <domain> --operation-id <digest> [--project <project>] --json` 只读检查阶段。若捕获 registry 后中断而原路径缺失，检查返回 `registry_restore_required`；相同精确请求重试只会原样归还实际捕获的 registry，再重新验证当前授权，不用审阅前快照重建授权。并发撤权或新建 registry 不被旧请求覆盖，源文件的并发替换也保留。证据文件先完整写入临时文件并同步，再不覆盖地发布，部分写入不会成为正式证据。该机制协调本机遵守协议的写者，不保证 iCloud 多设备事务；冲突须由 owner 核对暂存与恢复证据。
-
-Obsidian 调用方负责链接与文稿关系，不由通用 Framework 批量重写正文。完整操作顺序为：先枚举受影响链接及文件并以 `resolve-target` 区分已登记对象；保全并审阅修改集合；迁移目标正文；通过原文 owner 更新引用（已登记引用走共同写回/接受链）；最后用原知识 ID 执行 `read-source`、检查链接及相关视图。链接回写失败时保留迁移回执和待修集合，不能报告整次资料整理完成。普通未登记文件继续使用资料库现有维护入口。
-
-## 用户编辑与智能体提案
-
-用户直接编辑原文后，已授权维护者先运行 `knowledge inspect-source` 读取候选正文和哈希，结合此前接受版本核对差异，再运行 `knowledge review-source --expected-sha256 <sha256:reviewed-source-digest>`，并提供 reviewer、review ref、reviewed at 和 next review at。接受动作只更新与实际审阅字节一致的版本；源文在审阅后改变时拒绝接受。该命令不重写正文。复核时间与底层事实的观察时间分别记录。
-
-智能体提出修订时，先准备完整替换 Markdown 和结构化提案。提案包含 `source_refs`、`target_scope`、`content_kind`、`proposed_rule_or_mechanism`、`evidence_class` 和 `review_requirement`。提案不能借修订正文静默改变知识归属或类型。
-
-1. `knowledge propose` 绑定知识 ID、原文与 registry 版本，生成明确的提案身份。
-2. `knowledge review --proposal-id <digest>` 记录 `accepted` 或 `rejected`，并绑定精确提案的摘要、reviewer、实际 review ref、复核时间和下次复核期限；提案证据或基础原文、registry 漂移时拒绝审阅。
-3. `knowledge apply` 只应用获接受的精确提案；原版本漂移时拒绝覆盖，保留恢复证据并回读结果。
-4. 下一次任务重新 prepare；历史 binding 保留其当次上下文，真实行动前另做关键知识复核。
-
-上述写回命令都指定工作区和 domain；涉及项目授权时同时指定项目，并满足独立的写回 grant。产品知识由产品仓库的审阅发布流程维护，不经私有来源 writer 修改。
-
-来源版本检查和本机写入锁用于协调遵守同一协议的本机写者，不构成跨设备文件系统事务。云同步冲突或其他编辑器并发写入需要保留并核对版本；不以最后写入覆盖解决。
-
-提案、审阅与应用合同分别见[提案 schema](../../contracts/opl-framework/knowledge-writeback-proposal.schema.json)、[审阅 schema](../../contracts/opl-framework/knowledge-writeback-review.schema.json)和[回执 schema](../../contracts/opl-framework/knowledge-writeback-receipt.schema.json)。命令成功证明机械操作已完成，语义接受与业务结果仍由其 owner 的依据决定。
+来源版本检查和本机写入锁用于协调遵守同一协议的本机写者，不构成跨设备文件系统事务。云同步冲突或其他编辑器并发写入需要保留并核对版本；不以最后写入覆盖解决。语义接受与业务结果仍由原 owner 依据决定。

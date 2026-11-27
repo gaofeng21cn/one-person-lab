@@ -6,45 +6,24 @@ remaining implementation gaps belong to the [current gap](../active/current-stat
 
 ## Construction boundary
 
-The acceptance test uses a deterministic fixture gateway with the real
-`StageRunFoundryProviderInvoker`, `ManifestFoundryDesignerAdapter`, `FoundryKernel`,
-content-addressed compiler, file object store and SQLite ledger. Distinct target
-identities, domains, actions and Stages exercise the generic construction path.
+The acceptance checks exercise deterministic package scaffolding, manifest/lock verification, frozen-plan evaluation ledger emission, and Python extension integration using:
 
-`startRun()` and `advanceRunStep()` advance through
-`accepted -> designing -> materializing -> evaluating`. The ledger event
-`candidate_materialized` supplies a `candidate_record_digest` for an
-`opl_foundry_materialized_candidate` object. Verification reads that object and
-checks indexed file hashes and sizes, candidate/manifest digests, resource bytes
-and manifest conformance. Missing bytes, hash mismatch or wrong generation must
-not produce a materialization event.
+- `extensions/foundry/src/*` (`opl foundry init | validate | eval | compare | promote | rollback`);
+- `@opl/pack` manifest v2 schema (`contracts/opl-package.v2.schema.json`) and content-lock builder/verifier;
+- `opl-foundry-run-event.v1` hash-chained ledger events under `${OPL_STATE_DIR}/foundry/`.
 
-New candidates carry the Standard Agent capability map, primary Skill and a
-declared durable knowledge catalog in their immutable file index. The catalog
-starts empty. Blueprint knowledge refs identify Stage resources, and durable
-recall still requires declared, owner-authorized knowledge with the appropriate
-scope, kind and review status. Verify missing requirements with the Stage
-knowledge binder and verify the primary Skill through the Workspace Skill
-projection. Previously materialized versions retain their original bytes.
+`eval` emits an immutable `EvidenceBundle` and ledger event chain without mutating the target package directory, while `promote` and `rollback` enforce CAS `expected_revision` and owner authority checks on medium/high risk changes. Missing bytes, hash mismatch, or weakened protected gates must fail closed.
 
-The test stops before evaluation. It does not establish a terminal successful
-FoundryRun, qualification, version registration, activation or domain quality.
-Fixture packages are neither published nor installed; temporary artifacts are
-removed by the tests.
+Verification stops before domain production adoption. It does not establish domain quality or published carrier acceptance.
 
 ## Run the checks
 
 From a checkout with repository dependencies installed:
 
 ```sh
-scripts/run-with-repo-temp-env.sh node --experimental-strip-types --test \
-  tests/src/foundry-agent-package-acceptance.test.ts \
-  tests/src/foundry-provider-stage-run.test.ts \
-  tests/src/foundry-source-material.test.ts \
-  tests/src/foundry-managed-attempt-content.test.ts \
-  tests/src/reviewer-snapshot-authoring.test.ts \
-  tests/src/family-runtime-review-protocol-transport.test.ts \
-  tests/src/foundry-temporal.test.ts
+scripts/run-with-repo-temp-env.sh node --test \
+  extensions/foundry/tests/foundry.test.mjs \
+  extensions/foundry/tests/foundry-adversarial.test.mjs
 ```
 
 These checks cover construction, authoritative work-item scope, exact source and
@@ -62,7 +41,7 @@ A failed historical Run remains terminal. Normal observation and continue-as-new
 preserve in-flight execution; they do not authorize rewriting failed ledgers.
 
 An existing isolated run may supply construction evidence when its exact source,
-request, review receipts, immutable snapshots, Temporal history and candidate bytes
+request, review receipts, immutable snapshots, Runway/Ledger history and candidate bytes
 are available. Verify the original files and their bindings before comparing any
 local runtime patch against canonical source. Absorb only the missing behavior and
 retest the affected paths; do not require another complete model run solely because

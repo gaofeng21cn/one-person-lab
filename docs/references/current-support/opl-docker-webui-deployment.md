@@ -23,22 +23,20 @@ credential使用部署平台secret或显式stdin配置，不写入image、Compos
 容器包含 OPL CLI 时，可在独立初始化/维护步骤执行：
 
 ```bash
-opl install --headless --json
-opl system initialize --json
-opl system startup-maintenance --json
+opl daemon doctor --include-first-run --json
 ```
 
-有 image seed 时，使用当前 `opl system seed-apply --help` 声明的参数。seed receipt只证明Framework-owned bytes被观察或物化，不证明App release、Package installed、provider ready或domain ready。
+有 image seed 时，在运行时传入 `OPL_FULL_RUNTIME_HOME` 或由 Studio/App 构建输入配置 seed。seed receipt只证明Framework-owned bytes被观察或物化，不证明App release、Package installed、provider ready或domain ready。
 
 ## 诊断
 
 ```bash
-opl system docker-webui doctor --json
-opl app state --profile fast --json
-opl packages status --json
+opl daemon status --json
+opl daemon doctor --include-first-run --json
+opl pack list --json
 ```
 
-doctor是只读聚合，不启动container、不写credential、不安装Package，也不声明release readiness。
+`doctor` 与 `status` 是只读聚合，不启动 container、不写 credential、不安装 Package，也不声明 release readiness。
 
 ## 最小验证
 
