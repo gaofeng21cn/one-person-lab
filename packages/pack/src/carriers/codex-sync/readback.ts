@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '@opl/core';
 import { PackError } from '../../errors.ts';
@@ -99,7 +100,12 @@ export function isTransientMarketplaceUpgradeFailure(
 export function sameMarketplaceSource(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!a || !b) return false;
   if (path.isAbsolute(a) && path.isAbsolute(b)) {
-    return path.resolve(a) === path.resolve(b);
+    if (path.resolve(a) === path.resolve(b)) return true;
+    try {
+      return fs.realpathSync(a) === fs.realpathSync(b);
+    } catch {
+      return false;
+    }
   }
   return a.trim() === b.trim();
 }

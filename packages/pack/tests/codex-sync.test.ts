@@ -186,6 +186,25 @@ test('codex-sync imports external Codex plugins and handles marketplace transien
   const marketplaceRoot = path.join(tmpDir, 'marketplace');
 
   try {
+    // Codex canonicalizes local sources, including macOS /var and junctions.
+    const realSource = path.join(tmpDir, 'real-marketplace');
+    const sourceAlias = path.join(tmpDir, 'marketplace-alias');
+    fs.mkdirSync(realSource);
+    fs.symlinkSync(realSource, sourceAlias, 'junction');
+    await ensureMarketplaceAvailable({
+      marketplaceName: 'opl-local',
+      marketplaceSource: sourceAlias,
+      action: 'sync',
+      runner: {
+        async runCli(args) {
+          assert.deepEqual(args, ['plugin', 'marketplace', 'list', '--json']);
+          const entry = { name: 'opl-local', marketplaceSource: { sourceType: 'local', source: fs.realpathSync(realSource) } };
+          return { status: 0, stdout: JSON.stringify({ marketplaces: [entry] }), stderr: '', error: null };
+        },
+        async listPlugins() { throw new Error('Unexpected plugin read'); },
+      },
+    });
+
     // 1. Test ensureMarketplaceAvailable transient retry (ECONNRESET -> success)
     let upgradeCalls = 0;
     const retryRunner: CodexCarrierRunner = {
