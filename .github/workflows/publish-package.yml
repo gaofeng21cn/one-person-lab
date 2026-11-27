@@ -301,23 +301,17 @@ jobs:
 
           manifest="$PACKAGE_MANIFEST_PATH"
           source_repo="$(jq -er .source_repo "$manifest")"
-          if [[ "$source_repo" =~ ^https://github\.com/([^/]+)/([^/]+)\.git$ ]]; then
-            repo_name="${BASH_REMATCH[2]}"
-          else
+          if [[ ! "$source_repo" =~ ^https://github\.com/[^/]+/[^/]+\.git$ ]]; then
             echo "::error::Package source_repo must be a canonical GitHub HTTPS repository: $source_repo"
             exit 2
           fi
-          package_format=v1
-          if [ -n "$EXPECTED_CATALOG_SOURCE_COMMIT" ] && jq -e \
+          if [ -z "$EXPECTED_CATALOG_SOURCE_COMMIT" ] || ! jq -e \
             --arg version "$EXPECTED_PACKAGE_VERSION" --arg commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
             '.v2_release.version == $version and .v2_release.source_commit == $commit' "$manifest" >/dev/null; then
-            package_format=v2
-            payload_ref="$(jq -er '.v2_release.payload_manifest_ref' "$manifest")"
-          else
-            payload_ref="$(jq -er '.codex_surface.plugin_payload_manifest_url // .plugin_payload_manifest_url' "$manifest")"
-            [ "$(jq -r .version "$manifest")" = "$EXPECTED_PACKAGE_VERSION" ]
-            [ "$(jq -r '.codex_surface.carrier_source_commit // .source_commit' "$manifest")" = "$EXPECTED_OWNER_SOURCE_COMMIT" ]
+            echo "::error::Package ${PACKAGE_ID} must declare matching Catalog v2_release metadata for ${EXPECTED_PACKAGE_VERSION}@${EXPECTED_OWNER_SOURCE_COMMIT}."
+            exit 2
           fi
+          payload_ref="$(jq -er '.v2_release.payload_manifest_ref' "$manifest")"
           [ "$payload_ref" = "payloads/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.json" ]
           payload="$PACKAGE_PROJECTION_ROOT/${payload_ref}"
           [ "$(jq -r .package_id "$manifest")" = "$PACKAGE_ID" ]
@@ -331,56 +325,34 @@ jobs:
           package_root="dist/package"
           mkdir -p "$package_root"
           image="ghcr.io/${PACKAGES_OWNER}/${PACKAGE_REGISTRY_NAME}"
-          source_media_type=application/vnd.onepersonlab.package.source.v1+gzip
-          if [ "$package_format" = v2 ]; then
-            [ "$(jq -er '.v2_release.payload_sha256' "$manifest")" = "sha256:$(sha256sum "$payload" | cut -d' ' -f1)" ]
-            source_media_type=application/vnd.onepersonlab.package.source.v2+gzip
-            prepared="$(mktemp)"
-            trap 'rm -f "$prepared"' EXIT
-            node --conditions=opl-source --experimental-strip-types scripts/prepare-v2-package-publication.mjs \
-              --owner-root .owner-source --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
-              --package-id "$PACKAGE_ID" --package-version "$EXPECTED_PACKAGE_VERSION" \
-              --source-root "$(jq -er '.source_root' "$payload")" \
-              --output-directory "$package_root" > "$prepared"
-            jq -e --arg repo "$source_repo" --arg image "$image" --slurpfile result "$prepared" \
-              --arg visibility "$PACKAGE_VISIBILITY" --arg policy "$PACKAGE_ACCESS_POLICY_REF" \
-              --arg credential "$PACKAGE_CREDENTIAL_PROVIDER" \
-              '$result[0] as $build
-               | .package_format == "v2" and .source_repo == $repo and .source_root == $build.source_root
-               and .archive_sha256 == $build.archive_sha256
-               and .content_lock.digest == $build.content_digest and .file_count == $build.file_count
-               and .content_lock.canonicalization == $build.lock.canonicalization and .content_lock.algorithm == $build.lock.algorithm
-               and ($build.manifest.distribution.oci | . == $image or . == ($image + ":latest-stable"))
-               and ($build.manifest.distribution.visibility // "public") == $visibility
-               and ($build.manifest.distribution.access_policy_ref // "") == $policy
-               and ($build.manifest.distribution.credential_provider // "") == $credential' \
-              "$payload" >/dev/null
-            archive="$package_root/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.oplpack"
-            jq -e '.v2_release as $release | .version = $release.version
-              | .codex_surface.carrier_source_commit = $release.source_commit
-              | .codex_surface.plugin_payload_manifest_url = $release.payload_manifest_ref' \
-              "$manifest" > "$package_root/package-manifest.json"
-            cp "$payload" "$package_root/payload-manifest.json"
-          else
-            cp "$manifest" "$package_root/package-manifest.json"
-            node --experimental-strip-types scripts/package-source-projection-gate.mjs \
-              --package-id "$PACKAGE_ID" --owner-root .owner-source
-            archive="$package_root/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.tar.gz"
-            git -C .owner-source archive --format=tar.gz --prefix="${repo_name}/" \
-              -o "$GITHUB_WORKSPACE/$archive" "$EXPECTED_OWNER_SOURCE_COMMIT"
-            archive_sha256="sha256:$(sha256sum "$archive" | cut -d' ' -f1)"
-            node --experimental-strip-types scripts/materialize-package-payload.mjs \
-              --input "$payload" \
-              --output "$package_root/payload-manifest.json" \
-              --package-manifest "$manifest" \
-              --archive "$archive" \
-              --artifact-ref "${image}:${EXPECTED_PACKAGE_VERSION}" \
-              --archive-sha256 "$archive_sha256" \
-              --archive-root "$repo_name" \
-              --package-id "$PACKAGE_ID" \
-              --package-version "$EXPECTED_PACKAGE_VERSION" \
-              --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT"
-          fi
+          [ "$(jq -er '.v2_release.payload_sha256' "$manifest")" = "sha256:$(sha256sum "$payload" | cut -d' ' -f1)" ]
+          source_media_type=application/vnd.onepersonlab.package.source.v2+gzip
+          prepared="$(mktemp)"
+          trap 'rm -f "$prepared"' EXIT
+          node --conditions=opl-source --experimental-strip-types scripts/prepare-v2-package-publication.mjs \
+            --owner-root .owner-source --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
+            --package-id "$PACKAGE_ID" --package-version "$EXPECTED_PACKAGE_VERSION" \
+            --source-root "$(jq -er '.source_root' "$payload")" \
+            --output-directory "$package_root" > "$prepared"
+          jq -e --arg repo "$source_repo" --arg image "$image" --slurpfile result "$prepared" \
+            --arg visibility "$PACKAGE_VISIBILITY" --arg policy "$PACKAGE_ACCESS_POLICY_REF" \
+            --arg credential "$PACKAGE_CREDENTIAL_PROVIDER" \
+            '$result[0] as $build
+             | .package_format == "v2" and .source_repo == $repo and .source_root == $build.source_root
+             and .archive_sha256 == $build.archive_sha256
+             and .content_lock.digest == $build.content_digest and .file_count == $build.file_count
+             and .content_lock.canonicalization == $build.lock.canonicalization and .content_lock.algorithm == $build.lock.algorithm
+             and ($build.manifest.distribution.oci | . == $image or . == ($image + ":latest-stable"))
+             and ($build.manifest.distribution.visibility // "public") == $visibility
+             and ($build.manifest.distribution.access_policy_ref // "") == $policy
+             and ($build.manifest.distribution.credential_provider // "") == $credential' \
+            "$payload" >/dev/null
+          archive="$package_root/${PACKAGE_ID}-${EXPECTED_PACKAGE_VERSION}.oplpack"
+          jq -e '.v2_release as $release | .version = $release.version
+            | .codex_surface.carrier_source_commit = $release.source_commit
+            | .codex_surface.plugin_payload_manifest_url = $release.payload_manifest_ref' \
+            "$manifest" > "$package_root/package-manifest.json"
+          cp "$payload" "$package_root/payload-manifest.json"
 
           {
             echo "PACKAGE_ROOT=$package_root"
