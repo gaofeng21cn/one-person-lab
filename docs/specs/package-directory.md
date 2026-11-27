@@ -22,6 +22,8 @@ App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Packag
 
 Framework 持久化来源身份。由官方目录验证的安装可按目录刷新，其余安装沿用原来源以及用户指定的版本或摘要。开发链接、外部载体和缺少来源的历史安装会显示需要手动管理。一个来源不可用时，其他包继续更新，结果列出失败项。
 
+已审核的官方发布可用 `opl pack ensure <id> --release-version <version> --release-commit <git-commit> --release-digest <sha256:digest> --json` 激活。三个参数共同绑定根包的版本、Git 提交和内容锁摘要。若本机已安装的受管发布符合条件，Framework 校验文件并恢复所需依赖与载体。需要安装时，Framework 从官方目录或 Full 安装种子选择候选，在变更依赖前校验根包；候选与审批不符时返回 `PACK_LOCK_MISMATCH`。这条路径保留开发链接和外部管理的安装。可信宿主可调用 `pack.ensureExact`，传入 `package_id` 与 `exact_release: { version, git_commit, digest }`。CLI 通过 `--version --json` 声明 `pack.ensure.exact-release` 能力，早期守护进程会拒绝此 RPC。
+
 ## 管理范围与产品类型
 
 软件中心先回答“这是由谁维护的软件”，再回答“它是什么、装了什么、能否更新”。默认范围是 OPL 自己维护的软件，覆盖标准和非标准智能体、应用、扩展、通道和运行依赖及其受支持载体；OPL 核心只是其中一组架构关系。

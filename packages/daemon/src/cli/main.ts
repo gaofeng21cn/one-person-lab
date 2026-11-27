@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord, resolveStatePaths } from '@opl/core';
-import { buildPackage, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
+import { buildPackage, ExactPackageReleaseSchema, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
 import { coerceInstallSourceSpec } from '../utils/normalize.ts';
 import { prepareGatewayCommand } from './gateway-account.ts';
@@ -24,7 +24,10 @@ interface ParsedCliArgs {
   readonly version: boolean;
 }
 
+const RELEASE_FLAGS = new Set(['--release-version', '--release-commit', '--release-digest']);
+
 const VALUE_FLAGS = new Set([
+  ...RELEASE_FLAGS,
   '--name',
   '--domain',
   '--workspace',
@@ -130,7 +133,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
         if (key === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
-      if (VALUE_FLAGS.has(arg) && i + 1 < argv.length) {
+      if (VALUE_FLAGS.has(arg) && i + 1 < argv.length && !(RELEASE_FLAGS.has(arg) && argv[i + 1]!.startsWith('--'))) {
         const value = argv[++i]!;
         flags.set(arg, value);
         if (arg === '--state-dir' && positionals.length < 2) extensionStateDir = value;
@@ -292,7 +295,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'list', usage: 'list [--intent <intent>] [--origin <origin>] [--query <q>]' },
     { name: 'inspect', usage: 'inspect <packageIdOrDir>' },
     { name: 'install', usage: 'install <source> [--no-codex-sync]' },
-    { name: 'ensure', usage: 'ensure <packageId> [--dry-run]' },
+    { name: 'ensure', usage: 'ensure <packageId> [--release-version <version> --release-commit <sha> --release-digest <sha256:digest>] [--dry-run]' },
     { name: 'update', usage: 'update [<packageId>] [--source <spec>] [--all]' },
     { name: 'uninstall', usage: 'uninstall <packageId>' },
     { name: 'enable', usage: 'enable <packageId>' },
@@ -446,7 +449,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
   if (parsed.version && parsed.positionals.length === 0) {
     const ver = readCliVersion();
     if (parsed.json) {
-      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0', features: ['pack.ensure'] })}\n`);
+      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0', features: ['pack.ensure', 'pack.ensure.exact-release'] })}\n`);
     } else {
       process.stdout.write(`${ver}\n`);
     }
@@ -764,9 +767,20 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!packageId || rest.length !== 1) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack ensure requires one Package ID.');
           }
-          // Downloading a closure can take longer than an ordinary status RPC.
-          const result = await callDaemonRpc('pack.ensure', {
+          const exact = [...RELEASE_FLAGS].some(flag => parsed.flags.has(flag))
+            ? ExactPackageReleaseSchema.safeParse({
+                version: getStringFlag(parsed, '--release-version'),
+                git_commit: getStringFlag(parsed, '--release-commit'),
+                digest: getStringFlag(parsed, '--release-digest'),
+              })
+            : undefined;
+          if (exact && !exact.success) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Exact release requires --release-version, --release-commit and --release-digest with valid values.');
+          }
+          // Older daemons ignore new pack.ensure parameters. A distinct method makes them reject an exact request.
+          const result = await callDaemonRpc(exact ? 'pack.ensureExact' : 'pack.ensure', {
             package_id: packageId,
+            ...(exact && { exact_release: exact.data }),
             dry_run: getBoolFlag(parsed, '--dry-run'),
             // A previously started daemon has the environment of its first client.
             runtime_root: process.env.OPL_FULL_RUNTIME_HOME?.trim() || null,

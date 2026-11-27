@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { openSqliteStore, txImmediate } from '@opl/core';
+import { buildPackage } from '@opl/pack';
 import {
   V2_OPL_BIN,
   WORKTREE_ROOT,
@@ -28,6 +29,60 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
+  it('ensures the exact approved release through CLI and RPC and rejects partial selections', async () => {
+    const sb = trackSandbox();
+    const id = 'approved-extension';
+    const version = '1.2.3';
+    const gitCommit = 'a'.repeat(40);
+    const prefix = ['pack', 'ensure', id];
+    const features = await sb.spawnCli(['--version', '--json']);
+    assert.ok((features.json as { features: string[] }).features.includes('pack.ensure.exact-release'));
+    for (const flags of [['--release-version', version], ['--release-digest'], ['--release-commit=']]) {
+      const invalid = await sb.spawnCli([...prefix, ...flags, '--json']);
+      assert.equal(invalid.code, 2, invalid.stderr);
+      assert.match(invalid.stdout, /INVALID_INPUT/);
+    }
+    assert.equal(fs.existsSync(sb.sessionPath), false);
+
+    const sourceRepo = 'https://github.com/gaofeng21cn/' + id;
+    const sourceDir = writeMinimalV2Package(path.join(sb.root, 'modules', id), { id, version, intent: 'extension' });
+    fs.writeFileSync(path.join(sourceDir, 'opl-runtime-module.json'), JSON.stringify({
+      packaged_runtime: true, repo_name: id, source_git: { head_sha: gitCommit },
+    }));
+    const { digest } = buildPackage(sourceDir, { gitCommit });
+    const catalogDir = path.join(sb.root, 'opl', 'catalog-seed');
+    fs.mkdirSync(catalogDir, { recursive: true });
+    fs.writeFileSync(path.join(catalogDir, 'catalog-index.json'), JSON.stringify({
+      schema_version: 'opl_software_catalog_index.v1', catalog_id: 'public-registry:opl',
+      packages: [{ package_id: id, visibility: 'public',
+        manifest: { package_id: id, source_repo: sourceRepo },
+        payload: { package_id: id, source_repo: sourceRepo, source_commit: gitCommit },
+      }],
+    }));
+    await sb.startInProcess();
+    const flags = ['--release-version', version, '--release-commit', gitCommit, '--release-digest', digest];
+    const env = { OPL_FULL_RUNTIME_HOME: sb.root };
+    const installed = await sb.spawnCli([...prefix, ...flags, '--json'], env);
+    assert.equal(installed.code, 0, installed.stdout + installed.stderr);
+    assert.equal((installed.json as { status: string }).status, 'installed');
+
+    const rpc = await connectTestRpc(sb.sessionPath);
+    try {
+      const request = { package_id: id, runtime_root: sb.root };
+      await assert.rejects(rpc.call('pack.ensureExact', request), /INVALID_INPUT/);
+      await assert.rejects(rpc.call('pack.ensure', { ...request, exact_release: null }), /INVALID_INPUT/);
+      const repeated = await rpc.call('pack.ensure', {
+        ...request, exact_release: { version, git_commit: gitCommit, digest },
+      }) as { status: string };
+      assert.equal(repeated.status, 'already_present');
+      await assert.rejects(rpc.call('pack.ensureExact', {
+        ...request, exact_release: { version, git_commit: 'b'.repeat(40), digest },
+      }), /PACK_LOCK_MISMATCH/);
+    } finally {
+      await rpc.close();
+    }
+  });
+
   it('resolves relative package install and update sources in the caller workspace', async () => {
     const sb = trackSandbox();
     const id = 'relative-source';

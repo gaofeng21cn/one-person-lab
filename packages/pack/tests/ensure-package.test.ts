@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { openSqliteStore } from '@opl/core';
-import { createPackService, ensurePackage, type OplPackageManifestV2, type PackError } from '../src/index.ts';
+import { buildPackage, verifyReleaseLock, createPackService, ensurePackage, type OplPackageManifestV2, type PackError } from '../src/index.ts';
 
 function fixture(t: { after(fn: () => void): void }) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-ensure-'));
@@ -15,10 +15,10 @@ function fixture(t: { after(fn: () => void): void }) {
   const resolved: string[] = [];
   const disposed: string[] = [];
   const sources = new Map<string, { manifest: OplPackageManifestV2; dir: string }>();
-  function publish(id: string, dependencies: NonNullable<OplPackageManifestV2['dependencies']>['packages'] = [], skills: string[] = []) {
+  function publish(id: string, dependencies: NonNullable<OplPackageManifestV2['dependencies']>['packages'] = [], skills: string[] = [], version = '1.0.0') {
     const manifest: OplPackageManifestV2 = {
       schema_version: 'opl.package.v2',
-      identity: { id, version: '1.0.0', intent: 'extension', name: { 'en-US': id, 'zh-CN': id }, summary: { 'en-US': id, 'zh-CN': id }, publisher: 'opl' },
+      identity: { id, version, intent: 'extension', name: { 'en-US': id, 'zh-CN': id }, summary: { 'en-US': id, 'zh-CN': id }, publisher: 'opl' },
       host_hints: { codex: { sync_enabled: false } },
       dependencies: { packages: dependencies },
       provides: { skills: skills.map(skill => ({ id: skill, path: './skills/' + skill })) },
@@ -108,4 +108,91 @@ test('a stalled official source does not block an unrelated restore', { timeout:
     proceed.resolve();
     await slow;
   }
+});
+
+function lockRelease(dir: string, gitCommit: string) {
+  const { lock } = buildPackage(dir, { gitCommit });
+  return { version: lock.version, git_commit: gitCommit, digest: lock.digest };
+}
+
+test('activates the approved official release over a disabled older version and restores it offline', async t => {
+  const { pack, publish, resolved, resolveSource } = fixture(t);
+  const old = publish('root');
+  await pack.install({ source: { kind: 'local_dir', path: old } });
+  await pack.toggle({ packageId: 'root', enabled: false });
+  publish('new-dep');
+  const dir = publish('root', [{ id: 'new-dep' }], [], '1.1.0');
+  const exactRelease = lockRelease(dir, '1'.repeat(40));
+  const options = { packageId: 'root', exactRelease, resolveSource };
+  assert.equal((await ensurePackage(pack, { ...options, dryRun: true })).status, 'validated');
+  assert.equal(pack.inspect('root')?.enabled, false);
+  assert.equal(pack.inspect('new-dep'), null);
+  assert.equal((await ensurePackage(pack, options)).status, 'reconciled');
+  assert.deepEqual(pack.store.getInstallSource('root'), { kind: 'official', package_id: 'root' });
+  const installed = pack.inspect('root')!;
+  assert.equal(installed.enabled, true);
+  assert.equal(installed.content_digest, exactRelease.digest);
+  assert.equal(verifyReleaseLock(installed.install_path).lock.git_commit, exactRelease.git_commit);
+  const offline = { ...options, resolveSource: async () => assert.fail('already installed release needed a source') };
+  assert.equal((await ensurePackage(pack, offline)).status, 'already_present');
+  assert.deepEqual(resolved, ['root', 'new-dep', 'root', 'new-dep']);
+});
+
+test('distinguishes matching manifests with different commits or bytes and repairs changed installed bytes', async t => {
+  const { pack, publish, resolveSource } = fixture(t);
+  const dir = publish('root');
+  const opts = { packageId: 'root', resolveSource };
+  const first = lockRelease(dir, '1'.repeat(40));
+  await ensurePackage(pack, { ...opts, exactRelease: first });
+  const second = lockRelease(dir, '2'.repeat(40));
+  assert.equal(first.digest, second.digest);
+  assert.equal((await ensurePackage(pack, { ...opts, exactRelease: second })).changed, true);
+  fs.writeFileSync(path.join(dir, 'payload.txt'), 'new');
+  const third = lockRelease(dir, second.git_commit);
+  assert.notEqual(second.digest, third.digest);
+  await ensurePackage(pack, { ...opts, exactRelease: third });
+  const installedPath = pack.inspect('root')!.install_path;
+  const installedFile = path.join(installedPath, 'payload.txt');
+  fs.writeFileSync(installedFile, 'damaged');
+  await ensurePackage(pack, { ...opts, exactRelease: third });
+  assert.equal(fs.readFileSync(installedFile, 'utf8'), 'new');
+  assert.equal(verifyReleaseLock(installedPath).digest, third.digest);
+});
+
+test('rejects a stale approval before installing even a dependency and preserves development links', async t => {
+  const { pack, publish, resolveSource, resolved } = fixture(t);
+  const old = publish('root');
+  await pack.install({ source: { kind: 'local_dir', path: old } });
+  const dir = publish('root', [{ id: 'dep' }], [], '2.0.0');
+  publish('dep');
+  const release = lockRelease(dir, '3'.repeat(40));
+  for (const change of [{ version: '2.0.1' }, { git_commit: '0'.repeat(40) }, { digest: 'sha256:' + '0'.repeat(64) }]) {
+    await assert.rejects(ensurePackage(pack, { packageId: 'root', resolveSource, exactRelease: { ...release, ...change } }),
+      (error: PackError) => error.code === 'PACK_LOCK_MISMATCH');
+  }
+  assert.equal(pack.inspect('dep'), null);
+  assert.equal(pack.inspect('root')?.version, '1.0.0');
+  assert.deepEqual(resolved, ['root', 'root', 'root']);
+  await pack.link({ dir: old });
+  await assert.rejects(ensurePackage(pack, { packageId: 'root', resolveSource, exactRelease: release }), /not a managed release/);
+  assert.deepEqual(resolved, ['root', 'root', 'root']);
+  assert.equal(pack.inspect('root')?.install_mode, 'dev_link');
+});
+
+test('rejects a changed source at install time and preserves a concurrent development link', async t => {
+  const { pack, publish, resolveSource } = fixture(t);
+  const dir = publish('root');
+  const exactRelease = lockRelease(dir, '1'.repeat(40));
+  const options = { packageId: 'root', exactRelease, resolveSource };
+  await assert.rejects(ensurePackage(pack, { ...options, installSource: async input => {
+    lockRelease(dir, '2'.repeat(40));
+    return pack.install(input);
+  } }), (error: PackError) => error.code === 'PACK_LOCK_MISMATCH');
+  assert.equal(pack.inspect('root'), null);
+  lockRelease(dir, exactRelease.git_commit);
+  await assert.rejects(ensurePackage(pack, { ...options, installSource: async input => {
+    await pack.link({ dir });
+    return pack.install(input);
+  } }), (error: PackError) => error.code === 'PACK_OPERATION_BUSY');
+  assert.equal(pack.inspect('root')?.install_mode, 'dev_link');
 });

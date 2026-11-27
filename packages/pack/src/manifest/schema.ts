@@ -809,3 +809,8 @@ export const OplReleaseLockV2Schema = z.strictObject({
 });
 
 export type OplReleaseLockV2 = z.infer<typeof OplReleaseLockV2Schema>;
+
+export const ExactPackageReleaseSchema = OplReleaseLockV2Schema
+  .pick({ version: true, git_commit: true, digest: true })
+  .required();
+export type ExactPackageRelease = z.infer<typeof ExactPackageReleaseSchema>;

@@ -1,8 +1,9 @@
 import { isDeepStrictEqual } from 'node:util';
 import { assertTrustedHost, type ClientContext } from '@opl/core';
+import { verifyExactPackageRelease } from '../build/build-package.ts';
 import { shouldSyncToCodex } from '../carriers/codex-sync/project.ts';
 import { PackError } from '../errors.ts';
-import { KebabIdSchema, type OplPackageManifestV2 } from '../manifest/schema.ts';
+import { ExactPackageReleaseSchema, KebabIdSchema, type ExactPackageRelease, type OplPackageManifestV2 } from '../manifest/schema.ts';
 import type { InstallSourceSpec, InstalledPackageRecord } from '../types.ts';
 import { assertRequiredPackageDependency } from './dependency.ts';
 import type { PackService } from './service.ts';
@@ -15,6 +16,7 @@ export interface ResolvedPackageForInstall {
 
 interface EnsurePackageOptions {
   readonly packageId: string;
+  readonly exactRelease?: ExactPackageRelease;
   readonly dryRun?: boolean;
   readonly clientContext?: ClientContext;
   readonly resolveSource: (packageId: string) => Promise<ResolvedPackageForInstall>;
@@ -38,11 +40,26 @@ function assertSameInstalled(record: InstalledPackageRecord | null, planned: Pla
   }
 }
 
+function installedMatchesRelease(record: InstalledPackageRecord | null, release: ExactPackageRelease): boolean {
+  if (!record || record.origin !== 'opl' || record.install_mode !== 'release'
+      || record.version !== release.version || record.content_digest !== release.digest) return false;
+  try {
+    verifyExactPackageRelease(record.install_path, record.package_id, release);
+    return true;
+  } catch (error) {
+    if (error instanceof PackError) return false;
+    throw error;
+  }
+}
+
 export async function ensurePackage(pack: PackService, options: EnsurePackageOptions) {
   const { packageId, dryRun = false, clientContext, resolveSource } = options;
   if (!KebabIdSchema.safeParse(packageId).success) throw new PackError('INVALID_INPUT', 'Invalid Package identity.');
   if (clientContext) assertTrustedHost(clientContext, 'pack.ensure');
 
+  if (options.exactRelease !== undefined && !ExactPackageReleaseSchema.safeParse(options.exactRelease).success) {
+    throw new PackError('INVALID_INPUT', 'A release requires a version, full git_commit and content digest.');
+  }
   const resolvedSources = new Map<string, ResolvedPackageForInstall>();
   const plan = new Map<string, PlannedPackage>();
   const visiting = new Set<string>();
@@ -68,7 +85,12 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
       }
     }
     const installed = existing?.installed ?? pack.inspect(id);
-    const presence = installed ? await pack.readInstalledPackagePresence(id) : undefined;
+    const release = id === packageId ? options.exactRelease : undefined;
+    if (release && installed && (installed.origin !== 'opl' || installed.install_mode !== 'release')) {
+      throw new PackError('PACK_LOCK_MISMATCH', `The configured source of '${id}' is not a managed release.`);
+    }
+    const reusable = !release || installedMatchesRelease(installed, release);
+    const presence = installed && reusable ? await pack.readInstalledPackagePresence(id) : undefined;
     let manifest = installed?.manifest;
     let action: Action = 'none';
     let source: InstallSourceSpec | undefined;
@@ -90,6 +112,12 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
       const resolved = await resolveSource(id);
       resolvedSources.set(id, resolved);
       if (resolved.manifest.identity.id !== id) throw new PackError('INVALID_MANIFEST', `Official source returned another Package for '${id}'.`);
+      if (release) {
+        if (resolved.source.kind !== 'local_dir' || !resolved.source.path) {
+          throw new PackError('PACK_LOCK_MISMATCH', `Expected a staged official release for '${id}'.`);
+        }
+        verifyExactPackageRelease(resolved.source.path, id, release);
+      }
       manifest = resolved.manifest;
       source = { ...resolved.source, package_id: id };
       action = 'install';
@@ -139,7 +167,9 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
         for (const step of ordered) {
           const id = step.manifest.identity.id;
           const current = pack.inspect(id);
-          if (current?.enabled && step.action !== 'none' && isDeepStrictEqual(current.manifest, step.manifest)) {
+          const exactRelease = id === packageId ? options.exactRelease : undefined;
+          if (current?.enabled && step.action !== 'none' && isDeepStrictEqual(current.manifest, step.manifest)
+              && (!exactRelease || installedMatchesRelease(current, exactRelease))) {
             const presence = await pack.readInstalledPackagePresence(id);
             if (presence.files_present && presence.carrier_ready) {
               actions.set(id, 'none');
@@ -152,7 +182,7 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
             assertRequiredPackageDependency(id, dep, provider?.enabled ? provider.manifest : null);
           }
           if (step.action === 'install') {
-            const input = { source: step.source!, clientContext, updateSource: { kind: 'official' as const, package_id: id } };
+            const input = { source: step.source!, clientContext, ensure: { exactRelease }, updateSource: { kind: 'official' as const, package_id: id } };
             if (options.installSource) await options.installSource(input);
             else await pack.install(input);
           } else if (step.action === 'enable') {
@@ -172,6 +202,9 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
       }
     } finally {
       release?.();
+    }
+    if (!dryRun && options.exactRelease && !installedMatchesRelease(pack.inspect(packageId), options.exactRelease)) {
+      throw new PackError('PACK_LOCK_MISMATCH', `Installed Package '${packageId}' does not match the requested release.`);
     }
     const changes = [...actions.values()].some(action => action !== 'none');
     return {
