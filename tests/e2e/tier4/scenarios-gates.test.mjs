@@ -31,6 +31,9 @@ import {
   createSandbox,
   isPidAlive,
   measureLatencyMs,
+  resolveAppRoot,
+  resolveBridgeDir,
+  resolveStudioRoot,
   waitForStubLogEvent,
 } from "../lib/sandbox.mjs";
 import {
@@ -60,16 +63,9 @@ import {
 } from "../lib/sqlite-inspector.mjs";
 
 const REPO_ROOT = path.resolve(process.env.OPL_E2E_REPO_ROOT || DEFAULT_WORKTREE_ROOT);
-const STUDIO_ROOT = path.resolve(
-  process.env.OPL_STUDIO_ROOT || "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge"
-);
-const BRIDGE_DIR = path.resolve(
-  process.env.OPL_STUDIO_BRIDGE_DIR ||
-    (fs.existsSync(path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge"))
-      ? path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge")
-      : path.join(STUDIO_ROOT, "plugins", "opl-framework-bridge"))
-);
-const APP_ROOT = path.resolve(process.env.OPL_APP_ROOT || "/Users/gaofeng/workspace/one-person-lab-app");
+const STUDIO_ROOT = resolveStudioRoot(REPO_ROOT);
+const BRIDGE_DIR = resolveBridgeDir(STUDIO_ROOT);
+const APP_ROOT = resolveAppRoot(REPO_ROOT);
 const PYTHON_CLIENT_DIR = path.resolve(
   process.env.OPL_PYTHON_CLIENT_DIR || path.join(REPO_ROOT, "sdks", "python-client")
 );

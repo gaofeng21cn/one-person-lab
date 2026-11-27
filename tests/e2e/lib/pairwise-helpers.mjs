@@ -7,20 +7,19 @@ import { pathToFileURL } from "node:url";
 import { runCliJson, runCliOk } from "./cli.mjs";
 import { createLocalPackageArchive } from "./fixtures.mjs";
 import { connectRpcClient } from "./rpc-client.mjs";
-import { DEFAULT_WORKTREE_ROOT, createSandbox } from "./sandbox.mjs";
+import {
+  DEFAULT_WORKTREE_ROOT,
+  createSandbox,
+  resolveAppRoot,
+  resolveBridgeDir,
+  resolveStudioRoot,
+} from "./sandbox.mjs";
 import { openOplDb } from "./sqlite-inspector.mjs";
 
 export const REPO_ROOT = path.resolve(process.env.OPL_E2E_REPO_ROOT || DEFAULT_WORKTREE_ROOT);
-export const STUDIO_ROOT = path.resolve(
-  process.env.OPL_STUDIO_ROOT || "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge"
-);
-export const BRIDGE_DIR = path.resolve(
-  process.env.OPL_STUDIO_BRIDGE_DIR ||
-    (fs.existsSync(path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge"))
-      ? path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge")
-      : path.join(STUDIO_ROOT, "plugins", "opl-framework-bridge"))
-);
-export const APP_ROOT = path.resolve(process.env.OPL_APP_ROOT || "/Users/gaofeng/workspace/one-person-lab-app");
+export const STUDIO_ROOT = resolveStudioRoot(REPO_ROOT);
+export const BRIDGE_DIR = resolveBridgeDir(STUDIO_ROOT);
+export const APP_ROOT = resolveAppRoot(REPO_ROOT);
 export const PYTHON_CLIENT_DIR = path.resolve(
   process.env.OPL_PYTHON_CLIENT_DIR || path.join(REPO_ROOT, "sdks", "python-client")
 );

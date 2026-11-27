@@ -20,6 +20,7 @@ import {
 
 export interface BuildPackageOptions {
   readonly writeLock?: boolean;
+  readonly dryRun?: boolean;
   readonly builtAt?: string;
   readonly gitCommit?: string;
   readonly allowSymlinks?: boolean;
@@ -143,7 +144,7 @@ export function buildPackage(
 
   const lock = OplReleaseLockV2Schema.parse(lockObj);
   const lockPath = path.join(realRoot, 'opl-release.lock.json');
-  if (options.writeLock !== false) {
+  if (options.writeLock !== false && options.dryRun !== true) {
     const existingLockLstat = fs.lstatSync(lockPath, { throwIfNoEntry: false });
     if (existingLockLstat?.isSymbolicLink()) {
       throw new PackError(

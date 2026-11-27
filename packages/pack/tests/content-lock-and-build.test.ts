@@ -307,3 +307,90 @@ test('buildPackage excludes Python cache dirs and *.pyc files at any depth while
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('buildPackage excludes nested node_modules, .codegraph, and .tsbuildinfo at any depth while rejecting excluded-named symlinks and honoring dryRun', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-m8-excl-'));
+  const outsideFile = path.join(tmpDir, 'outside.txt');
+  const cleanDir = path.join(tmpDir, 'clean');
+  const noisyDir = path.join(tmpDir, 'noisy');
+  try {
+    fs.writeFileSync(outsideFile, 'secret\n');
+    writeMinimalPackage(cleanDir);
+    fs.mkdirSync(path.join(cleanDir, 'workbench', 'src'), { recursive: true });
+    fs.writeFileSync(path.join(cleanDir, 'workbench', 'src', 'index.ts'), 'export const ok = true;\n');
+
+    fs.cpSync(cleanDir, noisyDir, { recursive: true });
+    // Nested node_modules with internal symlink (mirrors opl-relay/workbench/node_modules/.bin/esbuild)
+    fs.mkdirSync(path.join(noisyDir, 'workbench', 'node_modules', '.bin'), { recursive: true });
+    fs.mkdirSync(path.join(noisyDir, 'workbench', 'node_modules', 'esbuild', 'bin'), { recursive: true });
+    fs.writeFileSync(path.join(noisyDir, 'workbench', 'node_modules', 'esbuild', 'bin', 'esbuild'), '#!/bin/sh\n');
+    fs.symlinkSync(
+      '../esbuild/bin/esbuild',
+      path.join(noisyDir, 'workbench', 'node_modules', '.bin', 'esbuild'),
+    );
+    // .codegraph directory at root and nested
+    fs.mkdirSync(path.join(noisyDir, '.codegraph'), { recursive: true });
+    fs.writeFileSync(path.join(noisyDir, '.codegraph', 'codegraph.db'), 'sqlite-bytes');
+    fs.mkdirSync(path.join(noisyDir, 'workbench', '.codegraph'), { recursive: true });
+    fs.writeFileSync(path.join(noisyDir, 'workbench', '.codegraph', '.gitignore'), '*\n');
+    // .tsbuildinfo directory (mirrors redcube-ai/.tsbuildinfo/*) and *.tsbuildinfo files
+    fs.mkdirSync(path.join(noisyDir, '.tsbuildinfo'), { recursive: true });
+    fs.writeFileSync(path.join(noisyDir, '.tsbuildinfo', 'tests.tsbuildinfo'), '{}');
+    fs.writeFileSync(path.join(noisyDir, 'workbench', 'tsconfig.tsbuildinfo'), '{}');
+
+    const cleanBuild = buildPackage(cleanDir, {
+      builtAt: '2026-11-27T00:00:00.000Z',
+      writeLock: false,
+    });
+    assert.equal(fs.existsSync(path.join(cleanDir, 'opl-release.lock.json')), false);
+
+    // dryRun: true must not write opl-release.lock.json when absent
+    const noisyDryBuild = buildPackage(noisyDir, {
+      builtAt: '2026-11-27T00:00:00.000Z',
+      dryRun: true,
+    });
+    assert.equal(fs.existsSync(path.join(noisyDir, 'opl-release.lock.json')), false);
+    assert.equal(noisyDryBuild.digest, cleanBuild.digest);
+    assert.deepEqual(noisyDryBuild.lock.paths, cleanBuild.lock.paths);
+    assert.equal(
+      noisyDryBuild.lock.paths.some(
+        (p) =>
+          p.includes('node_modules') ||
+          p.includes('.codegraph') ||
+          p.includes('.tsbuildinfo'),
+      ),
+      false,
+    );
+
+    // dryRun: true must not modify a pre-existing opl-release.lock.json
+    const lockPath = path.join(noisyDir, 'opl-release.lock.json');
+    const sentinelLock = '{"sentinel":true}\n';
+    fs.writeFileSync(lockPath, sentinelLock, 'utf8');
+    const pastTime = new Date(Date.now() - 60_000);
+    fs.utimesSync(lockPath, pastTime, pastTime);
+    const beforeStat = fs.statSync(lockPath);
+    buildPackage(noisyDir, { dryRun: true });
+    const afterStat = fs.statSync(lockPath);
+    assert.equal(fs.readFileSync(lockPath, 'utf8'), sentinelLock);
+    assert.equal(afterStat.mtimeMs, beforeStat.mtimeMs);
+
+    // Symlinks literally named node_modules, .codegraph, .tsbuildinfo, or *.tsbuildinfo MUST fail closed
+    for (const badRel of [
+      'workbench/node_modules',
+      '.codegraph',
+      '.tsbuildinfo',
+      'workbench/evil.tsbuildinfo',
+    ]) {
+      const linkPath = path.join(cleanDir, badRel);
+      fs.symlinkSync(outsideFile, linkPath);
+      assert.throws(
+        () => buildPackage(cleanDir, { dryRun: true }),
+        (err: unknown) => err instanceof PackError && err.code === 'PACK_SYMLINK_ESCAPE',
+        `Expected PACK_SYMLINK_ESCAPE for symlink ${badRel}`,
+      );
+      fs.rmSync(linkPath);
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

@@ -7,18 +7,16 @@ import { pathToFileURL } from "node:url";
 import { runCliJson, runCliOk } from "../lib/cli.mjs";
 import { buildV2Package, createLocalPackageArchive } from "../lib/fixtures.mjs";
 import { connectRpcClient } from "../lib/rpc-client.mjs";
-import { createSandbox, measureLatencyMs } from "../lib/sandbox.mjs";
+import {
+  createSandbox,
+  measureLatencyMs,
+  resolveBridgeDir,
+  resolveStudioRoot,
+} from "../lib/sandbox.mjs";
 import { getGrants, openOplDb } from "../lib/sqlite-inspector.mjs";
 
-const STUDIO_ROOT = path.resolve(
-  process.env.OPL_STUDIO_ROOT || "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge"
-);
-const BRIDGE_DIR = path.resolve(
-  process.env.OPL_STUDIO_BRIDGE_DIR ||
-    (fs.existsSync(path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge"))
-      ? path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge")
-      : path.join(STUDIO_ROOT, "plugins", "opl-framework-bridge"))
-);
+const STUDIO_ROOT = resolveStudioRoot();
+const BRIDGE_DIR = resolveBridgeDir(STUDIO_ROOT);
 
 const activeSandboxes = [];
 const activeBridges = [];

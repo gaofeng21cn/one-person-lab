@@ -45,7 +45,14 @@ export function writePng(filePath, minBytes = 128) {
   return out;
 }
 
-const DEFAULT_LOCK_EXCLUDES = new Set([".git", "node_modules", "opl-release.lock.json", ".DS_Store"]);
+const DEFAULT_LOCK_EXCLUDES = new Set([
+  ".git",
+  "node_modules",
+  ".codegraph",
+  ".tsbuildinfo",
+  "opl-release.lock.json",
+  ".DS_Store",
+]);
 
 function lstatSafe(p) {
   try {
@@ -75,6 +82,7 @@ function collectFilesRecursively(rootDir, prefix = "", excludeRealDirs = [], { i
       }
       out.push(...collectFilesRecursively(full, rel, excludeRealDirs, { includeLockFile }));
     } else if (ent.isFile()) {
+      if (ent.name.endsWith(".tsbuildinfo")) continue;
       out.push({ rel, full });
     }
   }

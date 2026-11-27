@@ -375,8 +375,9 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
 
   handlers.set('pack.build', (params) => {
     const dir = pickString(params, 'dir') ?? '.';
-    const writeLock = pickBoolean(params, 'write_lock', 'writeLock') ?? true;
-    return buildPackage(dir, { writeLock });
+    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
+    const writeLock = dryRun ? false : (pickBoolean(params, 'write_lock', 'writeLock') ?? true);
+    return buildPackage(dir, { writeLock, dryRun });
   });
 
   handlers.set('pack.link', async (params, conn) => {

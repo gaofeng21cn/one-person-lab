@@ -608,4 +608,68 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
       assert.match(errRes.stderr, /write EIO/);
     }
   });
+
+  it('keeps opl pack build --dry-run and pack.build RPC dry_run strictly non-mutating whether lockfile is absent or pre-existing', async () => {
+    const sb = trackSandbox();
+    const pkgAbsent = path.join(sb.workspaceDir, 'pkg-absent');
+    writeMinimalV2Package(pkgAbsent, { id: 'pkg-absent', intent: 'agent' });
+    fs.mkdirSync(path.join(pkgAbsent, 'workbench', 'node_modules', '.bin'), { recursive: true });
+    fs.mkdirSync(path.join(pkgAbsent, 'workbench', 'node_modules', 'esbuild'), { recursive: true });
+    fs.writeFileSync(path.join(pkgAbsent, 'workbench', 'node_modules', 'esbuild', 'cli.js'), 'console.log(1)\n');
+    fs.symlinkSync('../esbuild/cli.js', path.join(pkgAbsent, 'workbench', 'node_modules', '.bin', 'esbuild'));
+    fs.mkdirSync(path.join(pkgAbsent, '.codegraph'), { recursive: true });
+    fs.writeFileSync(path.join(pkgAbsent, '.codegraph', 'codegraph.db'), 'db');
+    fs.mkdirSync(path.join(pkgAbsent, '.tsbuildinfo'), { recursive: true });
+    fs.writeFileSync(path.join(pkgAbsent, '.tsbuildinfo', 'tests.tsbuildinfo'), '{}');
+    fs.writeFileSync(path.join(pkgAbsent, 'workbench', 'types.tsbuildinfo'), '{}');
+
+    const absentLockPath = path.join(pkgAbsent, 'opl-release.lock.json');
+    assert.equal(fs.existsSync(absentLockPath), false);
+
+    // 1. CLI --dry-run when lockfile is absent
+    const cliAbsent = await sb.spawnRootCli(['pack', 'build', pkgAbsent, '--dry-run', '--json']);
+    assert.equal(cliAbsent.code, 0, cliAbsent.stderr);
+    assert.equal(fs.existsSync(absentLockPath), false);
+    const cliAbsentJson = cliAbsent.json as { lock?: { paths?: string[]; digest?: string } };
+    assert.match(String(cliAbsentJson.lock?.digest), /^sha256:[0-9a-f]{64}$/);
+    const pathsAbsent = cliAbsentJson.lock?.paths ?? [];
+    assert.equal(
+      pathsAbsent.some((p) => p.includes('node_modules') || p.includes('.codegraph') || p.includes('.tsbuildinfo')),
+      false,
+    );
+
+    // 2. CLI --dry-run when lockfile already exists -> bytes & mtime unchanged
+    const pkgExisting = path.join(sb.workspaceDir, 'pkg-existing');
+    writeMinimalV2Package(pkgExisting, { id: 'pkg-existing', intent: 'agent' });
+    const existingLockPath = path.join(pkgExisting, 'opl-release.lock.json');
+    const sentinel = '{"preexisting":true}\n';
+    fs.writeFileSync(existingLockPath, sentinel, 'utf8');
+    const fixedTime = new Date(Date.now() - 120_000);
+    fs.utimesSync(existingLockPath, fixedTime, fixedTime);
+    const beforeStat = fs.statSync(existingLockPath);
+
+    const cliExisting = await sb.spawnRootCli(['pack', 'build', pkgExisting, '--dry-run', '--json']);
+    assert.equal(cliExisting.code, 0, cliExisting.stderr);
+    const afterStat = fs.statSync(existingLockPath);
+    assert.equal(fs.readFileSync(existingLockPath, 'utf8'), sentinel);
+    assert.equal(afterStat.mtimeMs, beforeStat.mtimeMs);
+
+    // 3. RPC pack.build with dry_run: true -> zero disk writes
+    await sb.startInProcess();
+    const rpc = await connectTestRpc(sb.sessionPath, 'opl_app');
+    try {
+      const rpcAbsent = (await rpc.call('pack.build', { dir: pkgAbsent, dry_run: true })) as {
+        lock?: { digest?: string; paths?: string[] };
+      };
+      assert.match(String(rpcAbsent.lock?.digest), /^sha256:[0-9a-f]{64}$/);
+      assert.equal(fs.existsSync(absentLockPath), false);
+
+      await rpc.call('pack.build', { dir: pkgExisting, dry_run: true });
+      const afterRpcStat = fs.statSync(existingLockPath);
+      assert.equal(fs.readFileSync(existingLockPath, 'utf8'), sentinel);
+      assert.equal(afterRpcStat.mtimeMs, beforeStat.mtimeMs);
+    } finally {
+      await rpc.close();
+    }
+  });
 });

@@ -738,13 +738,13 @@ export function validatePackage(targetDir) {
     }
   }
 
-  // Whole-tree symlink rejection (excluding top-level .git and node_modules, and .DS_Store)
+  // Whole-tree symlink rejection (excluding top-level .git, arbitrary-depth cache/dep dirs, and .DS_Store)
   const realRoot = fs.realpathSync(absDir);
   function scanTreeForSymlinks(curDir, relPrefix, isTopLevel) {
     const names = fs.readdirSync(curDir).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     for (const name of names) {
       if (name === '.DS_Store' || name === 'opl-release.lock.json') continue;
-      if (isTopLevel && (name === '.git' || name === 'node_modules')) continue;
+      if (isTopLevel && name === '.git') continue;
       const abs = path.join(curDir, name);
       const rel = relPrefix ? `${relPrefix}/${name}` : name;
       const lst = fs.lstatSync(abs);
@@ -757,7 +757,15 @@ export function validatePackage(targetDir) {
         continue;
       }
       if (lst.isDirectory()) {
-        if (name === '__pycache__' || name === '.pytest_cache' || name === '.ruff_cache' || name === '.venv') {
+        if (
+          name === 'node_modules' ||
+          name === '.codegraph' ||
+          name === '.tsbuildinfo' ||
+          name === '__pycache__' ||
+          name === '.pytest_cache' ||
+          name === '.ruff_cache' ||
+          name === '.venv'
+        ) {
           continue;
         }
         scanTreeForSymlinks(abs, rel, false);
