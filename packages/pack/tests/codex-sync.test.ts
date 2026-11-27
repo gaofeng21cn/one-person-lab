@@ -793,9 +793,14 @@ test('installed presence reads the configured carrier and files without writing 
   let offline = false;
   let ownerPath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
   let reads = 0;
+  let visibleSkills = [path.join(root, 'cache', 'skills', id, 'SKILL.md')];
   let loadErrorSource = path.join(root, 'other', 'marketplace.json');
   const service = createPackService({ db, stateDir, marketplaceRoot, codexRunner: {
     async runCli() { throw new Error('presence must only read'); },
+    async readInstalledSkillPaths(pluginId) {
+      assert.equal(pluginId, id + '@opl-local');
+      return visibleSkills;
+    },
     async listPlugins() {
       reads++;
       if (offline) throw new PackError('PACK_CODEX_SYNC_FAILED', 'carrier unavailable');
@@ -813,6 +818,8 @@ test('installed presence reads the configured carrier and files without writing 
   projectPackageToCodexMarketplace({ manifest: linked.package.manifest, installPath: source, marketplaceRoot });
   const inspect = () => service.readInstalledPackagePresence(id);
   assert.deepEqual(await inspect(), { carrier_ready: true, files_present: true });
+  visibleSkills = [];
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: true });
   loadErrorSource = ownerPath;
   await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
   loadErrorSource = path.join(root, 'other', 'marketplace.json');
@@ -825,5 +832,5 @@ test('installed presence reads the configured carrier and files without writing 
   await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
   fs.unlinkSync(path.join(source, 'skills/my-pkg/SKILL.md'));
   assert.deepEqual(await inspect(), { carrier_ready: false, files_present: false });
-  assert.equal(reads, 5);
+  assert.equal(reads, 6);
 });
