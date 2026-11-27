@@ -74,6 +74,8 @@ export {
   type TerminateProcessResult,
 } from './executors/spi.ts';
 
+export { activateCodexRuntime, ensureCodexRuntime } from './executors/codex/runtime-install.ts';
+
 export { ExecutorRegistry } from './executors/registry.ts';
 
 export {

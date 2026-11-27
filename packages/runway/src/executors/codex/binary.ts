@@ -49,11 +49,16 @@ function resolveCodexFromPath(env: NodeJS.ProcessEnv = process.env): CodexBinary
   return null;
 }
 
+export function codexRuntimeRoot(env: NodeJS.ProcessEnv): string {
+  return path.resolve(env.OPL_RUNTIME_ROOT?.trim() || path.join(resolveHomeDir(env), 'Library', 'Application Support', 'OPL', 'runtime'));
+}
+
+export function managedCodexBinary(env: NodeJS.ProcessEnv): string {
+  return path.join(codexRuntimeRoot(env), 'current', 'bin', process.platform === 'win32' ? 'codex.exe' : 'codex');
+}
+
 function resolveCodexFromRuntime(env: NodeJS.ProcessEnv = process.env): CodexBinaryInfo | null {
-  const runtimeRoot =
-    env.OPL_RUNTIME_ROOT?.trim()
-    || path.join(resolveHomeDir(env), 'Library', 'Application Support', 'OPL', 'runtime');
-  const candidate = path.join(runtimeRoot, 'current', 'bin', 'codex');
+  const candidate = managedCodexBinary(env);
   if (!isExecutableFile(candidate)) return null;
   return { path: candidate, source: 'runtime' };
 }
