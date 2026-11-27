@@ -14,6 +14,13 @@
   "channel": {
     "kind": "framework_oci"
   },
+  "observed_publishers": [
+    {
+      "lane": "package",
+      "workflow": "daily-package-channel.yml",
+      "daily_dispatch": true
+    }
+  ],
   "version_file": {
     "path": "package.json",
     "kind": "json"

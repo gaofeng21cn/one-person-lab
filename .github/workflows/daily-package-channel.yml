@@ -1,4 +1,8 @@
 name: Daily OPL Package Channel
+run-name: >-
+  ${{ inputs.opl_release_control_run_id != ''
+    && format('Daily OPL Package Channel [opl-release:{0}]', inputs.opl_release_control_run_id)
+    || 'Daily OPL Package Channel' }}
 
 on:
   schedule:
@@ -10,13 +14,22 @@ on:
         required: false
         default: ''
         type: string
+      opl_release_control_run_id:
+        description: First-attempt schedule run ID from gaofeng21cn/opl-release
+        required: false
+        type: string
 
 permissions:
+  actions: read
   contents: read
   packages: read
 
 concurrency:
-  group: opl-daily-package-channel-${{ github.repository_owner }}
+  # GitHub replaces pending runs in a concurrency group even when its job is skipped.
+  group: >-
+    ${{ github.event_name == 'schedule' && vars.OPL_RELEASE_CENTRAL_DAILY == 'true'
+      && format('opl-daily-package-channel-disabled-{0}', github.run_id)
+      || format('opl-daily-package-channel-{0}', github.repository_owner) }}
   cancel-in-progress: false
 
 env:
@@ -27,7 +40,7 @@ env:
 jobs:
   detect-package-channel-change:
     name: Prepare owner versions and detect independent channels
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || vars.OPL_RELEASE_CENTRAL_DAILY != 'true')
     concurrency:
       group: opl-daily-main-${{ github.repository }}
       cancel-in-progress: false
@@ -40,6 +53,13 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify centralized daily dispatch
+        if: inputs.opl_release_control_run_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPL_RELEASE_CONTROL_RUN_ID: ${{ inputs.opl_release_control_run_id }}
+          SELECTED_PACKAGE: ${{ inputs.package_id }}
+        run: python3 -B -m scripts.package_release.daily_control
       - name: Checkout compatible Package publisher tooling
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

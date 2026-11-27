@@ -4,6 +4,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { isProcessAlive, openSqliteStore } from '@opl/core';
+import { waitForCodexStartupProbe } from '@opl/runway';
 import { startDaemonServer, type StartedDaemonServer } from '../../src/daemon.ts';
 
 export const WORKTREE_ROOT = path.resolve(import.meta.dirname, '../../../..');
@@ -280,9 +281,12 @@ export function createDaemonSandbox(extraEnv: NodeJS.ProcessEnv = {}): DaemonSan
       return pid;
     },
     async cleanup() {
-      for (const s of startedServers.splice(0)) {
+      const servers = startedServers.splice(0);
+      for (const s of servers) {
         await s.shutdown().catch(() => {});
       }
+      // The in-process startup probe can still write stub logs after daemon shutdown.
+      if (servers.length) await waitForCodexStartupProbe(env);
       if (fs.existsSync(sessionPath)) {
         try {
           const sess = JSON.parse(fs.readFileSync(sessionPath, 'utf8')) as { pid?: number };
