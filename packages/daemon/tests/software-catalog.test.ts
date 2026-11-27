@@ -37,6 +37,8 @@ test('fast reads share a single pending catalog and expose only discoverable row
   });
   assert.equal(catalog.read().status, 'loading');
   assert.equal(catalog.read().entries.size, 0);
+  assert.equal(requests, 0);
+  await Promise.resolve();
   assert.equal(requests, 1);
   response.resolve(Response.json(index));
   await changed.promise;
@@ -84,4 +86,33 @@ test('provider failure still permits a fast read and schedules no immediate retr
   assert.equal(catalog.read().status, 'unavailable');
   assert.deepEqual(projectCatalogEntries(catalog.read(), new Set()), []);
   assert.equal(requests, 1);
+});
+
+test('a failed refresh preserves the last good public catalog and a later request recovers', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-01-01') });
+  let online = true;
+  let changed = Promise.withResolvers<void>();
+  const catalog = new OfficialSoftwareCatalog(() => changed.resolve(), {
+    runtimeRoot: null, fetchImpl: async () => {
+      if (!online) throw new Error('offline');
+      return Response.json(index);
+    },
+  });
+  catalog.read();
+  await changed.promise;
+  const lastGood = catalog.read().entries;
+  assert.ok(lastGood.has('published'));
+  changed = Promise.withResolvers<void>();
+  online = false;
+  t.mock.timers.tick(5 * 60_000);
+  assert.equal(catalog.read().entries, lastGood);
+  await changed.promise;
+  assert.equal(catalog.read().status, 'stale');
+  assert.equal(catalog.read().entries, lastGood);
+  changed = Promise.withResolvers<void>();
+  online = true;
+  t.mock.timers.tick(30_000);
+  catalog.read();
+  await changed.promise;
+  assert.equal(catalog.read().status, 'ready');
 });

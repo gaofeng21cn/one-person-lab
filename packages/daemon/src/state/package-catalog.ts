@@ -110,7 +110,7 @@ export class OfficialSoftwareCatalog {
   read(): SoftwareCatalogSnapshot {
     if (Date.now() >= this.#refreshAfter) {
       this.#refreshAfter = Infinity;
-      void this.#refresh();
+      queueMicrotask(() => { void this.#refresh(); });
     }
     return this.#snapshot;
   }
