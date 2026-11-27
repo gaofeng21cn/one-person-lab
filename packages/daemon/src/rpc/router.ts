@@ -195,11 +195,17 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
 
   const handleContributionExecute: RpcHandler = async (params, conn) => {
     const ctx = requireClientContext(conn);
-    const packageId = pickString(params, 'package_id', 'packageId');
+    const explicitPackage = pickString(params, 'package_id', 'packageId');
     const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef') ?? '';
     const payload = pickRecord(params, 'payload', 'input') ?? {};
+    const payloadPackage = pickString(payload, 'package_id');
+    if (explicitPackage && payloadPackage && explicitPackage !== payloadPackage) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Conflicting Package identities.');
+    }
+    const packageId = explicitPackage ?? payloadPackage;
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     const mode = pickString(params, 'mode');
+    const confirmed = pickBoolean(params, 'confirmed');
 
     const gatewayAction = !packageId && gatewayAccountActions.find(action => action.action_id === actionId);
     if (gatewayAction) {
@@ -216,13 +222,53 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       clientContext: ctx,
       packageId,
       actionId,
+      ...(confirmed !== undefined ? { confirmed } : {}),
       payload,
       dryRun,
       mode,
     });
   };
   handlers.set('app.contribution.execute', handleContributionExecute);
-  handlers.set('app.action.execute', handleContributionExecute);
+  handlers.set('app.action.execute', async (params, conn) => {
+    const actionId = pickString(params, 'action_id', 'actionId') ?? '';
+    if (actionId === 'package_contribution_execute') {
+      return handleContributionExecute(params, conn);
+    }
+    if (actionId !== 'agent_package_preferences_set' && actionId !== 'agent_package_uninstall') {
+      throw new DaemonRpcError(-32004, 'ACTION_NOT_FOUND', `No App action is registered for '${actionId}'.`);
+    }
+    const payload = pickRecord(params, 'payload') ?? {};
+    const packageId = pickString(payload, 'package_id');
+    const explicitPackage = pickString(params, 'package_id', 'packageId');
+    if (!packageId || (explicitPackage && explicitPackage !== packageId)) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A matching payload.package_id is required.');
+    }
+    const installed = runtime.packService.inspect(packageId);
+    if (!installed || installed.origin === 'external') {
+      throw new DaemonRpcError(-32004, 'PACKAGE_NOT_MANAGED', `Pack does not manage '${packageId}'.`);
+    }
+
+    const uninstall = actionId === 'agent_package_uninstall';
+    const exposure = payload.exposure_action;
+    if (!uninstall && exposure !== 'enable' && exposure !== 'disable') {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Specify enable or disable for exposure_action.');
+    }
+    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+    const method = uninstall ? 'pack.uninstall' : 'pack.toggle';
+    const receipt = {
+      action_id: actionId, dry_run: dryRun, dryRun,
+      authorityBoundary: 'app_bridge_no_domain_authority',
+      confirmationRequired: uninstall,
+    };
+    if (dryRun) return { ...receipt, status: 'preview', package_id: packageId };
+    if (uninstall && payload.confirmed !== true) {
+      throw new DaemonRpcError(-32602, 'CONFIRMATION_REQUIRED', 'Confirm the Package uninstall before execution.');
+    }
+    const result = await handlers.get(method)!({
+      package_id: packageId, ...(uninstall ? {} : { enabled: exposure === 'enable' }),
+    }, conn);
+    return { ...receipt, status: 'executed', result, app_action_execution: { ...receipt, result } };
+  });
 
   // ---- workspace.* ----
   const handleWorkspaceInit: RpcHandler = (params, conn) => {

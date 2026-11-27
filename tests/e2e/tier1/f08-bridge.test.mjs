@@ -214,8 +214,8 @@ describe("Tier 1 F8: opl-framework-bridge Thin opld Client", () => {
     const drillRes = await bridge.opl.readFullDrilldown();
     const contribRes = await bridge.opl.readContribution({ packageId: "opl-relay", ref: "status", input: {} });
     const actionRes = await bridge.opl.executeAction({
-      actionId: "package_operation_start",
-      payload: { confirmed: true },
+      actionId: "agent_package_uninstall",
+      payload: { package_id: "opl-relay" },
       dryRun: true,
       mode: "preview",
     });
