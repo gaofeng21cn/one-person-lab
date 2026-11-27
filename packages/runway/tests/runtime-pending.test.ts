@@ -50,6 +50,16 @@ function installFixture(t: TestContext) {
 
 const env = { PATH: path.dirname(process.execPath), OPL_APP_PROCESS_INSTANCE_ID: 'desktop:next-launch' };
 
+async function assertFirstInstallCanContinue(f: ReturnType<typeof installFixture>, originalReceipt: Buffer) {
+  assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
+  assert.equal(fs.existsSync(f.pending), false);
+  assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
+  const copies = fs.readdirSync(f.runtime, { withFileTypes: true }).filter(entry =>
+    entry.isFile() && fs.readFileSync(path.join(f.runtime, entry.name)).equals(originalReceipt));
+  assert.equal(copies.length, 1);
+  assert.equal(fs.existsSync(path.join(f.current, 'codex')), false);
+}
+
 test('upgrade activates a v1 pending Codex once and retains the running toolchain for rollback', async (t) => {
   const f = installFixture(t);
   const stagingEnv = { ...env, OPL_APP_PROCESS_INSTANCE_ID: f.receipt.staging_process_instance_id };
@@ -107,13 +117,7 @@ for (const damage of ['missing generations', 'missing stage', 'missing bin', 'mi
         assert.deepEqual(fs.readFileSync(f.pending), bytes);
         assert.equal(fs.readFileSync(activeCodex, 'utf8'), 'active version');
       } else {
-        assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
-        assert.equal(fs.existsSync(f.pending), false);
-        assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'none');
-        const copies = fs.readdirSync(f.runtime, { withFileTypes: true }).filter(entry =>
-          entry.isFile() && fs.readFileSync(path.join(f.runtime, entry.name)).equals(bytes));
-        assert.equal(copies.length, 1);
-        assert.equal(fs.existsSync(activeCodex), false);
+        await assertFirstInstallCanContinue(f, bytes);
       }
       if (damage === 'changed executable') {
         assert.equal(fs.readFileSync(stagedCodex, 'utf8'), incompleteExecutable);
@@ -237,16 +241,27 @@ for (const invalid of ['digest', 'version', 'protocol', 'escaped generation'] as
   });
 }
 
-test('upgrade refuses an executable whose actual App Server protocol no longer matches its staging receipt', async (t) => {
-  const f = installFixture(t);
-  const invalidCandidate = '#!/usr/bin/env node\nif (process.argv[2] === "--version") console.log("codex-cli 0.169.0"); else console.log("not-json");\n';
-  fs.writeFileSync(path.join(f.generation, 'bin', 'codex'), invalidCandidate, { mode: 0o755 });
-  f.receipt.codex_sha256 = crypto.createHash('sha256').update(invalidCandidate).digest('hex');
-  fs.writeFileSync(f.pending, JSON.stringify(f.receipt));
+for (const active of [true, false]) {
+  test(`App Server protocol failure ${active ? 'preserves the active Codex' : 'permits first installation'}`, async (t) => {
+    const f = installFixture(t);
+    const activeCodex = path.join(f.current, 'codex');
+    if (!active) fs.unlinkSync(activeCodex);
+    const invalidCandidate = '#!/usr/bin/env node\nif (process.argv[2] === "--version") console.log("codex-cli 0.169.0"); else console.log("not-json");\n';
+    const stagedCodex = path.join(f.generation, 'bin', 'codex');
+    fs.writeFileSync(stagedCodex, invalidCandidate, { mode: 0o755 });
+    f.receipt.codex_sha256 = crypto.createHash('sha256').update(invalidCandidate).digest('hex');
+    const bytes = Buffer.from(`${JSON.stringify(f.receipt, null, 2)}\n`);
+    fs.writeFileSync(f.pending, bytes);
 
-  await assert.rejects(activateLegacyCodexGeneration(f.runtime, env));
-  assert.equal(fs.readFileSync(path.join(f.generation, 'bin', 'codex'), 'utf8'), invalidCandidate);
-  assert.equal(fs.readFileSync(path.join(f.current, 'codex'), 'utf8'), 'active version');
-  assert.equal(fs.readFileSync(path.join(f.previous, 'codex'), 'utf8'), 'older version');
-  assert.equal(fs.existsSync(f.pending), true);
-});
+    if (active) {
+      await assert.rejects(activateLegacyCodexGeneration(f.runtime, env), /app_server_invalid_json/);
+      assert.deepEqual(fs.readFileSync(f.pending), bytes);
+      assert.equal(fs.readFileSync(activeCodex, 'utf8'), 'active version');
+    } else {
+      await assertFirstInstallCanContinue(f, bytes);
+    }
+    assert.equal(fs.readFileSync(stagedCodex, 'utf8'), invalidCandidate);
+    assert.equal(fs.readFileSync(path.join(f.current, 'opl'), 'utf8'), 'existing tool');
+    assert.equal(fs.readFileSync(path.join(f.previous, 'codex'), 'utf8'), 'older version');
+  });
+}
