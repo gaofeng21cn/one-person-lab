@@ -37,6 +37,8 @@ test('the workbench joins owner inventory and Runway work without turning execut
     assert.equal(read().work_item_projection_v2.items.length, 2);
     assert.equal(read().work_item_projection_v2.summary.agent_count, 1);
     const domain = read().work_item_projection_v2.items.find((item) => item.identity.work_item_id === 'paper-1')!;
+    assert.equal(domain.identity.identity_state, 'resolved');
+    assert.match(domain.identity.work_item_scope_id!, /^work-item:[a-f0-9]{64}$/);
     assert.equal(domain.lifecycle.primary_state, 'delivered_auto_paused');
     assert.equal(domain.execution.state, 'unknown');
     runwayStore.updateTaskStatus({ task_id: created.task_id, status: 'awaiting_human' });

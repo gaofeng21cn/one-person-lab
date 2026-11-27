@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { stableId, type SqliteDb } from '@opl/core';
+import { canonicalJsonText, sha256Hex, stableId, type SqliteDb } from '@opl/core';
 import type { StageRunRow, TaskRow } from '@opl/runway';
 import type { ProjectedPackageSummary } from './app-state-cache.ts';
 import type { DomainInventoryTask, DomainTaskInventory } from './domain-task-inventory.ts';
@@ -76,6 +76,11 @@ export function buildRunwayWorkbench(
   function projectItem(agentId: string, root: string, workId: string, title: string, task?: Task, domain?: DomainInventoryTask) {
     const projectId = stableId('project', [agentId, root]);
     const projectName = path.basename(root) || root;
+    const itemId = projectId + ':' + encodeURIComponent(workId);
+    const domainScope = domain && sha256Hex(canonicalJsonText({
+      namespace: 'opl_work_item_scope', project_scope_id: projectId, domain_id: domain.domain_id,
+      domain_work_item_id: domain.work_item_id,
+    })).slice('sha256:'.length);
     const agentName = agents.get(agentId) ?? agentId;
     agents.set(agentId, agentName);
     projects.set(projectId, { project_id: projectId, agent_id: agentId, workspace_path: root, display_name: projectName });
@@ -105,12 +110,13 @@ export function buildRunwayWorkbench(
     const lifecycleKey = businessState === 'delivered_paused' ? 'deliveredPaused' : businessState === 'unknown' ? 'syncPending' : businessState;
     const reason = domain?.business_status ?? task?.status ?? 'unknown';
     return {
-      item_id: projectId + ':' + encodeURIComponent(workId),
+      item_id: itemId,
       identity: {
         agent_id: agentId, agent_display_name: agentName, project_id: projectId, workspace_path: root,
         project_display_name: projectName, work_item_id: workId, work_item_display_name: title,
         work_item_kind: domain ? 'domain_work_item' : 'runway_task',
-        ...(domain && { domain_id: domain.domain_id, domain_work_item_id: domain.work_item_id, work_item_root: domain.work_item_root }),
+        ...(domain && { identity_state: 'resolved', work_item_scope_id: 'work-item:' + domainScope,
+          domain_id: domain.domain_id, domain_work_item_id: domain.work_item_id, work_item_root: domain.work_item_root }),
       },
       lifecycle: { business_state: businessState, primary_state: state, primary_state_label: label,
         reason, last_transition_at: updatedAt, current_stage_id: stageId, current_stage_display_name: stageId },
@@ -121,7 +127,7 @@ export function buildRunwayWorkbench(
         attempt_id: currentAttempt?.attempt_id ?? null, updated_at: current?.updated_at ?? null },
       attention: { kind: decision ? 'user' : 'none', reason, owner: decision ? 'user' : null,
         summary: null, owner_display_name: null, responsibility: null },
-      action: { kind: decision ? 'user_action' : 'no_action', title: null, summary: null,
+      action: { kind: decision ? 'user_action' : 'blocked_no_action', title: null, summary: null,
         title_key: decision ? null : 'lifecycle.' + lifecycleKey + '.title',
         summary_key: decision ? null : 'lifecycle.' + lifecycleKey + '.summary',
         message_args: {}, owner: decision ? 'user' : agentId, owner_kind: decision ? 'user' : 'agent',
