@@ -1,3 +1,4 @@
+import type { SqliteDb } from '@opl/core';
 import {
   checkPrivatePackageSource, configurePrivatePackageSource, disconnectPrivatePackageSource, listPrivatePackageSources,
 } from '@opl/pack';
@@ -19,8 +20,8 @@ export const softwareSourceActions = [
 
 type SourceAction = typeof softwareSourceActions[number];
 
-export function projectSoftwareSources(stateDir: string) {
-  const entries = listPrivatePackageSources({ stateDir }).map(source => ({
+export function projectSoftwareSources(db: SqliteDb) {
+  const entries = listPrivatePackageSources(db).map(source => ({
     ...source,
     origin_basis: 'owner_projection',
     catalog_source: { manager: 'opl_packages', marketplace_id: source.source_id, delivery: 'marketplace' },
@@ -36,7 +37,7 @@ export function projectSoftwareSources(stateDir: string) {
 }
 
 export async function executeSoftwareSourceAction(
-  action: SourceAction, payload: Record<string, unknown>, dryRun: boolean, stateDir: string,
+  action: SourceAction, payload: Record<string, unknown>, dryRun: boolean, db: SqliteDb, onConfigured: () => void,
 ) {
   if (dryRun || Object.keys(payload).some(key => key !== 'confirmed' && !action.payload_fields.includes(key))) {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Unexpected software source action parameters.');
@@ -47,7 +48,7 @@ export async function executeSoftwareSourceAction(
   const sourceId = payload.source_id;
   let result;
   if (action.action_id === 'source_list') {
-    result = { software_sources: projectSoftwareSources(stateDir) };
+    result = { software_sources: projectSoftwareSources(db) };
   } else if (typeof sourceId !== 'string') {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A software source ID is required.');
   } else if (action.action_id === 'source_configure') {
@@ -55,12 +56,13 @@ export async function executeSoftwareSourceAction(
         typeof payload.enabled !== 'boolean') {
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Specify a GitHub Packages credential reference and enabled state.');
     }
-    const source = configurePrivatePackageSource({ stateDir, sourceId, credentialHandle: payload.credential_handle, enabled: payload.enabled });
-    result = { software_source: source.enabled ? await checkPrivatePackageSource({ stateDir, sourceId }) : source };
+    const source = configurePrivatePackageSource(db, { sourceId, credentialHandle: payload.credential_handle, enabled: payload.enabled });
+    onConfigured();
+    result = { software_source: source.enabled ? await checkPrivatePackageSource(db, sourceId) : source };
   } else if (action.action_id === 'source_check') {
-    result = { software_source: await checkPrivatePackageSource({ stateDir, sourceId }) };
+    result = { software_source: await checkPrivatePackageSource(db, sourceId) };
   } else {
-    result = { software_source: disconnectPrivatePackageSource({ stateDir, sourceId }) };
+    result = { software_source: disconnectPrivatePackageSource(db, sourceId) };
   }
   return {
     ok: true, status: 'executed',

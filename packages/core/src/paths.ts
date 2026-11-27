@@ -118,3 +118,9 @@ export function ensureStateDir(paths: StatePaths = resolveStatePaths()): StatePa
   fs.mkdirSync(paths.run_dir, { recursive: true });
   return paths;
 }
+
+/** Locate a legacy default-state entry for read-only migration. */
+export function legacyDefaultStateEntry(paths: Pick<StatePaths, 'home_dir' | 'state_dir'>, name: string): string | null {
+  if (process.platform === 'darwin' || path.resolve(paths.state_dir) !== path.resolve(defaultUserStateDir(paths.home_dir))) return null;
+  return path.join(paths.home_dir, 'Library', 'Application Support', 'OPL', 'state', name);
+}

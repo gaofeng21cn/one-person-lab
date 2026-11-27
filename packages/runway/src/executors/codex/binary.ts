@@ -50,7 +50,14 @@ function resolveCodexFromPath(env: NodeJS.ProcessEnv = process.env): CodexBinary
 }
 
 export function codexRuntimeRoot(env: NodeJS.ProcessEnv): string {
-  return path.resolve(env.OPL_RUNTIME_ROOT?.trim() || path.join(resolveHomeDir(env), 'Library', 'Application Support', 'OPL', 'runtime'));
+  const override = env.OPL_RUNTIME_ROOT?.trim();
+  if (override) return path.resolve(override);
+  const home = resolveHomeDir(env);
+  if (process.platform === 'darwin') return path.resolve(home, 'Library', 'Application Support', 'OPL', 'runtime');
+  if (process.platform === 'win32') {
+    return path.resolve(env.LOCALAPPDATA?.trim() || path.join(home, 'AppData', 'Local'), 'OPL', 'runtime');
+  }
+  return path.resolve(env.XDG_STATE_HOME?.trim() || path.join(home, '.local', 'state'), 'opl', 'runtime');
 }
 
 export function managedCodexBinary(env: NodeJS.ProcessEnv): string {

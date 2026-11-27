@@ -1,6 +1,6 @@
-import { resolveStatePaths } from '../packages/core/src/paths.ts';
-import { preparePrivatePackageSourceCredential } from '../packages/pack/src/distribution/private-package-source-provider.ts';
-import { privatePackageSourceStoreFile, readConfiguredPrivatePackageHandle } from '../packages/pack/src/distribution/private-package-source-store.ts';
+import fs from 'node:fs';
+import { openSqliteStore, resolveStatePaths } from '@opl/core';
+import { preparePrivatePackageSourceCredential, readConfiguredPrivatePackageHandle } from '@opl/pack';
 
 const privatePublication = /^ghcr\.io\/([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)\/one-person-lab-private-packages\/[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?:latest-stable$/;
 
@@ -8,8 +8,13 @@ const privatePublication = /^ghcr\.io\/([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)\/o
 export function preparePrivatePackageRegistryAccess(publicationRef, registryConfigRoot) {
   const owner = typeof publicationRef === 'string' && privatePublication.exec(publicationRef)?.[1];
   if (!owner) return 'source_not_configured';
-  const allowLegacyDefault = !process.env.OPL_STATE_DIR?.trim() && !process.env.OPL_DATA_DIR?.trim();
-  const file = privatePackageSourceStoreFile(resolveStatePaths(), allowLegacyDefault);
-  const handle = readConfiguredPrivatePackageHandle(file, `github-packages:${owner}`);
-  return preparePrivatePackageSourceCredential(handle, registryConfigRoot);
+  const { db_file } = resolveStatePaths();
+  if (!fs.existsSync(db_file)) return 'source_not_configured';
+  const db = openSqliteStore(db_file, { readOnly: true });
+  try {
+    const handle = readConfiguredPrivatePackageHandle(db, `github-packages:${owner}`);
+    return preparePrivatePackageSourceCredential(handle, registryConfigRoot);
+  } finally {
+    db.close();
+  }
 }

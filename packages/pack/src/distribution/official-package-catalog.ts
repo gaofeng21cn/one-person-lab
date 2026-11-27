@@ -105,7 +105,6 @@ export function officialPackagePrivateSourceId(entry: OfficialPackageCatalogEntr
 export function officialPackageInstallSource(
   entry: OfficialPackageCatalogEntry,
   runtimeRoot: string | null,
-  generation: 'preferred' | 'legacy' = 'preferred',
   options?: { readonly allowAuthorizedOnly?: boolean },
 ): InstallSourceSpec {
   const { manifest, package_id: packageId } = entry;
@@ -129,7 +128,7 @@ export function officialPackageInstallSource(
     if (registry !== 'ghcr.io' || !expectedOwner || repository !== `${expectedOwner}/${expectedNamespace}/${packageId}`) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' points outside its registered Package repository.`);
     }
-    const release = generation === 'preferred' ? selectedV2Release(entry) : null;
+    const release = selectedV2Release(entry);
     const version = release?.version ?? entry.version;
     if (!version || !catalogVersion.test(version)) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' has no selected Catalog version.`);

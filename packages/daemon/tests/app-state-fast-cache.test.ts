@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 describe('AppStateCache fast hot-path caching & zero-staleness guarantees', () => {
-  it('immediately observes external file edits and connect mutations with strict multi-profile isolation', async () => {
+  it('observes profile file edits and daemon mutations while ignoring retired preference files', async () => {
     const sb = trackSandbox({ OPL_GITHUB_PACKAGES_TOKEN: 'synthetic-token-cache-test' });
     const srv = await sb.startInProcess();
 
@@ -64,7 +64,7 @@ describe('AppStateCache fast hot-path caching & zero-staleness guarantees', () =
       const sAgents2 = await first.call('app.state.get', { profile: 'fast' }) as any;
       assert.equal(sAgents2.app_state.codex_personalization.user_agents.content, 'Updated instructions v2\n');
 
-      // 3. External write to workspace-root.json -> immediately observed.
+      // 3. Retired workspace-root.json edits do not change the selection.
       const customRoot = path.join(sb.root, 'external-ws-root');
       fs.mkdirSync(customRoot, { recursive: true });
       fs.writeFileSync(
@@ -73,9 +73,12 @@ describe('AppStateCache fast hot-path caching & zero-staleness guarantees', () =
         { mode: 0o600 },
       );
       const sWsRoot = await first.call('app.state.get', { profile: 'fast' }) as any;
-      assert.equal(sWsRoot.app_state.paths.workspace_root_path, customRoot);
+      assert.equal(sWsRoot.app_state.paths.workspace_root_path, s1Before.app_state.paths.workspace_root_path);
+      await first.call('app.action.execute', { action_id: 'workspace_root_set', payload: { path: customRoot } });
+      const updated = await first.call('app.state.get', { profile: 'fast' }) as any;
+      assert.equal(updated.app_state.paths.workspace_root_path, customRoot);
 
-      // 4. External write to software-sources.json -> immediately observed.
+      // 4. Retired software-sources.json edits do not change the source.
       fs.writeFileSync(
         path.join(sb.stateDir, 'software-sources.json'),
         JSON.stringify({
@@ -92,7 +95,13 @@ describe('AppStateCache fast hot-path caching & zero-staleness guarantees', () =
         { mode: 0o600 },
       );
       const sSources = await first.call('app.state.get', { profile: 'fast' }) as any;
-      assert.equal(sSources.app_state.agent_packages.sources.entries[0].status, 'authorized');
+      assert.equal(sSources.app_state.agent_packages.sources.entries[0].status, 'signed_out');
+      await first.call('pack.sources.configure', {
+        source_id: 'github-packages:gaofeng21cn', provider_id: 'github_packages',
+        credential_handle: 'env:OPL_GITHUB_PACKAGES_TOKEN', enabled: false,
+      });
+      const configured = await first.call('app.state.get', { profile: 'fast' }) as any;
+      assert.equal(configured.app_state.agent_packages.sources.entries[0].credential_handle_present, true);
 
       // 5. Connect access request, approval & invocation -> immediately reflected in cached authorization projection.
       srv.runtime.connectService.registerProvider({

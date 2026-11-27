@@ -4,7 +4,7 @@ import path from 'node:path';
 import { connectTestRpc, createDaemonSandbox, E2E_CODEX_STUB } from './helpers/sandbox.ts';
 
 test('Studio can discover and preview local Codex installation through the trusted App socket', async (t) => {
-  const sandbox = createDaemonSandbox({ OPL_RUNTIME_ROOT: '' });
+  const sandbox = createDaemonSandbox({ OPL_RUNTIME_ROOT: '', XDG_STATE_HOME: '', LOCALAPPDATA: '' });
   t.after(() => sandbox.cleanup());
   await sandbox.spawnDaemonProcess();
   const app = await connectTestRpc(sandbox.sessionPath, 'opl_app', '2.0');
@@ -26,8 +26,13 @@ test('Studio can discover and preview local Codex installation through the trust
     runtime_activation: { codex: { runtime_binary_path: string; managed_binary_path: string } };
   };
   assert.equal(current.runtime_activation.codex.runtime_binary_path, E2E_CODEX_STUB);
+  const expectedRuntimeRoot = process.platform === 'darwin'
+    ? path.join(sandbox.homeDir, 'Library', 'Application Support', 'OPL', 'runtime')
+    : process.platform === 'win32'
+      ? path.join(sandbox.homeDir, 'AppData', 'Local', 'OPL', 'runtime')
+      : path.join(sandbox.homeDir, '.local', 'state', 'opl', 'runtime');
   assert.equal(current.runtime_activation.codex.managed_binary_path, path.join(
-    sandbox.homeDir, 'Library', 'Application Support', 'OPL', 'runtime', 'current', 'bin',
+    expectedRuntimeRoot, 'current', 'bin',
     process.platform === 'win32' ? 'codex.exe' : 'codex',
   ));
   const sdk = await connectTestRpc(sandbox.sessionPath, 'sdk_python', '2.0');

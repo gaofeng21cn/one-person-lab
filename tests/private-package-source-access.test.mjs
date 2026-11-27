@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { openSqliteStore } from '@opl/core';
+import { initializePrivatePackageSourceStore } from '@opl/pack';
 
 const publication = 'ghcr.io/example/one-person-lab-private-packages/sample:latest-stable';
 const envHandle = 'env:OPL_GITHUB_PACKAGES_TOKEN';
@@ -26,8 +28,13 @@ function sandbox(t) {
     ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}),
   };
   const setSource = (handle, fields = {}, copies = 1) => {
+    const dbFile = path.join(isolated.state, 'opl.db');
+    if (fs.existsSync(dbFile)) fs.unlinkSync(dbFile);
     const source = { source_id: 'github-packages:example', enabled: true, credential_handle: handle, ...fields };
     fs.writeFileSync(storeFile, JSON.stringify({ surface_kind: 'opl_software_sources_store.v1', sources: Array(copies).fill(source) }));
+    const db = openSqliteStore(dbFile);
+    try { initializePrivatePackageSourceStore(db, { state_dir: isolated.state, home_dir: root }); }
+    finally { db.close(); }
   };
   const run = (publicationRef = publication, writeConfig = false, overrides = {}) => {
     const child = spawnSync(process.execPath, ['--input-type=module', '-e',
@@ -111,41 +118,57 @@ echo 'fixture-gh-secret'
 
 test('private source checks distinguish GitHub identity from package access and keep diagnostics local', t => {
   const fixture = sandbox(t);
-  const provider = new URL('../packages/pack/src/distribution/private-package-source-provider.ts', import.meta.url);
   const script = `
     import assert from 'node:assert/strict';
-    import { probePrivatePackageSourceIdentity } from ${JSON.stringify(provider.href)};
+    import { probePrivatePackageSourceIdentity } from '@opl/pack';
     const handle = 'env:OPL_GITHUB_PACKAGES_TOKEN';
-    let response;
-    let checks = 0;
-    globalThis.fetch = async (url, options) => {
-      checks++;
-      assert.equal(url, 'https://api.github.com/user');
-      assert.equal(options.redirect, 'error');
-      assert.equal(options.headers.Authorization, 'Bearer fixture-env-secret');
-      if (response instanceof Error) throw response;
-      return response;
-    };
-    for (const [reply, status, verification_reason] of [
-      [Response.json({login:'example',id:42}), 'authorized', 'provider_identity_verified_package_grants_checked_at_install'],
-      [new Response(null, {status:401}), 'expired', 'provider_credential_expired'],
-      [new Response(null, {status:403}), 'forbidden', 'provider_identity_forbidden'],
-      [new Response(null, {status:503}), 'unknown', 'software_source_verification_unavailable'],
-      [new Response(null, {status:302}), 'unknown', 'software_source_verification_unavailable'],
-      [new Response('<html>proxy login</html>'), 'unknown', 'software_source_verification_unavailable'],
-      [Response.json({message:'fixture-diagnostic-secret'}), 'unknown', 'software_source_verification_unavailable'],
-      [new Error('fixture-diagnostic-secret'), 'unknown', 'software_source_verification_unavailable'],
+    const repository = 'example/one-person-lab-private-packages/sample';
+    const select = async () => ['sample'];
+    const identity = () => Response.json({ login: 'example', id: 42 });
+    for (const [user, exchange, head, status, verification_reason] of [
+      [identity(), Response.json({token:'opaque'}), 200, 'authorized', 'provider_identity_and_registry_package_read_verified'],
+      [identity(), Response.json({}), null, 'forbidden', 'registry_package_read_scope_missing'],
+      [identity(), Response.json({token:'opaque'}), 401, 'forbidden', 'registry_package_read_scope_missing'],
+      [identity(), Response.json({token:'opaque'}), 403, 'forbidden', 'registry_package_read_scope_missing'],
+      [identity(), new Response(null, {status:401}), null, 'expired', 'registry_credential_expired'],
+      [identity(), new Response(null, {status:403}), null, 'forbidden', 'registry_package_read_scope_missing'],
+      [new Response(null, {status:401}), null, null, 'expired', 'provider_credential_expired'],
+      [new Response(null, {status:403}), null, null, 'forbidden', 'provider_identity_forbidden'],
+      [new Response(null, {status:503}), null, null, 'unknown', 'software_source_verification_unavailable'],
+      [new Response('<html>proxy login</html>'), null, null, 'unknown', 'software_source_verification_unavailable'],
     ]) {
-      response = reply;
-      assert.deepEqual(await probePrivatePackageSourceIdentity(handle), {status, verification_reason});
+      const requests = [];
+      globalThis.fetch = async (url, init) => {
+        requests.push(String(url));
+        assert.equal(init.redirect, 'error');
+        if (requests.length === 1) {
+          assert.equal(url, 'https://api.github.com/user');
+          assert.equal(init.headers.Authorization, 'Bearer fixture-env-secret');
+          return user;
+        }
+        if (requests.length === 2) {
+          assert.equal(url.origin, 'https://ghcr.io');
+          assert.equal(url.pathname, '/token');
+          assert.equal(url.searchParams.get('scope'), 'repository:' + repository + ':pull');
+          assert.equal(init.headers.Authorization, 'Basic ' + Buffer.from('x-access-token:fixture-env-secret').toString('base64'));
+          return exchange;
+        }
+        assert.equal(url, 'https://ghcr.io/v2/' + repository + '/manifests/latest-stable');
+        assert.equal(init.method, 'HEAD');
+        assert.equal(init.headers.Authorization, 'Bearer opaque');
+        return new Response(null, {status:head});
+      };
+      assert.deepEqual(await probePrivatePackageSourceIdentity(handle, 'example', select), {
+        status, verification_reason, ...(status === 'authorized' ? {account_login:'example'} : {}),
+      });
+      assert.equal(requests.length, head ? 3 : exchange ? 2 : 1);
     }
     delete process.env.OPL_GITHUB_PACKAGES_TOKEN;
-    assert.deepEqual(await probePrivatePackageSourceIdentity(handle), {
+    assert.deepEqual(await probePrivatePackageSourceIdentity(handle, 'example', select), {
       status:'signed_out', verification_reason:'provider_credential_unavailable',
     });
-    assert.equal(checks, 8);
   `;
-  const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+  const child = spawnSync(process.execPath, ['--disable-warning=ExperimentalWarning', '--input-type=module', '-e', script], {
     env: { HOME: fixture.state, OPL_STATE_DIR: fixture.state, PATH: fixture.bin, OPL_GITHUB_PACKAGES_TOKEN: 'fixture-env-secret',
       ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}) },
     encoding: 'utf8', timeout: 10000,

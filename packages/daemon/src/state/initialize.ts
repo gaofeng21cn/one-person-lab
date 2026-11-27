@@ -1,3 +1,4 @@
+import type { SqliteDb } from '@opl/core';
 import { codexStartupReady } from '@opl/runway';
 import { readWorkspaceRoot } from './workspace-root.ts';
 
@@ -17,8 +18,8 @@ function coreCheck(itemId: string, label: string, ready: boolean, reason: string
   };
 }
 
-export function readSystemInitialize(stateDir: string, modelAccessReady: boolean, codexReady = codexStartupReady()) {
-  const workspace = readWorkspaceRoot(stateDir);
+export function readSystemInitialize(db: SqliteDb, modelAccessReady: boolean, codexReady = codexStartupReady()) {
+  const workspace = readWorkspaceRoot(db);
   const checklist = [
     coreCheck('workspace_root', 'Working directory', workspace.exists && workspace.writable, 'workspace_unavailable', 'Choose an accessible working directory.'),
     coreCheck('codex', 'Local assistant', codexReady, 'codex_unavailable', 'Set up the local assistant.'),

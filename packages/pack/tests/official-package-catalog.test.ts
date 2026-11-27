@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { openSqliteStore, resolveStatePaths } from '@opl/core';
+import { initializePrivatePackageSourceStore } from '../src/distribution/private-package-source-store.ts';
 import {
   officialPackageInstallSource,
   officialPackagePrivateSourceId,
@@ -131,7 +133,7 @@ test('selects a numbered v2 OCI tag and pins the archive using the immutable pay
   }, null), /Invalid Catalog v2 release/);
 });
 
-test('official resolver retries only a missing public v2 OCI manifest, using the exact v1 tag', async () => {
+test('official resolver fails closed when the selected public v2 manifest is missing', async () => {
   const version = '2.4.0';
   const digest = 'sha256:' + 'c'.repeat(64);
   const bytes = JSON.stringify({
@@ -149,18 +151,15 @@ test('official resolver retries only a missing public v2 OCI manifest, using the
     },
   };
   const missing = () => Response.json({ errors: [{ code: 'MANIFEST_UNKNOWN' }] }, { status: 404 });
-  const legacyReached = new Error('Reached the exact legacy manifest');
   type ExpectedFailure = { message: string | RegExp };
   const cases: Array<{
     response?: () => Response;
     expected: ExpectedFailure;
-    exactPackageId?: string;
     tokenStatus?: number;
     payloadStatus?: number;
     requests: string[];
   }> = [
-    { response: missing, expected: legacyReached, requests: [version, '1.2.3'] },
-    { response: missing, exactPackageId: packageId, expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
+    { response: missing, expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
     { response: () => new Response('', { status: 404 }), expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
     { response: () => Response.json({ errors: [{ code: 'DENIED' }] }, { status: 404 }), expected: { message: /manifest fetch failed with HTTP 404/ }, requests: [version] },
     { response: () => new Response('', { status: 403 }), expected: { message: /manifest fetch failed with HTTP 403/ }, requests: [version] },
@@ -180,7 +179,6 @@ test('official resolver retries only a missing public v2 OCI manifest, using the
     const requestedVersions: string[] = [];
     const resolve = createOfficialPackageResolver({
       runtimeRoot: null,
-      exactPackageId: scenario.exactPackageId,
       fetchImpl: async url => {
         const address = new URL(String(url));
         if (address.pathname.endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [candidate] });
@@ -188,7 +186,6 @@ test('official resolver retries only a missing public v2 OCI manifest, using the
         if (address.pathname === '/token') return Response.json({ token: 'fixture-token' }, { status: scenario.tokenStatus });
         const selected = address.pathname.split('/').pop()!;
         requestedVersions.push(selected);
-        if (selected === '1.2.3') throw legacyReached;
         assert.equal(selected, version);
         return scenario.response!();
       },
@@ -198,7 +195,7 @@ test('official resolver retries only a missing public v2 OCI manifest, using the
   }
 });
 
-test('authorized private v2 packages resolve with Basic auth header, reject unauthorized/offline/wrong-repo, and support pending-tag fallback', async (t) => {
+test('authorized private v2 packages resolve with Basic auth header, reject unauthorized/offline/wrong-repo, and fail closed on missing manifests', async (t) => {
   const privatePkgId = 'private-agent';
   const privateRepo = 'https://github.com/gaofeng21cn/private-agent.git';
   const privatePub = `ghcr.io/gaofeng21cn/one-person-lab-private-packages/${privatePkgId}:latest-stable`;
@@ -226,8 +223,8 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   assert.equal(officialPackagePrivateSourceId(privateEntry), 'github-packages:gaofeng21cn');
   assert.equal(officialPackagePrivateSourceId(entry), null);
   assert.throws(() => officialPackageInstallSource(privateEntry, null), /public Package source unavailable/);
-  assert.throws(() => officialPackageInstallSource(privateEntry, '/tmp/full-seed', 'preferred', { allowAuthorizedOnly: true }), /Offline Full seed/);
-  assert.deepEqual(officialPackageInstallSource(privateEntry, null, 'preferred', { allowAuthorizedOnly: true }), {
+  assert.throws(() => officialPackageInstallSource(privateEntry, '/tmp/full-seed', { allowAuthorizedOnly: true }), /Offline Full seed/);
+  assert.deepEqual(officialPackageInstallSource(privateEntry, null, { allowAuthorizedOnly: true }), {
     kind: 'oci', package_id: privatePkgId, ref: privatePub, version: v2Version,
   });
   const wrongPrivateRef = {
@@ -235,16 +232,13 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
     codex_surface: { configured_codex_plugin_carrier: { publication_ref: `ghcr.io/gaofeng21cn/one-person-lab-packages/${privatePkgId}:latest-stable` } },
   };
   assert.throws(
-    () => officialPackageInstallSource({ ...privateEntry, manifest: wrongPrivateRef }, null, 'preferred', { allowAuthorizedOnly: true }),
+    () => officialPackageInstallSource({ ...privateEntry, manifest: wrongPrivateRef }, null, { allowAuthorizedOnly: true }),
     /outside its registered Package repository/,
   );
 
   // Missing authorization fails closed before contacting registry
-  const emptyState = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-priv-auth-empty-'));
-  t.after(() => fs.rmSync(emptyState, { recursive: true, force: true }));
   const unauthorizedResolve = createOfficialPackageResolver({
     runtimeRoot: null,
-    stateDir: emptyState,
     fetchImpl: async url => {
       if (String(url).endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [privateEntry] });
       assert.fail(`Unauthorized request must not reach ${String(url)}`);
@@ -252,11 +246,13 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   });
   await assert.rejects(unauthorizedResolve(privatePkgId), /requires an authorized 'github-packages:gaofeng21cn'/);
 
-  // Configured env token passes Authorization: Basic to GHCR /token and supports pending-tag fallback
+  // Configured env token passes Authorization: Basic to GHCR /token for only the selected tag
   const authState = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-priv-auth-ok-'));
   t.after(() => fs.rmSync(authState, { recursive: true, force: true }));
-  configurePrivatePackageSource({
-    stateDir: authState,
+  const db = openSqliteStore(':memory:');
+  t.after(() => db.close());
+  initializePrivatePackageSourceStore(db, resolveStatePaths({ stateDir: authState }));
+  configurePrivatePackageSource(db, {
     sourceId: 'github-packages:gaofeng21cn',
     credentialHandle: 'env:OPL_GITHUB_PACKAGES_TOKEN',
     enabled: true,
@@ -275,10 +271,9 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   const expectedBasic = 'Basic ' + Buffer.from('x-access-token:ghp_private_fixture_token', 'utf8').toString('base64');
   const tokenHeaders: string[] = [];
   const manifestTags: string[] = [];
-  const legacyReached = new Error('Private legacy manifest reached with auth');
   const authorizedResolve = createOfficialPackageResolver({
     runtimeRoot: null,
-    stateDir: authState,
+    db,
     fetchImpl: async (url, init) => {
       const address = new URL(String(url));
       if (address.pathname.endsWith('/catalog-index.json')) return Response.json({ ...index, packages: [privateEntry] });
@@ -294,11 +289,12 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
       const tag = address.pathname.split('/').pop()!;
       manifestTags.push(tag);
       if (tag === v2Version) return Response.json({ errors: [{ code: 'MANIFEST_UNKNOWN' }] }, { status: 404 });
-      if (tag === '1.2.3') throw legacyReached;
       assert.fail(`Unexpected tag ${tag}`);
     },
   });
-  await assert.rejects(authorizedResolve(privatePkgId), legacyReached);
-  assert.deepEqual(tokenHeaders, [expectedBasic, expectedBasic]);
-  assert.deepEqual(manifestTags, [v2Version, '1.2.3']);
+  await assert.rejects(authorizedResolve(privatePkgId), {
+    code: 'PACK_DOWNLOAD_FAILED', message: /manifest fetch failed with HTTP 404/,
+  });
+  assert.deepEqual(tokenHeaders, [expectedBasic]);
+  assert.deepEqual(manifestTags, [v2Version]);
 });

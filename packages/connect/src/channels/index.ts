@@ -71,14 +71,6 @@ export {
 } from './channel-provider-host.ts';
 
 export {
-  RemoteCompanionConnectorHost,
-  type RemoteCompanionAccessRequest,
-  type RemoteCompanionConnectorHostOptions,
-  type RemoteCompanionConnectorProjectionEntry,
-  type RemoteCompanionHostProjection,
-} from './remote-companion-host.ts';
-
-export {
   SqliteChannelThreadBindingStore,
   type ChannelPersistedThreadBinding,
 } from './thread-bindings.ts';

@@ -51,11 +51,15 @@ test('shutdown cancels a stalled startup Package discovery and exits cleanly', a
   });
   const log = path.join(sb.stubLogDir, 'codex.jsonl');
   const deadline = Date.now() + 4000;
-  while (!fs.existsSync(log) && Date.now() < deadline) {
+  let readback: { pid: number } | undefined;
+  while (Date.now() < deadline) {
+    if (fs.existsSync(log)) {
+      const entries = fs.readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+      readback = entries.find(row => row.subcommand === 'app_server' && row.fault === 'stall');
+      if (readback) break;
+    }
     await new Promise(resolve => setTimeout(resolve, 20));
   }
-  const entries = fs.readFileSync(log, 'utf8').trim().split('\n').map(line => JSON.parse(line));
-  const readback = entries.find(row => row.subcommand === 'app_server' && row.fault === 'stall');
   assert.ok(readback && isProcessAlive(readback.pid), 'the native Package discovery must be running');
   sb.trackPid(readback.pid);
 

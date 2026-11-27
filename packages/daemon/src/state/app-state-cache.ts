@@ -8,7 +8,7 @@ import {
   type ConnectService,
 } from '@opl/connect';
 import type { SqliteDb } from '@opl/core';
-import { privatePackageSourceStorePath, type InstalledPackageRecord, type PackService } from '@opl/pack';
+import type { InstalledPackageRecord, PackService } from '@opl/pack';
 import { codexInstallAction } from '../rpc/codex-runtime.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
 import { gatewayAccountActions } from '../rpc/gateway-actions.ts';
@@ -23,7 +23,7 @@ import { packageActions, projectPackageDirectory } from './package-projection.ts
 import { buildRunwayWorkbench } from './task-projection.ts';
 import { ensureTaskVisibilitySchema } from './task-visibility.ts';
 import { projectUiContributions } from './ui-projection.ts';
-import { readWorkspaceRoot, workspaceRootAction, workspaceRootPreferencePath } from './workspace-root.ts';
+import { readWorkspaceRoot, workspaceRootAction } from './workspace-root.ts';
 
 export interface ProjectedPackageSummary {
   readonly package_id: string;
@@ -158,14 +158,8 @@ export class AppStateCache {
   #fastSnapshot: AppStateSnapshot | null = null;
   #fullSnapshot: AppStateSnapshot | null = null;
   #connectionAuthorization: ConnectionAuthSnapshot | null = null;
-  #workspaceRootCache = new Map<string, {
-    envKey: string;
-    prefPath: string;
-    prefStat: string;
-    selectedStat: string;
-    value: WorkspaceRootSnapshot;
-  }>();
-  #sourcesCache = new Map<string, { key: string; value: SoftwareSourcesSnapshot | undefined }>();
+  #softwareSources: SoftwareSourcesSnapshot | null = null;
+  #workspaceRootCache: { envKey: string; selectedStat: string; value: WorkspaceRootSnapshot } | null = null;
   #codexPolicyCache = new Map<string, { fingerprint: string; value: CodexModelPolicySnapshot }>();
   #gatewayAccountCache = new Map<string, {
     key: string;
@@ -175,7 +169,6 @@ export class AppStateCache {
   #trustedSnapshots = new Map<string, {
     revision: number;
     workspaceRoot: WorkspaceRootSnapshot;
-    sources: SoftwareSourcesSnapshot | undefined;
     codexModelPolicy: CodexModelPolicySnapshot;
     account: GatewayAccountSnapshot | undefined;
     authorization: ConnectionAuthSnapshot;
@@ -210,48 +203,30 @@ export class AppStateCache {
     this.#fastSnapshot = null;
     this.#fullSnapshot = null;
     this.#connectionAuthorization = null;
+    this.#softwareSources = null;
+    this.#workspaceRootCache = null;
     this.#personalizationReader.invalidate();
     this.#trustedSnapshots.clear();
   }
 
-  #getConnectionAuthorization(): ConnectionAuthSnapshot {
-    return (this.#connectionAuthorization ??= projectConnectionAuthorization(this.#connectService.listProjection()));
-  }
-
-  #readWorkspaceRootCached(gatewayStateDir: string): WorkspaceRootSnapshot {
-    const envRoot = process.env.OPL_WORKSPACE_ROOT?.trim() || '';
-    const envKey = `${envRoot}\0${process.env.HOME?.trim() || ''}\0${process.env.OPL_STATE_DIR?.trim() || ''}\0${process.env.OPL_DATA_DIR?.trim() || ''}`;
-    const prefPath = envRoot ? '' : workspaceRootPreferencePath(gatewayStateDir);
-    const prefStat = envRoot ? 'env' : fileStatFingerprint(prefPath, false);
-    const cached = this.#workspaceRootCache.get(gatewayStateDir);
-    if (cached && cached.envKey === envKey && cached.prefPath === prefPath && cached.prefStat === prefStat) {
+  #readWorkspaceRootCached(): WorkspaceRootSnapshot {
+    const envKey = `${process.env.OPL_WORKSPACE_ROOT?.trim() || ''}\0${process.env.HOME?.trim() || ''}`;
+    const cached = this.#workspaceRootCache;
+    if (cached && cached.envKey === envKey) {
       const selectedStat = cached.value.selected_path ? fileStatFingerprint(cached.value.selected_path, true) : 'null';
       if (selectedStat === cached.selectedStat) return cached.value;
     }
-    const value = readWorkspaceRoot(gatewayStateDir);
-    this.#workspaceRootCache.set(gatewayStateDir, {
+    const value = readWorkspaceRoot(this.#db);
+    this.#workspaceRootCache = {
       envKey,
-      prefPath,
-      prefStat,
       selectedStat: value.selected_path ? fileStatFingerprint(value.selected_path, true) : 'null',
       value,
-    });
+    };
     return value;
   }
 
-  #readSourcesCached(gatewayStateDir: string): SoftwareSourcesSnapshot | undefined {
-    const storePath = privatePackageSourceStorePath(gatewayStateDir);
-    const key = `${process.env.OPL_STATE_DIR?.trim() || ''}\0${process.env.OPL_DATA_DIR?.trim() || ''}\0${storePath}\0${fileStatFingerprint(storePath, false)}`;
-    const cached = this.#sourcesCache.get(gatewayStateDir);
-    if (cached && cached.key === key) return cached.value;
-    let value: SoftwareSourcesSnapshot | undefined;
-    try {
-      value = projectSoftwareSources(gatewayStateDir);
-    } catch {
-      // A damaged source store is diagnosed by source_list and leaves other settings usable.
-    }
-    this.#sourcesCache.set(gatewayStateDir, { key, value });
-    return value;
+  #getConnectionAuthorization(): ConnectionAuthSnapshot {
+    return (this.#connectionAuthorization ??= projectConnectionAuthorization(this.#connectService.listProjection()));
   }
 
   #readCodexPolicyCached(codexHome: string, fingerprint: string): CodexModelPolicySnapshot {
@@ -300,8 +275,8 @@ export class AppStateCache {
 
     const codexHome = resolveCodexHome();
     const codexFingerprint = codexAccessFingerprint(codexHome);
-    const workspaceRoot = this.#readWorkspaceRootCached(gatewayStateDir);
-    const sources = this.#readSourcesCached(gatewayStateDir);
+    const workspaceRoot = this.#readWorkspaceRootCached();
+    const sources = (this.#softwareSources ??= projectSoftwareSources(this.#db));
     const codexModelPolicy = this.#readCodexPolicyCached(codexHome, codexFingerprint);
     const account = this.#readGatewayAccountCached(gatewayStateDir, codexFingerprint);
     const authorization = this.#getConnectionAuthorization();
@@ -312,8 +287,10 @@ export class AppStateCache {
     if (
       prev
       && prev.revision === this.#revision
-      && prev.workspaceRoot === workspaceRoot
-      && prev.sources === sources
+      && prev.workspaceRoot.selected_path === workspaceRoot.selected_path
+      && prev.workspaceRoot.source === workspaceRoot.source
+      && prev.workspaceRoot.exists === workspaceRoot.exists
+      && prev.workspaceRoot.writable === workspaceRoot.writable
       && prev.codexModelPolicy === codexModelPolicy
       && prev.account === account
       && prev.authorization === authorization
@@ -323,7 +300,7 @@ export class AppStateCache {
     }
 
     const authorizedSources = new Set(
-      (sources?.entries ?? [])
+      sources.entries
         .filter(source => source.enabled && source.credential_handle_present && source.status === 'authorized')
         .map(source => source.source_id),
     );
@@ -339,9 +316,9 @@ export class AppStateCache {
       ...snapshot,
       app_state: {
         ...snapshot.app_state,
-        agent_packages: { ...agentPackages, ...(sources && { sources }) },
+        agent_packages: { ...agentPackages, sources },
         paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },
-        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...(sources ? softwareSourceActions : []), codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...softwareSourceActions, codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
         codex_personalization: personalization,
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
@@ -358,7 +335,6 @@ export class AppStateCache {
     this.#trustedSnapshots.set(trustedKey, {
       revision: this.#revision,
       workspaceRoot,
-      sources,
       codexModelPolicy,
       account,
       authorization,

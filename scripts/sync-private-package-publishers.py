@@ -6,8 +6,36 @@ import base64
 import json
 import re
 from pathlib import Path
-from package_release.common import ReleaseError, gh, git, read, slug, write
-from package_release.projection import PackageProjection, catalog_root_from
+from urllib.parse import quote
+from package_release.common import ReleaseError, gh, git, read, run, slug, write
+from package_release.projection import PackageProjection, catalog_root_from, package_source_roots
+
+
+def declares_v2(manifest, allowlist, controller):
+    repo = slug(manifest['source_repo'])
+    for source_root in package_source_roots(manifest, allowlist):
+        descriptor = (Path(source_root) / 'opl-package.json').as_posix()
+        try:
+            result = gh(f'repos/{repo}/contents/{quote(descriptor)}?ref=main')
+        except ReleaseError as exc:
+            if 'HTTP 404' in str(exc):
+                continue
+            raise
+        if result.get('type') != 'file' or result.get('encoding') != 'base64':
+            continue
+        content = base64.b64decode(result['content']).decode()
+        value = json.loads(content)
+        if not isinstance(value, dict) or value.get('schema_version') != 'opl.package.v2':
+            continue
+        validated = run([
+            'node', '--conditions=opl-source', '--input-type=module', '-e',
+            "import { parsePackageManifestV2 } from '@opl/pack';"
+            "const { identity } = parsePackageManifestV2(JSON.parse(process.argv[1]));"
+            "if (identity.id !== process.argv[2] || !/^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$/.test(identity.version)) process.exit(1);",
+            content, manifest['package_id'],
+        ], cwd=controller, check=False)
+        return validated.returncode == 0
+    return False
 
 
 def wrapper(package_id, commit, *, catalog=False):
@@ -81,14 +109,22 @@ def sync(root, selected=None, *, catalog=None, controller_source_commit=None):
         raise ReleaseError('Private publisher synchronization requires an exact controller source commit')
     legacy_commit = git(root, 'rev-parse', 'HEAD')
     results = []
-    for path in PackageProjection(root, catalog).manifest_paths():
+    paths = PackageProjection(root, catalog)
+    for path in paths.manifest_paths():
         manifest = read(path)
         package_id = manifest['package_id']
         if manifest.get('visibility') != 'authorized_only' or (selected and package_id not in selected):
             continue
         result = {'package_id': package_id}
         try:
-            commit = controller_source_commit if manifest.get('v2_release') is not None else legacy_commit
+            needs_controller = manifest.get('v2_release') is not None
+            if controller_source_commit and not needs_controller:
+                allowlist_path = paths.allowlist(package_id)
+                needs_controller = declares_v2(
+                    manifest, read(allowlist_path) if allowlist_path.is_file() else {},
+                    Path(__file__).resolve().parents[1],
+                )
+            commit = controller_source_commit if needs_controller else legacy_commit
             if not commit:
                 raise ReleaseError('The v2 private publisher requires the controller source commit')
             result['status'] = sync_publisher(manifest, commit, catalog=catalog is not None)

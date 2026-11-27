@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { packageRegistryNamespace } from './registry-client.ts';
 
 const supportedHandles = new Set([
   'env:OPL_GITHUB_PACKAGES_TOKEN',
@@ -83,30 +84,82 @@ export function preparePrivatePackageSourceCredential(handle: string | null, reg
   return 'ready';
 }
 
-export async function probePrivatePackageSourceIdentity(handle: string): Promise<{
+export async function probePrivatePackageSourceIdentity(
+  handle: string,
+  owner: string,
+  selectPackages: (signal: AbortSignal) => Promise<readonly string[]>,
+): Promise<{
   status: 'signed_out' | 'authorized' | 'expired' | 'forbidden' | 'unknown';
   verification_reason: string;
+  account_login?: string;
 }> {
   const selected = selectedCredential(handle);
   if (!selected) return { status: 'signed_out', verification_reason: 'provider_credential_unavailable' };
   try {
+    const signal = AbortSignal.timeout(15_000);
     const response = await fetch('https://api.github.com/user', {
       headers: { Authorization: `Bearer ${selected.token}`, Accept: 'application/vnd.github+json' },
       redirect: 'error',
-      signal: AbortSignal.timeout(15_000),
+      signal,
     });
-    if (response.status === 200) {
-      const user = await response.json();
-      if (Number.isSafeInteger(user?.id) && user.id > 0 && typeof user.login === 'string' && user.login.trim()) {
-        return { status: 'authorized', verification_reason: 'provider_identity_verified_package_grants_checked_at_install' };
-      }
-    } else {
+    if (!response.ok) {
       await response.body?.cancel();
       if (response.status === 401) return { status: 'expired', verification_reason: 'provider_credential_expired' };
       if (response.status === 403) return { status: 'forbidden', verification_reason: 'provider_identity_forbidden' };
+      return { status: 'unknown', verification_reason: 'software_source_verification_unavailable' };
     }
+    const user = await response.json();
+    if (!Number.isSafeInteger(user?.id) || user.id <= 0 || typeof user.login !== 'string' || !user.login.trim()) {
+      return { status: 'unknown', verification_reason: 'software_source_verification_unavailable' };
+    }
+
+    const packages = await selectPackages(signal);
+    if (!packages.length) return { status: 'unknown', verification_reason: 'registry_package_probe_unavailable' };
+    const auth = Buffer.from(`${selected.username}:${selected.token}`).toString('base64');
+    let unavailable = false;
+    for (const packageId of packages) {
+      const repository = `${owner}/${packageRegistryNamespace('authorized_only')}/${packageId}`;
+      const tokenUrl = new URL('https://ghcr.io/token');
+      tokenUrl.searchParams.set('service', 'ghcr.io');
+      tokenUrl.searchParams.set('scope', `repository:${repository}:pull`);
+      const exchange = await fetch(tokenUrl, {
+        headers: { Authorization: `Basic ${auth}` },
+        redirect: 'error',
+        signal,
+      });
+      if (!exchange.ok) {
+        await exchange.body?.cancel();
+        if (exchange.status === 401) return { status: 'expired', verification_reason: 'registry_credential_expired' };
+        if (exchange.status === 403 || exchange.status === 404) continue;
+        unavailable = true;
+        continue;
+      }
+      const body = await exchange.json();
+      const token = body?.token ?? body?.access_token;
+      if (typeof token !== 'string' || !token) continue;
+      const manifest = await fetch(`https://ghcr.io/v2/${repository}/manifests/latest-stable`, {
+        method: 'HEAD',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json',
+        },
+        redirect: 'error',
+        signal,
+      });
+      if (manifest.ok) {
+        return {
+          status: 'authorized',
+          verification_reason: 'provider_identity_and_registry_package_read_verified',
+          account_login: user.login.trim(),
+        };
+      }
+      if (manifest.status !== 401 && manifest.status !== 403 && manifest.status !== 404) unavailable = true;
+    }
+    return unavailable
+      ? { status: 'unknown', verification_reason: 'registry_access_verification_unavailable' }
+      : { status: 'forbidden', verification_reason: 'registry_package_read_scope_missing' };
   } catch {
     // Provider errors can contain account details. Return only the stable verification result.
+    return { status: 'unknown', verification_reason: 'software_source_verification_unavailable' };
   }
-  return { status: 'unknown', verification_reason: 'software_source_verification_unavailable' };
 }

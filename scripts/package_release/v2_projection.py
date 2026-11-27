@@ -11,16 +11,17 @@ import tempfile
 from pathlib import Path
 
 from .common import ReleaseError, run, safe_path, version_tuple, write
-from .projection import PackageProjection
+from .projection import PackageProjection, package_source_roots
 
 
-def build_v2_candidate(controller, owner_root, package_id, version, source_commit):
+def build_v2_candidate(controller, owner_root, package_id, version, source_commit, source_root='.'):
     with tempfile.TemporaryDirectory(prefix='opl-v2-candidate-') as temporary:
         built = run([
             'node', '--conditions=opl-source', '--experimental-strip-types',
             'scripts/prepare-v2-package-publication.mjs',
             '--owner-root', owner_root, '--package-id', package_id, '--package-version', version,
             '--source-commit', source_commit, '--output-directory', temporary,
+            '--source-root', source_root,
         ], cwd=controller)
         candidate = json.loads(built.stdout)
         candidate.pop('archive_path', None)
@@ -51,7 +52,7 @@ def _payload(candidate, manifest, package_id, version, source_commit):
         'package_version': version,
         'source_commit': source_commit,
         'source_repo': manifest['source_repo'],
-        'source_root': '.',
+        'source_root': candidate.get('source_root', '.'),
         'archive_sha256': candidate['archive_sha256'],
         'file_count': lock['file_count'],
         'content_lock': {key: lock[key] for key in ('algorithm', 'canonicalization', 'digest')},
@@ -89,8 +90,18 @@ def prepare_v2_projection(controller, catalog_paths, owner_root, package_id, ver
         raise ReleaseError('v2 Package version cannot regress the Catalog selection')
     if not re.fullmatch(r'[0-9a-f]{40}', source_commit):
         raise ReleaseError('v2 Package publication requires an exact owner commit')
+    allowlist_path = catalog_paths.allowlist(package_id)
+    allowlist = json.loads(allowlist_path.read_bytes()) if allowlist_path.is_file() else {}
+    source_roots = package_source_roots(manifest, allowlist)
     if candidate is None:
-        candidate = build_v2_candidate(controller, owner_root, package_id, version, source_commit)
+        from .owner import root_v2_version
+        source_root = next((root for root in source_roots
+                            if root_v2_version(owner_root, source_commit, package_id, root) is not None), None)
+        if source_root is None:
+            raise ReleaseError('The selected Git commit has no v2 Package descriptor')
+        candidate = build_v2_candidate(controller, owner_root, package_id, version, source_commit, source_root)
+    if candidate.get('source_root', '.') not in source_roots:
+        raise ReleaseError('Built v2 Package source_root differs from its Catalog declaration')
     payload = _payload(candidate, manifest, package_id, version, source_commit)
     payload_ref = f'payloads/{package_id}-{version}.json'
     payload_path = safe_path(catalog_paths.packages, payload_ref)

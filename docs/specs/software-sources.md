@@ -4,7 +4,7 @@
 
 ## 物理位置与单写入边界
 
-在 Framework v2 中，本机持久化状态的唯一写入入口是 `opld` JSON-RPC 写入 SQLite `opl.db`；应用、CLI 与 SDK 通过同一投影读取。当前 `software-sources` 正在从 legacy `software-sources.json`（及历史 macOS 路径只读迁移）向 `opl.db` + `pack.sources.*` RPC 收敛（见[当前差距](../active/current-state-vs-ideal-gap.md)）。来源配置只保存 `source_id`、是否启用、provider/credential handle 引用和最近状态，不是凭证数据库，也不保存 token 值。
+在 Framework v2 中，本机持久化状态的唯一写入入口是 `opld` JSON-RPC 写入 SQLite `opl.db`；应用、CLI（`opl sources` / `opl pack sources` 均通过 `pack.sources.*` RPC）与 SDK 通过同一投影读取。遗留 `software-sources.json`（及非 macOS 主机历史 macOS 默认路径）仅在启动建表时由数据库执行一次性只读迁入，迁移完成后由 `opl.db` 持有事实，不再向磁盘写回 flat JSON 或非平台默认路径。来源配置只保存 `source_id`、是否启用、provider/credential handle 引用和最近状态，不是凭证数据库，也不保存 token 值。
 
 ## 一个目录，多个获取渠道
 

@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { KernelError } from '@opl/core';
-import { resolveConfiguredCodexHome, resolveSafePackagePath, type PackService } from '@opl/pack';
+import { normalizeRelativePosixPath, resolveConfiguredCodexHome, resolveSafePackagePath, type PackService } from '@opl/pack';
 import { readCodexUserInstructions, writeCodexUserInstructions } from './codex-user-instructions.ts';
 import { fileStatFingerprint } from './file-stat-cache.ts';
 
@@ -15,7 +15,7 @@ function readFlowDefault(pack: PackService) {
     source_path: null, content: null, sha256: null,
   };
   if (!flow?.enabled || flow.origin === 'external') {
-    return { ...base, status: 'unavailable' as const, reason: 'opl_flow_package_not_installed_or_enabled' };
+    return { templatePath: null, value: { ...base, status: 'unavailable' as const, reason: 'opl_flow_package_not_installed_or_enabled' } };
   }
 
   try {
@@ -26,23 +26,27 @@ function readFlowDefault(pack: PackService) {
     if (descriptor?.schema !== 'opl_flow_profile_manifest.v2' || typeof descriptor.runtime_profile?.path !== 'string') {
       throw new Error('Missing Flow runtime Profile declaration.');
     }
-    const sourcePath = source(descriptor.runtime_profile.path);
+    const relative = normalizeRelativePosixPath(descriptor.runtime_profile.path);
+    const sourcePath = source(relative);
     const stat = fs.statSync(sourcePath);
     if (!stat.isFile() || stat.size > 256 * 1024) throw new Error('Invalid Flow template.');
     const bytes = fs.readFileSync(sourcePath);
     const content = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     if (!content.trim() || content.includes('\0')) throw new Error('Invalid Flow template.');
-    return { ...base, status: 'available' as const, reason: null, content, source_path: sourcePath,
-      sha256: crypto.createHash('sha256').update(bytes).digest('hex') };
+    return {
+      templatePath: path.join(flow.install_path, relative),
+      value: { ...base, status: 'available' as const, reason: null, content, source_path: sourcePath,
+        sha256: crypto.createHash('sha256').update(bytes).digest('hex') },
+    };
   } catch {
-    return { ...base, status: 'invalid' as const, reason: 'installed_owner_profile_source_missing_or_invalid' };
+    return { templatePath: null, value: { ...base, status: 'invalid' as const, reason: 'installed_owner_profile_source_missing_or_invalid' } };
   }
 }
 
 export type CodexPersonalizationSnapshot = {
   readonly surface_kind: 'opl_codex_personalization.v1';
   readonly user_agents: ReturnType<typeof readCodexUserInstructions> | { readonly status: 'unavailable'; readonly source: 'codex_home_agents_md' };
-  readonly opl_flow_default_user_agents: ReturnType<typeof readFlowDefault>;
+  readonly opl_flow_default_user_agents: ReturnType<typeof readFlowDefault>['value'];
 };
 
 export function createCodexPersonalizationReader() {
@@ -55,7 +59,7 @@ export function createCodexPersonalizationReader() {
     manifestStat: string;
     templatePath: string | null;
     templateStat: string;
-    value: ReturnType<typeof readFlowDefault>;
+    value: ReturnType<typeof readFlowDefault>['value'];
   } | null = null;
   let cachedSnapshot: CodexPersonalizationSnapshot | null = null;
 
@@ -85,18 +89,19 @@ export function createCodexPersonalizationReader() {
         : [flow.version, flow.install_mode, flow.install_path, flow.content_digest].join('\0');
       const profileDirPath = flow ? path.join(flow.install_path, 'profile') : '';
       const manifestPath = flow ? path.join(profileDirPath, 'manifest.json') : '';
-      const profileDirStat = flow ? fileStatFingerprint(profileDirPath, false) : 'missing';
-      const manifestStat = flow ? fileStatFingerprint(manifestPath, false) : 'missing';
+      const followSymlinks = flow?.install_mode === 'dev_link';
+      const profileDirStat = flow ? fileStatFingerprint(profileDirPath, followSymlinks) : 'missing';
+      const manifestStat = flow ? fileStatFingerprint(manifestPath, followSymlinks) : 'missing';
       const flowCacheHit = cachedFlow
         && cachedFlow.flowKey === flowKey
         && cachedFlow.profileDirPath === profileDirPath
         && cachedFlow.profileDirStat === profileDirStat
         && cachedFlow.manifestPath === manifestPath
         && cachedFlow.manifestStat === manifestStat
-        && (!cachedFlow.templatePath || fileStatFingerprint(cachedFlow.templatePath, false) === cachedFlow.templateStat);
+        && cachedFlow.value.status !== 'invalid'
+        && (!cachedFlow.templatePath || fileStatFingerprint(cachedFlow.templatePath, followSymlinks) === cachedFlow.templateStat);
       if (!flowCacheHit) {
-        const value = readFlowDefault(pack);
-        const templatePath = value.source_path;
+        const { value, templatePath } = readFlowDefault(pack);
         cachedFlow = {
           flowKey,
           profileDirPath,
@@ -104,7 +109,7 @@ export function createCodexPersonalizationReader() {
           manifestPath,
           manifestStat,
           templatePath,
-          templateStat: templatePath ? fileStatFingerprint(templatePath, false) : 'none',
+          templateStat: templatePath ? fileStatFingerprint(templatePath, followSymlinks) : 'none',
           value,
         };
         cachedSnapshot = null;
@@ -128,7 +133,7 @@ export function readCodexPersonalization(pack: PackService) {
 export function restoreCodexUserInstructions(
   pack: PackService, stateDir: string, payload: Record<string, unknown>, dryRun: boolean,
 ) {
-  const template = readFlowDefault(pack);
+  const { value: template } = readFlowDefault(pack);
   if (template.status !== 'available') {
     throw new KernelError('INVALID_INPUT', 'The installed OPL Flow package has no available default Profile.');
   }

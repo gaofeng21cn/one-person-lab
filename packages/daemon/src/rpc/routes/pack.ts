@@ -3,6 +3,7 @@ import path from 'node:path';
 import { isRecord } from '@opl/core';
 import {
   buildPackage,
+  listPrivatePackageSources,
   createOfficialPackageResolver,
   ensurePackage,
   ExactPackageReleaseSchema,
@@ -19,6 +20,7 @@ import { toProjectedPackageSummary } from '../../state/app-state-cache.ts';
 import type { DaemonRuntime } from '../../state/runtime.ts';
 import { coerceInstallSourceSpec, pickBoolean, pickString } from '../../utils/normalize.ts';
 import { requireTrustedHost } from '../context.ts';
+import { executeSoftwareSourceAction, softwareSourceActions } from '../software-source-actions.ts';
 
 export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: DaemonRuntime): void {
   const handlePackList: RpcHandler = async (params) => {
@@ -40,6 +42,30 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
   handlers.set('pack.list', handlePackList);
   handlers.set('pack.catalog.list', handlePackList);
   handlers.set('pack.search', handlePackList);
+
+  handlers.set('pack.sources.list', (_params, conn) => {
+    requireTrustedHost(conn, 'pack.sources.list');
+    return { software_sources: { entries: listPrivatePackageSources(runtime.db) } };
+  });
+  for (const command of ['configure', 'check', 'disconnect'] as const) {
+    const method = 'pack.sources.' + command;
+    const action = softwareSourceActions.find(item => item.action_id === 'source_' + command)!;
+    handlers.set(method, async (params, conn) => {
+      requireTrustedHost(conn, method);
+      try {
+        const execution = await executeSoftwareSourceAction(
+          action, { ...params, confirmed: true }, false, runtime.db, () => runtime.appStateCache.invalidate(),
+        );
+        return {
+          ...execution.app_action_execution.result,
+          ...(command === 'configure' ? { next_action: 'source_list' } : {}),
+          ...(command === 'disconnect' ? { local_installations_preserved: true } : {}),
+        };
+      } finally {
+        runtime.appStateCache.invalidate();
+      }
+    });
+  }
 
   handlers.set('pack.inspect', async (params) => {
     await runtime.waitForInitialPackageDiscovery();
@@ -96,8 +122,7 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
         clientContext: ctx,
         resolveSource: createOfficialPackageResolver({
           runtimeRoot,
-          stateDir: runtime.paths.state_dir,
-          exactPackageId: exact?.data ? packageId : undefined,
+          db: runtime.db,
         }),
         installSource: (input) => runtime.installPackage(input),
       });

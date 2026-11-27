@@ -11,6 +11,7 @@ const timeoutMs = 8_000;
 
 type VersionCheck = { signature: string; ready: boolean };
 let lastVersionCheck: VersionCheck | undefined;
+const startupChecks = new Set<string>();
 
 function binarySignature(binaryPath: string): string | undefined {
   const stat = fs.statSync(binaryPath, { bigint: true, throwIfNoEntry: false });
@@ -19,14 +20,19 @@ function binarySignature(binaryPath: string): string | undefined {
 }
 
 // Page mounts read the last observed version result as long as the selected
-// file is unchanged. A first mount can still render before an explicit check.
+// file is unchanged. Start a single background check for an unverified selection.
 export function codexStartupReady(env: NodeJS.ProcessEnv = process.env): boolean {
   try {
     const candidate = resolveCodexBinary(undefined, env);
     if (!candidate) return false;
     const signature = binarySignature(candidate.path);
     if (!signature) return false;
-    return lastVersionCheck?.signature === signature ? lastVersionCheck.ready : true;
+    if (lastVersionCheck?.signature === signature) return lastVersionCheck.ready;
+    if (!startupChecks.has(signature)) {
+      startupChecks.add(signature);
+      void checkCodexExecutable(candidate.path, env).catch(() => false).finally(() => startupChecks.delete(signature));
+    }
+    return false;
   } catch {
     return false;
   }

@@ -13,7 +13,8 @@ export type RunwayErrorCode =
   | 'INVALID_STAGE_STATE'
   | 'TASK_PAUSED_BY_HUMAN'
   | 'EXECUTION_ABORTED'
-  | 'DB_ERROR';
+  | 'DB_ERROR'
+  | 'CODEX_INSTALL_BUSY';
 
 const RUNWAY_ERROR_RPC_CODE: Record<RunwayErrorCode, number> = {
   INVALID_INPUT: -32602,
@@ -31,6 +32,7 @@ const RUNWAY_ERROR_RPC_CODE: Record<RunwayErrorCode, number> = {
   TASK_PAUSED_BY_HUMAN: -32009,
   EXECUTION_ABORTED: -32000,
   DB_ERROR: -32000,
+  CODEX_INSTALL_BUSY: -32009,
 };
 
 export class RunwayError extends Error {

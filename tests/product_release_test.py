@@ -179,8 +179,9 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual((result['status'], result['version']), ('prepared', '1.2.4'))
         self.assertEqual(result['owner_source_commit'], commit)
         self.assertEqual(result['candidate']['lock']['git_commit'], commit)
+        self.assertEqual(result['candidate']['source_root'], '.')
 
-    def test_v2_owner_freezes_validated_bytes_before_tag_and_aligns_declared_versions(self):
+    def test_nested_v2_owner_freezes_validated_subtree_and_aligns_declared_versions(self):
         projection, allowlist, payload = self.package_selection()
         # The fixture's external payload and owner release metadata are staged in this repo for the test.
         settings = self.root / 'release-automation.json'
@@ -188,7 +189,9 @@ class ProductReleaseTests(unittest.TestCase):
             {'path': 'policy.json', 'kind': 'json', 'field': 'package.version'},
         ]}))
         (self.root / 'policy.json').write_text(json.dumps({'package': {'version': '1.2.3'}}))
-        (self.root / 'opl-package.json').write_text(json.dumps({
+        carrier = self.root / allowlist['source_root']
+        carrier.mkdir(parents=True)
+        (carrier / 'opl-package.json').write_text(json.dumps({
             'schema_version': 'opl.package.v2',
             'identity': {'id': 'fixture', 'version': '1.2.3', 'intent': 'extension',
                          'name': {'en-US': 'Fixture', 'zh-CN': '样例'},
@@ -210,6 +213,10 @@ class ProductReleaseTests(unittest.TestCase):
         commit = self.git('rev-parse', 'v1.2.4^{}')
         self.assertEqual(result['owner_source_commit'], commit)
         self.assertEqual(result['candidate']['lock']['git_commit'], commit)
+        self.assertEqual(result['candidate']['source_root'], allowlist['source_root'])
+        self.assertEqual(result['candidate']['lock']['paths'], ['opl-package.json'])
+        descriptor = json.loads(self.git('show', f"{commit}:{allowlist['source_root']}/opl-package.json"))
+        self.assertEqual(descriptor['identity']['version'], '1.2.4')
         self.assertEqual(self.git('cat-file', '-t', 'v1.2.4'), 'tag')
         self.assertEqual(json.loads(self.git('show', f'{commit}:policy.json'))['package']['version'], '1.2.4')
 
@@ -247,7 +254,7 @@ class ProductReleaseTests(unittest.TestCase):
             'schema_version': 'opl.package.v2', 'identity': {'id': 'another-package', 'version': '1.2.3'},
         }))
         self.commit()
-        with self.assertRaisesRegex(ReleaseError, 'Root v2 Package identity'):
+        with self.assertRaisesRegex(ReleaseError, 'v2 Package identity'):
             prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
                           apply=False, payload_path=payload, v2_controller=ROOT)
 

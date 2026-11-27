@@ -199,7 +199,7 @@ export class OfficialSoftwareCatalog {
           const sourceId = officialPackagePrivateSourceId(entry);
           if (sourceId) {
             try {
-              const source = officialPackageInstallSource(entry, runtimeRoot, 'preferred', { allowAuthorizedOnly: true });
+              const source = officialPackageInstallSource(entry, runtimeRoot, { allowAuthorizedOnly: true });
               if (source.version) privateAccess.set(entry.package_id, { sourceId, selectedVersion: source.version });
             } catch { /* Unavailable private or offline source stays non-installable. */ }
           }

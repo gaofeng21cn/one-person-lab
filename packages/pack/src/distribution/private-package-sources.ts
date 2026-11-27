@@ -1,111 +1,110 @@
 import { randomUUID } from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
-import { resolveStatePaths, withAdvisoryLockSync } from '@opl/core';
+import { txImmediate, type SqliteDb } from '@opl/core';
 import { PackError } from '../errors.ts';
+import { officialPackagePrivateSourceId, readOfficialPackageCatalog } from './official-package-catalog.ts';
 import { isPrivatePackageSourceHandle, probePrivatePackageSourceIdentity } from './private-package-source-provider.ts';
-import {
-  defaultPrivateSourceId, privatePackageSourceStoreFile, privateSourceOwner, readPrivateSourceStore,
-  selectedHandle, selectedPrivateSource,
-} from './private-package-source-store.ts';
+import { defaultPrivateSourceId, privateSourceOwner } from './private-package-source-store.ts';
 
 const sourceStatuses = ['authorized', 'expired', 'forbidden', 'revoked', 'signed_out', 'unknown'] as const;
 type SourceStatus = typeof sourceStatuses[number];
+type SourceRow = {
+  source_id: string; provider_id: string; credential_handle: string | null; enabled: number; status: SourceStatus;
+  account_login: string | null; checked_at: string | null; error_message: string | null; updated_at: string; revision: string;
+};
 
-interface SourceLocation {
-  stateDir?: string;
-}
-interface SourceTarget extends SourceLocation {
-  sourceId: string;
-}
-
-function storeFile(stateDir?: string): string {
-  const paths = resolveStatePaths({ stateDir });
-  const defaultState = !stateDir && !process.env.OPL_STATE_DIR?.trim() && !process.env.OPL_DATA_DIR?.trim();
-  return privatePackageSourceStoreFile(paths, defaultState);
-}
-
-export function privatePackageSourceStorePath(stateDir?: string): string {
-  return storeFile(stateDir);
-}
-
-function safeEntry(sourceId: string, row?: Record<string, unknown>) {
+function safeEntry(sourceId: string, row?: SourceRow) {
   const owner = privateSourceOwner(sourceId);
-  const enabled = !row || row.enabled === true;
-  const present = isPrivatePackageSourceHandle(row?.credential_handle)
-    && (row?.provider_id === undefined || row.provider_id === 'github_packages');
-  const status: SourceStatus = enabled && present
-    ? sourceStatuses.find(candidate => candidate === row?.status) ?? 'unknown' : 'signed_out';
+  const enabled = row ? row.enabled !== 0 : true;
+  const present = Boolean(row && isPrivatePackageSourceHandle(row.credential_handle) && row.provider_id === 'github_packages');
+  const status = enabled && present ? sourceStatuses.find(value => value === row?.status) ?? 'unknown' : 'signed_out';
   return {
     source_id: sourceId, provider_id: 'github_packages', source_kind: 'registry',
     display_name: `${owner} / GitHub`, source_ref: `https://github.com/${owner}`,
     visibility: 'authorized_only', catalog_origin: sourceId === defaultPrivateSourceId ? 'opl' : 'external',
     enabled, status, credential_handle_present: present,
-    verified_at: typeof row?.verified_at === 'string' ? row.verified_at : null,
-    verification_reason: typeof row?.verification_reason === 'string' ? row.verification_reason : null,
-    revision: typeof row?.revision === 'string' ? row.revision : 'default',
+    verified_at: row?.checked_at ?? null, verification_reason: row?.error_message ?? null,
+    account_login: row?.account_login ?? null, checked_at: row?.checked_at ?? null,
+    error_message: row?.error_message ?? null, updated_at: row?.updated_at ?? null,
+    revision: row?.revision ?? 'default',
   } as const;
 }
 
-export function listPrivatePackageSources({ stateDir }: SourceLocation = {}) {
-  const store = readPrivateSourceStore(storeFile(stateDir));
-  const ids = new Set([defaultPrivateSourceId]);
-  for (const row of store.sources) {
-    if (typeof row.source_id === 'string' && row.source_id.startsWith('github-packages:')) ids.add(row.source_id);
-  }
-  return [...ids].map(id => safeEntry(id, selectedPrivateSource(store, id)));
+function readRow(db: SqliteDb, sourceId: string): SourceRow | undefined {
+  return db.prepare('SELECT source_id, provider_id, credential_handle, enabled, status, account_login, checked_at, error_message, updated_at, revision FROM package_sources WHERE source_id = ?')
+    .get(sourceId) as SourceRow | undefined;
 }
 
-function updateSource(target: SourceTarget, change: (row: Record<string, unknown> | undefined) => Record<string, unknown>) {
-  privateSourceOwner(target.sourceId);
-  const file = storeFile(target.stateDir);
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  return withAdvisoryLockSync(`${file}.lock`, () => {
-    const store = readPrivateSourceStore(file);
-    const row = selectedPrivateSource(store, target.sourceId);
-    const next = { ...row, ...change(row), source_id: target.sourceId, provider_id: 'github_packages', revision: randomUUID() };
-    const index = row ? store.sources.indexOf(row) : -1;
-    if (index < 0) store.sources.push(next);
-    else store.sources[index] = next;
-    const temporary = `${file}.${randomUUID()}.tmp`;
-    try {
-      fs.writeFileSync(temporary, JSON.stringify(store, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
-      fs.renameSync(temporary, file);
-    } finally {
-      fs.rmSync(temporary, { force: true });
-    }
-    return safeEntry(target.sourceId, next);
-  }, { timeoutMs: 1000, preserveLiveHolder: true });
+function writeRow(db: SqliteDb, row: Omit<SourceRow, 'revision'>): SourceRow {
+  const next = { ...row, revision: randomUUID() };
+  db.prepare(`
+    INSERT INTO package_sources
+      (source_id, provider_id, credential_handle, enabled, status, account_login, checked_at, error_message, updated_at, revision)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(source_id) DO UPDATE SET provider_id=excluded.provider_id, credential_handle=excluded.credential_handle,
+      enabled=excluded.enabled, status=excluded.status, account_login=excluded.account_login, checked_at=excluded.checked_at,
+      error_message=excluded.error_message, updated_at=excluded.updated_at, revision=excluded.revision
+  `).run(next.source_id, next.provider_id, next.credential_handle, next.enabled, next.status,
+    next.account_login, next.checked_at, next.error_message, next.updated_at, next.revision);
+  return next;
 }
 
-export function configurePrivatePackageSource(input: SourceTarget & { credentialHandle: string; enabled?: boolean }) {
-  if (!isPrivatePackageSourceHandle(input.credentialHandle) || (input.enabled !== undefined && typeof input.enabled !== 'boolean')) {
+export function listPrivatePackageSources(db: SqliteDb) {
+  const rows = db.prepare('SELECT source_id, provider_id, credential_handle, enabled, status, account_login, checked_at, error_message, updated_at, revision FROM package_sources').all() as SourceRow[];
+  const byId = new Map(rows.map(row => [row.source_id, row]));
+  const ids = new Set([defaultPrivateSourceId, ...rows.filter(row => row.source_id.startsWith('github-packages:')).map(row => row.source_id)]);
+  return [...ids].map(id => safeEntry(id, byId.get(id)));
+}
+
+export function configurePrivatePackageSource(db: SqliteDb, input: {
+  sourceId: string; credentialHandle: string; enabled?: boolean;
+}) {
+  const { sourceId, credentialHandle } = input;
+  privateSourceOwner(sourceId);
+  if (!isPrivatePackageSourceHandle(credentialHandle) || (input.enabled !== undefined && typeof input.enabled !== 'boolean')) {
     throw new PackError('INVALID_INPUT', 'Choose a supported GitHub Packages credential reference and boolean enabled setting.');
   }
   const enabled = input.enabled ?? true;
-  return updateSource(input, () => ({
-    enabled, credential_handle: input.credentialHandle, status: enabled ? 'unknown' : 'signed_out',
-    verified_at: null, verification_reason: 'configured_requires_check',
-  }));
+  const row = writeRow(db, {
+    source_id: sourceId, provider_id: 'github_packages', credential_handle: credentialHandle, enabled: Number(enabled),
+    status: enabled ? 'unknown' : 'signed_out', account_login: null, checked_at: null,
+    error_message: 'configured_requires_check', updated_at: new Date().toISOString(),
+  });
+  return safeEntry(sourceId, row);
 }
 
-export function disconnectPrivatePackageSource(input: SourceTarget) {
-  return updateSource(input, () => ({
-    enabled: true, credential_handle: null, status: 'signed_out', verified_at: null,
-    verification_reason: 'credential_reference_removed',
-  }));
+export function disconnectPrivatePackageSource(db: SqliteDb, sourceId: string) {
+  privateSourceOwner(sourceId);
+  const row = writeRow(db, {
+    source_id: sourceId, provider_id: 'github_packages', credential_handle: null, enabled: 1,
+    status: 'signed_out', account_login: null, checked_at: null,
+    error_message: 'credential_reference_removed', updated_at: new Date().toISOString(),
+  });
+  return safeEntry(sourceId, row);
 }
 
-export async function checkPrivatePackageSource(input: SourceTarget) {
-  const row = selectedPrivateSource(readPrivateSourceStore(storeFile(input.stateDir)), input.sourceId);
-  const handle = selectedHandle(row);
-  const entry = safeEntry(input.sourceId, row);
-  if (!handle) return entry;
-  const result = await probePrivatePackageSourceIdentity(handle);
-  return updateSource(input, current => {
-    if (current?.revision !== row?.revision || selectedHandle(current) !== handle) {
+export async function checkPrivatePackageSource(db: SqliteDb, sourceId: string) {
+  const owner = privateSourceOwner(sourceId);
+  const row = readRow(db, sourceId);
+  if (!row?.enabled || !isPrivatePackageSourceHandle(row.credential_handle)) return safeEntry(sourceId, row);
+  const result = await probePrivatePackageSourceIdentity(row.credential_handle, owner, async signal => {
+    const catalog = await readOfficialPackageCatalog({
+      runtimeRoot: null,
+      fetchImpl: (url, init) => fetch(url, { ...init, signal }),
+    });
+    return [...catalog.values()]
+      .filter(entry => officialPackagePrivateSourceId(entry) === sourceId)
+      .map(entry => entry.package_id);
+  });
+  return txImmediate(db, () => {
+    const current = readRow(db, sourceId);
+    if (!current || current.revision !== row.revision) {
       throw new PackError('PACK_OPERATION_BUSY', 'The source configuration changed during access verification.');
     }
-    return { ...result, verified_at: new Date().toISOString() };
+    const now = new Date().toISOString();
+    const updated = writeRow(db, {
+      ...current, status: result.status, account_login: result.account_login ?? null,
+      checked_at: now, error_message: result.verification_reason, updated_at: now,
+    });
+    return safeEntry(sourceId, updated);
   });
 }
