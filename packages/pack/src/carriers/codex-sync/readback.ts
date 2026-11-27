@@ -1,7 +1,12 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
 import { isRecord } from '@opl/core';
 import { PackError } from '../../errors.ts';
+import {
+  captureCodexCarrierTmpSnapshot,
+  cleanupCodexCarrierTmpAfterRun,
+  resolveConfiguredCodexHome,
+} from './temp-hygiene.ts';
 
 export interface CodexCommandResult {
   readonly status: number | null;
@@ -203,6 +208,22 @@ export function parsePluginListResponse(raw: unknown): CodexPluginListResponse {
   };
 }
 
+function terminateProcessGroup(child: ChildProcess, signal: NodeJS.Signals): void {
+  try {
+    if (process.platform !== 'win32' && child.pid) {
+      process.kill(-child.pid, signal);
+      return;
+    }
+  } catch {
+    // Fall back to direct child kill if the process group no longer exists.
+  }
+  try {
+    child.kill(signal);
+  } catch {
+    // Process already exited.
+  }
+}
+
 export function createProcessCodexRunner(
   options: { readonly binary?: string; readonly timeoutMs?: number } = {},
 ): CodexCarrierRunner {
@@ -211,14 +232,29 @@ export function createProcessCodexRunner(
 
   return {
     async runCli(args, env = process.env) {
+      const codexHome = resolveConfiguredCodexHome(env);
+      const snapshot = captureCodexCarrierTmpSnapshot(codexHome);
       return new Promise<CodexCommandResult>((resolve) => {
         const child = spawn(binary, [...args], {
           env,
           stdio: ['ignore', 'pipe', 'pipe'],
+          detached: process.platform !== 'win32',
         });
         let stdout = '';
         let stderr = '';
-        const timer = setTimeout(() => child.kill('SIGTERM'), timeoutMs);
+        let killTimer: ReturnType<typeof setTimeout> | undefined;
+        let timedOut = false;
+        const terminate = () => {
+          timedOut = true;
+          terminateProcessGroup(child, 'SIGTERM');
+          killTimer ??= setTimeout(() => terminateProcessGroup(child, 'SIGKILL'), 200);
+        };
+        const timer = setTimeout(terminate, timeoutMs);
+        const cleanupTmp = (failed: boolean) => {
+          cleanupCodexCarrierTmpAfterRun(codexHome, snapshot, {
+            aggressiveStagingCleanup: failed || timedOut,
+          });
+        };
         child.stdout.setEncoding('utf8');
         child.stderr.setEncoding('utf8');
         child.stdout.on('data', (chunk: string) => {
@@ -229,50 +265,94 @@ export function createProcessCodexRunner(
         });
         child.once('error', (error) => {
           clearTimeout(timer);
+          if (killTimer) clearTimeout(killTimer);
+          cleanupTmp(true);
           resolve({ status: null, stdout, stderr, error });
         });
         child.once('close', (status) => {
           clearTimeout(timer);
+          if (killTimer) clearTimeout(killTimer);
+          cleanupTmp(status !== 0);
           resolve({ status, stdout, stderr, error: null });
         });
       });
     },
 
     async listPlugins(params = { marketplaceKinds: ['local'] }, env = process.env) {
+      const codexHome = resolveConfiguredCodexHome(env);
+      const snapshot = captureCodexCarrierTmpSnapshot(codexHome);
       return new Promise<CodexPluginListResponse>((resolve, reject) => {
         const child = spawn(binary, ['app-server', '--stdio'], {
           env,
           stdio: ['pipe', 'pipe', 'pipe'],
+          detached: process.platform !== 'win32',
         });
         let buffer = '';
         let phase = 1;
-        let settled = false;
-        const finishError = (err: Error) => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          child.kill('SIGTERM');
-          reject(err);
+        let closed = false;
+        let shutdownRequested = false;
+        let forcedTerminate = false;
+        let resolvedValue: CodexPluginListResponse | null = null;
+        let pendingError: Error | null = null;
+        let shutdownTimer: ReturnType<typeof setTimeout> | undefined;
+        let killTimer: ReturnType<typeof setTimeout> | undefined;
+
+        const forceKillChain = () => {
+          forcedTerminate = true;
+          terminateProcessGroup(child, 'SIGTERM');
+          killTimer ??= setTimeout(() => terminateProcessGroup(child, 'SIGKILL'), 200);
         };
-        const timer = setTimeout(
+
+        const finishError = (err: Error) => {
+          if (pendingError || resolvedValue !== null) return;
+          pendingError = err;
+          clearTimeout(deadline);
+          if (shutdownTimer) clearTimeout(shutdownTimer);
+          forceKillChain();
+          if (closed) settleNow();
+        };
+
+        const settleNow = () => {
+          clearTimeout(deadline);
+          if (shutdownTimer) clearTimeout(shutdownTimer);
+          if (killTimer) clearTimeout(killTimer);
+          cleanupCodexCarrierTmpAfterRun(codexHome, snapshot, {
+            aggressiveStagingCleanup: forcedTerminate || pendingError !== null,
+          });
+          if (pendingError) {
+            reject(pendingError);
+            return;
+          }
+          if (resolvedValue !== null) {
+            resolve(resolvedValue);
+          }
+        };
+
+        const deadline = setTimeout(
           () => finishError(new PackError('PACK_CODEX_SYNC_FAILED', 'Codex plugin/list timed out.')),
           timeoutMs,
         );
         const send = (frame: unknown) => child.stdin.write(`${JSON.stringify(frame)}\n`);
 
-        child.on('error', (error) =>
+        child.on('error', (error) => {
           finishError(
             new PackError('PACK_CODEX_SYNC_FAILED', `Failed to spawn '${binary}': ${error.message}`, {}, { cause: error }),
-          ),
-        );
-        child.stdin.on('error', () =>
-          finishError(new PackError('PACK_CODEX_SYNC_FAILED', 'Codex app-server stdin failed.')),
-        );
+          );
+          if (!closed) {
+            closed = true;
+            settleNow();
+          }
+        });
+        child.stdin.on('error', () => {
+          if (!shutdownRequested && !pendingError && resolvedValue === null) {
+            finishError(new PackError('PACK_CODEX_SYNC_FAILED', 'Codex app-server stdin failed.'));
+          }
+        });
         child.stdout.setEncoding('utf8');
         child.stdout.on('data', (chunk: string) => {
           buffer += chunk;
           let nl: number;
-          while (!settled && (nl = buffer.indexOf('\n')) >= 0) {
+          while (!pendingError && resolvedValue === null && (nl = buffer.indexOf('\n')) >= 0) {
             const line = buffer.slice(0, nl).trim();
             buffer = buffer.slice(nl + 1);
             if (!line) continue;
@@ -295,30 +375,32 @@ export function createProcessCodexRunner(
               send({ method: 'initialized', params: {} });
               send({ id: 2, method: 'plugin/list', params });
             } else if (phase === 2) {
-              settled = true;
-              clearTimeout(timer);
-              child.stdin.end();
-              child.kill('SIGTERM');
+              clearTimeout(deadline);
+              shutdownRequested = true;
               try {
-                resolve(parsePluginListResponse(frame.result));
+                resolvedValue = parsePluginListResponse(frame.result);
               } catch (err) {
-                reject(err);
+                pendingError = err instanceof Error ? err : new Error(String(err));
               }
+              try {
+                child.stdin.end();
+              } catch {
+                // Ignore stdin close race.
+              }
+              shutdownTimer = setTimeout(forceKillChain, 500);
               return;
             }
           }
         });
         child.once('close', (code) => {
-          clearTimeout(timer);
-          if (!settled) {
-            settled = true;
-            reject(
-              new PackError(
-                'PACK_CODEX_SYNC_FAILED',
-                `Codex app-server exited before completing plugin/list (code=${String(code)}).`,
-              ),
+          closed = true;
+          if (!pendingError && resolvedValue === null) {
+            pendingError = new PackError(
+              'PACK_CODEX_SYNC_FAILED',
+              `Codex app-server exited before completing plugin/list (code=${String(code)}).`,
             );
           }
+          settleNow();
         });
 
         send({

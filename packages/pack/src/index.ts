@@ -201,6 +201,24 @@ export {
 } from './lifecycle/pack-store.ts';
 
 export {
+  DEFAULT_CARRIER_TMP_LOCK_QUIET_MS,
+  DEFAULT_CARRIER_TMP_MAX_AGE_MS,
+  DEFAULT_CARRIER_TMP_MAX_ENTRIES_PER_PASS,
+  DEFAULT_PACKAGE_DOWNLOAD_CACHE_MAX_AGE_MS,
+  DEFAULT_PACKAGE_DOWNLOAD_CACHE_MAX_BYTES,
+  captureCodexCarrierTmpSnapshot,
+  cleanupCodexCarrierTmpAfterRun,
+  pruneCodexCarrierTmpArtifacts,
+  prunePackStateArtifacts,
+  prunePackageDownloadCache,
+  resolveConfiguredCodexHome,
+  type CodexCarrierTmpPruneSummary,
+  type CodexCarrierTmpSnapshot,
+  type PackStateHygieneSummary,
+  type PackageDownloadCachePruneSummary,
+} from './carriers/codex-sync/temp-hygiene.ts';
+
+export {
   PackService,
   createPackService,
   type BatchOperationResult,

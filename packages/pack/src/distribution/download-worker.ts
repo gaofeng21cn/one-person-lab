@@ -6,6 +6,7 @@ import type { PackageOperationProgress } from '../types.ts';
 import { packageSourceArchiveDigest } from './archive.ts';
 import { freeDiskBytes, packageDownloadCacheDir } from './download-plan.ts';
 import { MAX_PACKAGE_SOURCE_ARCHIVE_BYTES } from './archive.ts';
+import { prunePackageDownloadCache } from '../carriers/codex-sync/temp-hygiene.ts';
 
 export interface PackageDownloadRequest {
   readonly url: string;
@@ -684,6 +685,11 @@ export async function downloadPackageArchive(request: PackageDownloadRequest): P
     return completePath;
   } finally {
     fs.rmSync(lockPath, { force: true });
+    try {
+      prunePackageDownloadCache(request.cacheRoot, { preserveDigests: [request.digest] });
+    } catch {
+      // Best-effort cache quota pruning must not fail a verified download.
+    }
   }
 }
 

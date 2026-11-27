@@ -506,30 +506,31 @@ export class PackService {
 
       fs.mkdirSync(path.dirname(destDir), { recursive: true });
       const tmpDest = `${destDir}.tmp-${opId}`;
-      copyDirectoryPhysical(staged.stagingDir, tmpDest);
-      const lockFileInStaged = path.join(staged.stagingDir, 'opl-release.lock.json');
-      if (fs.existsSync(lockFileInStaged)) {
-        fs.copyFileSync(lockFileInStaged, path.join(tmpDest, 'opl-release.lock.json'));
-      }
-      const backupDest = fs.existsSync(destDir) ? `${destDir}.bak-${opId}` : null;
-      if (backupDest) {
-        fs.rmSync(backupDest, { recursive: true, force: true });
-        fs.renameSync(destDir, backupDest);
-      }
-
-      let codexSync: CodexSyncProjectionResult = {
-        package_id: manifest.identity.id,
-        plugin_name: resolveCodexPluginName(manifest),
-        synced: false,
-        skipped_reason: 'no_codex_surface',
-        marketplace_root: this.marketplaceRoot ?? '',
-        marketplace_manifest_path: '',
-        plugin_dir: null,
-        verified_by_readback: false,
-      };
-      let installed: InstalledPackageRecord;
+      let backupDest: string | null = null;
       let movedToDest = false;
       try {
+        copyDirectoryPhysical(staged.stagingDir, tmpDest);
+        const lockFileInStaged = path.join(staged.stagingDir, 'opl-release.lock.json');
+        if (fs.existsSync(lockFileInStaged)) {
+          fs.copyFileSync(lockFileInStaged, path.join(tmpDest, 'opl-release.lock.json'));
+        }
+        backupDest = fs.existsSync(destDir) ? `${destDir}.bak-${opId}` : null;
+        if (backupDest) {
+          fs.rmSync(backupDest, { recursive: true, force: true });
+          fs.renameSync(destDir, backupDest);
+        }
+
+        let codexSync: CodexSyncProjectionResult = {
+          package_id: manifest.identity.id,
+          plugin_name: resolveCodexPluginName(manifest),
+          synced: false,
+          skipped_reason: 'no_codex_surface',
+          marketplace_root: this.marketplaceRoot ?? '',
+          marketplace_manifest_path: '',
+          plugin_dir: null,
+          verified_by_readback: false,
+        };
+        let installed: InstalledPackageRecord;
         fs.renameSync(tmpDest, destDir);
         movedToDest = true;
         if (input.syncCodex !== false) {
@@ -556,6 +557,21 @@ export class PackService {
         if (backupDest) {
           fs.rmSync(backupDest, { recursive: true, force: true });
         }
+
+        const reloadMode = classifyReloadMode(manifest, { action: input.action });
+        const opRecord = this.store.transitionOperation(opId, {
+          status: 'succeeded',
+          target_version: manifest.identity.version,
+          reload_mode: reloadMode,
+          progress: { stage: 'completed', bytes_done: 1, bytes_total: 1 },
+        });
+
+        return {
+          package: installed,
+          codex_sync: codexSync,
+          reload_mode: reloadMode,
+          operation: opRecord,
+        };
       } catch (postMoveError) {
         if (movedToDest) {
           fs.rmSync(destDir, { recursive: true, force: true });
@@ -567,21 +583,6 @@ export class PackService {
         }
         throw postMoveError;
       }
-
-      const reloadMode = classifyReloadMode(manifest, { action: input.action });
-      const opRecord = this.store.transitionOperation(opId, {
-        status: 'succeeded',
-        target_version: manifest.identity.version,
-        reload_mode: reloadMode,
-        progress: { stage: 'completed', bytes_done: 1, bytes_total: 1 },
-      });
-
-      return {
-        package: installed,
-        operation: opRecord,
-        reload_mode: reloadMode,
-        codex_sync: codexSync,
-      };
     } catch (error) {
       const cancelled =
         controller.signal.aborted
