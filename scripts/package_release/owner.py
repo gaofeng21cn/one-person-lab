@@ -4,7 +4,6 @@ import hashlib
 import json
 import plistlib
 import re
-import sys
 import time
 import tomllib
 from pathlib import Path
@@ -163,8 +162,13 @@ def _ordered_content_digest(paths, read_bytes):
             raise ValueError(f'Duplicate path {clean!r} in content digest input')
         seen.add(clean)
         normalized.append(clean)
+    return _content_digest(sorted(normalized, key=lambda item: item.encode('utf-16-be')), read_bytes)
+
+
+def _content_digest(paths, read_bytes):
+    """Hash paths and file bytes in the supplied order."""
     h = hashlib.sha256()
-    for relative in sorted(normalized, key=lambda item: item.encode('utf-16-be')):
+    for relative in paths:
         rel_bytes = relative.encode('utf-8')
         data = read_bytes(relative)
         h.update(len(rel_bytes).to_bytes(8, 'big'))
@@ -183,7 +187,9 @@ def refresh_locks(root, projection, allowlist, framework):
             paths = lock['paths']
             if name in paths and carrier == root:
                 raise ReleaseError('A content lock cannot contain its own descriptor')
-            lock['digest'] = _ordered_content_digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
+            # Legacy Catalog descriptors bind the declared path order and spelling.
+            digest = _ordered_content_digest if d.get('schema_version') == 'opl.package.v2' else _content_digest
+            lock['digest'] = digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
             write(root / name, d)
 
 
@@ -192,10 +198,10 @@ def execute_commands(root, settings, field):
         run(command, cwd=root)
 
 
-def _carrier_source_paths(root, allowlist, commit):
+def _carrier_source_paths(root, allowlist, commit, framework):
     if not allowlist.get('carrier_projection_ref'):
         return None
-    resolver = Path(__file__).resolve().parents[1] / 'package-carrier-source-paths.mjs'
+    resolver = framework / 'scripts/package-carrier-source-paths.mjs'
     if not resolver.is_file():
         raise ReleaseError('Missing package-carrier-source-paths resolver')
     script = (
@@ -218,14 +224,14 @@ def _carrier_source_paths(root, allowlist, commit):
     return json.loads(output)
 
 
-def content_changed(root, previous_commit, projection, allowlist, settings=None):
+def content_changed(root, previous_commit, projection, allowlist, framework, settings=None):
     carrier = safe_path(root, allowlist['source_root'])
     descriptor = read(carrier / 'opl-package.json')
     paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
     source_root = allowlist['source_root']
     head_commit = git(root, 'rev-parse', 'HEAD')
-    head_map = _carrier_source_paths(root, allowlist, head_commit)
-    prev_map = _carrier_source_paths(root, allowlist, previous_commit)
+    head_map = _carrier_source_paths(root, allowlist, head_commit, framework)
+    prev_map = _carrier_source_paths(root, allowlist, previous_commit, framework)
     pairs = {}
     all_paths = sorted(
         set(paths)
@@ -386,7 +392,7 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
     if base == payload['source_commit']:
         return {'status': 'unchanged', 'owner_source_commit': base}
     execute_commands(root, settings, 'prepare')
-    if not content_changed(root, payload['source_commit'], projection, allowlist, settings):
+    if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}
     carrier = safe_path(root, allowlist['source_root'])
     current = read(carrier / 'opl-package.json')['version']

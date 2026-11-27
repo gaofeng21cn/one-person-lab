@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import _ordered_content_digest, wait_for_checks
+from package_release.owner import _carrier_source_paths, _ordered_content_digest, refresh_locks, wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -22,6 +22,24 @@ spec.loader.exec_module(package)
 
 
 class PackagePublisherCheckoutTests(unittest.TestCase):
+    def test_carrier_resolver_comes_from_selected_framework_checkout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            framework = Path(temp) / 'framework'
+            resolver = framework / 'scripts/package-carrier-source-paths.mjs'
+            resolver.parent.mkdir(parents=True)
+            resolver.write_text(
+                'export function packageCarrierSourcePaths({ sourceCommit }) {\n'
+                '  return new Map([["skills/example/SKILL.md", `owner/${sourceCommit}/SKILL.md`]]);\n'
+                '}\n'
+            )
+            commit = 'a' * 40
+            self.assertEqual(
+                _carrier_source_paths(Path(temp), {
+                    'carrier_projection_ref': 'contracts/carrier_projection.json',
+                }, commit, framework),
+                {'skills/example/SKILL.md': f'owner/{commit}/SKILL.md'},
+            )
+
     def test_daily_workflow_uses_exact_legacy_tooling_without_weakening_main_authority(self):
         controller = 'a' * 40
         tooling = 'b' * 40
@@ -246,6 +264,28 @@ class ProductReleaseTests(unittest.TestCase):
                 _ordered_content_digest(['a/b.txt', 'a/b.txt'], lambda _: b'x')
             with self.assertRaises(ValueError):
                 _ordered_content_digest(['a/b.txt', './a/b.txt'], lambda _: b'x')
+
+    def test_legacy_content_digest_preserves_declared_path_order(self):
+        with tempfile.TemporaryDirectory() as package_tmp:
+            package_root = Path(package_tmp)
+            paths = ['./b.txt', 'a.txt']
+            for name, content in {'b.txt': b'b', 'a.txt': b'a'}.items():
+                (package_root / name).write_bytes(content)
+            manifest = {
+                'surface_kind': 'opl_capability_package_manifest.v2',
+                'package_id': 'fixture',
+                'version': '0.1.0',
+                'content_lock': {'paths': paths, 'digest': 'stale'},
+            }
+            (package_root / 'opl-package.json').write_text(json.dumps(manifest))
+            projection = {'package_id': 'fixture', 'publication_source': {'owner_package_manifest_ref': 'opl-package.json'}}
+            allowlist = {'package_id': 'fixture', 'plugin_id': 'fixture', 'source_root': '.'}
+
+            refresh_locks(package_root, projection, allowlist, Path('/unused'))
+
+            actual = json.loads((package_root / 'opl-package.json').read_text())['content_lock']['digest']
+            # Fixture digest from the legacy Framework Python encoder.
+            self.assertEqual(actual, 'sha256:d43a765c28ccbcd60bee4f0602ca11e5945162edd79de8e8ac07a0e7fc267e06')
 
 
 if __name__ == '__main__':

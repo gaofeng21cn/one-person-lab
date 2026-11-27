@@ -19,7 +19,10 @@
     "packages/mcp-app-shared/assets",
     "extensions",
     "sdks/python-client",
-    "contracts/opl-package.v2.schema.json"
+    "contracts/opl-package.v2.schema.json",
+    "contracts/opl-framework/dependency-release-sources.json",
+    "scripts/dependency-release-resolution.ts",
+    "scripts/resolve-dependency-releases.mjs"
   ],
   "scripts": {
     "build": "node ./scripts/build-framework.mjs",
