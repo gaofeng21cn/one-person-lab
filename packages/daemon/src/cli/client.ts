@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import { acquireAdvisoryLock, isProcessAlive, isRecord, resolveStatePaths, type AdvisoryLockHandle, type StatePaths } from '@opl/core';
+import { resolveCodexHome } from '@opl/connect';
 import { DaemonRpcError } from '../errors.ts';
 import type { DaemonSessionFilePayload } from '../server/socket-server.ts';
 
@@ -415,6 +416,7 @@ function sendSingleRpcOverSocket(
           params: {
             token: session.token,
             client_kind: 'opl_cli',
+            codex_home: resolveCodexHome(),
             api_version: '2.0',
           },
         })}\n`,

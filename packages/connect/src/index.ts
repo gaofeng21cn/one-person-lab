@@ -145,4 +145,4 @@ export {
   withGatewayStateDirectory,
 } from './gateway/account.ts';
 
-export { configureGatewayCodexProvider, readLocalCodexAccessState } from './gateway/codex-binding.ts';
+export { configureGatewayCodexProvider, readLocalCodexAccessState, resolveCodexHome, withClientCodexHome } from './gateway/codex-binding.ts';

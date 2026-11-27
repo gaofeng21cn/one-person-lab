@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { ConnectError } from '../src/errors.ts';
-import { readLocalCodexAccessState } from '../src/gateway/codex-binding.ts';
+import { readLocalCodexAccessState, withClientCodexHome } from '../src/gateway/codex-binding.ts';
 import {
   disconnectOplGatewayAccount,
   loginOplGatewayAccount,
@@ -169,6 +169,12 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     const configPath = path.join(codexHome, 'config.toml');
     const firstConfig = fs.readFileSync(configPath, 'utf8');
 
+    const otherCodex = path.join(root, 'other-codex');
+    const requestsBeforeOtherProfile = requests.length;
+    await assert.rejects(withClientCodexHome(otherCodex, useOplGatewayForModelAccess),
+      (error: unknown) => error instanceof ConnectError && error.reason_code === 'account_switch_requires_disconnect');
+    assert.equal(requests.length, requestsBeforeOtherProfile);
+    assert.equal(fs.existsSync(path.join(otherCodex, 'config.toml')), false);
     const secondUse = await useOplGatewayForModelAccess();
     assert.equal(secondUse.gateway_account.status, 'connected');
     assert.equal(fs.readFileSync(configPath, 'utf8'), firstConfig);

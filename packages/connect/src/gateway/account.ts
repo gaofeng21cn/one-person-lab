@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { ConnectError } from '../errors.ts';
 import {
   getGatewayKey,
@@ -15,6 +16,8 @@ import {
   readLocalCodexAccessState,
   readLocalCodexDefaultsIfAvailable,
   restoreCodexBinding,
+  resolveCodexHome,
+  withClientCodexHome,
 } from './codex-binding.ts';
 import { exchangeCompanionCredentials, writeCompanionAuthorization } from './companion-authorization.ts';
 import { disableGatewayManagedKey, reconcileGatewayManagedKey } from './key-reconcile.ts';
@@ -221,7 +224,7 @@ async function reconcileAndCommit(input: {
     const needsRebind = !current.codex_binding
       || current.codex_binding.managed_key_fingerprint !== gatewayKeyFingerprint(key.key);
     bindingResult = needsRebind
-      ? bindGatewayKeyToCodex(key.key)
+      ? withClientCodexHome(path.dirname(current.codex_binding.config_path), () => bindGatewayKeyToCodex(key.key))
       : {
           binding: current.codex_binding,
           previous_config: baseCredentials.previous_codex_config,
@@ -347,6 +350,11 @@ export async function useOplGatewayForModelAccess() {
   return withGatewayAccountLock(async () => {
     const state = readGatewayAccountState();
     if (!state) throw gatewayError('reauth_required', 'OPL Gateway account is not connected.');
+    // Each installation retains one restore snapshot for its managed model key.
+    if (state.codex_binding?.activated
+        && path.resolve(state.codex_binding.config_path) !== path.join(resolveCodexHome(), 'config.toml')) {
+      throw gatewayError('account_switch_requires_disconnect', 'Disconnect the Gateway account before activating it in another Codex home.');
+    }
     const rotated = await rotateSession();
     const remote = await accountSnapshot(rotated.session.access_token);
     const installation = readOrCreateGatewayInstallation();
