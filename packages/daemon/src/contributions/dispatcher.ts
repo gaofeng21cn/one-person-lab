@@ -8,7 +8,6 @@ import type { WorkspaceService } from '@opl/workspace';
 import { DaemonRpcError } from '../errors.ts';
 import { runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
 import type { AppStateCache } from '../state/app-state-cache.ts';
-import { executeTransitionalAdapter, TRANSITIONAL_V1_ADAPTER } from './transitional-adapter.ts';
 
 const MAX_WORKSPACE_READ_BYTES = 1024 * 1024;
 
@@ -22,21 +21,6 @@ function invokeHandler(root: string, handler: ModuleOrCommandEntrypoint, request
     env.PYTHONPATH = env.PYTHONPATH ? sdkSource + path.delimiter + env.PYTHONPATH : sdkSource;
   }
   return runModuleOrCommandEntrypoint(root, handler, request, { env });
-}
-
-function invokeContribution(
-  root: string,
-  handler: ModuleOrCommandEntrypoint,
-  request: Parameters<typeof executeTransitionalAdapter>[1],
-  nativeRequest: unknown,
-  env?: NodeJS.ProcessEnv,
-) {
-  if (handler.kind === 'cli' && handler.argv.length === TRANSITIONAL_V1_ADAPTER.length
-    && TRANSITIONAL_V1_ADAPTER.every((argument, index) => handler.argv[index] === argument)) {
-    return executeTransitionalAdapter(root, request, (argv, input) =>
-      invokeHandler(root, { kind: 'cli', argv, transport: 'stdin_json_stdout_json' }, input, env));
-  }
-  return invokeHandler(root, handler, nativeRequest, env);
 }
 
 export interface ContributionReadRequest {
@@ -199,7 +183,7 @@ export class ContributionDispatcher {
       ref: req.ref,
       input: context.input,
     };
-    const out = await invokeContribution(pkg.install_path, handler, request, request, context.env);
+    const out = await invokeHandler(pkg.install_path, handler, request, context.env);
 
     if (out && typeof out === 'object' && !Array.isArray(out)) {
       return out as Record<string, unknown>;
@@ -396,7 +380,7 @@ export class ContributionDispatcher {
       payload: context.input,
       dry_run: false,
     };
-    const response = await invokeContribution(pkg.install_path, handler, request, nativeRequest, context.env);
+    const response = await invokeHandler(pkg.install_path, handler, nativeRequest, context.env);
     // Direct SDK callers receive the Package's native result. The Studio action
     // additionally binds its declared receipt to the requested Package and ref.
     if (appAction || (isRecord(response) && response.schema_version !== undefined)) {

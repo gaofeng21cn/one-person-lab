@@ -1,10 +1,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { verifyReleaseLock } from '../build/build-package.ts';
+import { readPackageManifestFromDir, verifyReleaseLock } from '../build/build-package.ts';
 import { verifyManifestPathsExist } from '../build/content-lock.ts';
 import { PackError } from '../errors.ts';
-import { migrateV1Package } from '../migrate/migrate-v1.ts';
 import type { InstallSourceSpec } from '../types.ts';
 import { extractPackageSourceArchive } from './archive.ts';
 import { normalizeDistributionVersion, type RegistryFetch } from './registry-client.ts';
@@ -48,9 +47,7 @@ export async function stageOfficialPackageSource(
       throw new PackError('INVALID_INPUT', 'Official package requires a local seed directory or an OCI source.');
     }
     options.signal?.throwIfAborted();
-    // The converter leaves root v2 manifests intact and only relocates legacy
-    // files inside this private copy. The publisher's bytes stay untouched.
-    const { manifest } = migrateV1Package({ repoDir: pkgRoot, apply: true, clean: false });
+    const { manifest } = readPackageManifestFromDir(pkgRoot);
     if (manifest.identity.id !== source.package_id) {
       throw new PackError('INVALID_MANIFEST', `Expected official package '${source.package_id}', got '${manifest.identity.id}'.`);
     }

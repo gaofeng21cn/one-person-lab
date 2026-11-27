@@ -5,10 +5,8 @@ import { isRecord } from '@opl/core';
 import semver from 'semver';
 import { resolveConfiguredCodexHome } from './temp-hygiene.ts';
 import { PackError } from '../../errors.ts';
-import { migrateV1Package } from '../../migrate/migrate-v1.ts';
 import {
   CODEX_PLUGIN_NAME_REGEX,
-  KebabIdSchema,
   SemverSchema,
   type OplPackageManifestV2,
 } from '../../manifest/schema.ts';
@@ -305,23 +303,10 @@ function installedPackageDescriptor(root: string | null, plugin: CodexPluginSumm
   if (!root) return null;
   try {
     const input: unknown = JSON.parse(fs.readFileSync(path.join(root, 'opl-package.json'), 'utf8'));
-    if (!isRecord(input)) return null;
-    const codex = isRecord(input.codex_surface) ? input.codex_surface : {};
-    let manifest: OplPackageManifestV2;
-    if (input.schema_version === 'opl.package.v2') {
-      manifest = parsePackageManifestV2(input);
-    } else {
-      const kind = input.surface_kind;
-      if (kind !== 'opl_agent_package_manifest.v1' && kind !== 'opl_capability_package_manifest.v2'
-          && kind !== 'opl_workflow_profile_package_manifest.v1') return null;
-      if (!KebabIdSchema.safeParse(input.package_id).success) return null;
-      const configured = isRecord(codex.configured_codex_plugin_carrier) ? codex.configured_codex_plugin_carrier : {};
-      if (typeof configured.plugin_selector === 'string' && configured.plugin_selector !== plugin.id) return null;
-      if (typeof codex.plugin_id === 'string' && codex.plugin_id !== plugin.id && codex.plugin_id !== plugin.name) return null;
-      manifest = migrateV1Package({ repoDir: root, apply: false, clean: false }).manifest;
-    }
+    if (!isRecord(input) || input.schema_version !== 'opl.package.v2') return null;
+    const manifest = parsePackageManifestV2(input);
     if (manifest.identity.version !== (plugin.localVersion ?? plugin.version)) return null;
-    return { manifest, internal: (input.codex_interaction_mode ?? codex.interaction_mode) === 'headless_internal' };
+    return { manifest, internal: manifest.host_hints?.codex?.sync_enabled === false };
   } catch {
     // A native plugin without a readable OPL descriptor retains its carrier ID.
     return null;

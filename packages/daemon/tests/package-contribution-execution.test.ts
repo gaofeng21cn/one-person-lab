@@ -138,7 +138,7 @@ test('Package owner reads and writes use the selected registered workspace acros
   assert.equal(fs.readFileSync(path.join(workspaceRoots[1]!, 'note'), 'utf8'), 'updated');
 });
 
-test('Python contributions import the bundled SDK and the legacy adapter confines reads and commands', async t => {
+test('Python contributions import the bundled SDK', async t => {
   const inheritedPath = '/fixture/pythonpath';
   const sandbox = createDaemonSandbox({ PYTHONPATH: inheritedPath, PYTHONDONTWRITEBYTECODE: '1' });
   t.after(() => sandbox.cleanup());
@@ -146,53 +146,27 @@ test('Python contributions import the bundled SDK and the legacy adapter confine
   const rpc = await connectTestRpc(sandbox.sessionPath);
   t.after(() => rpc.close());
   const label = { 'en-US': 'Review', 'zh-CN': '审阅' };
-  const transitional = ['opl', 'app', 'contribution', 'adapter', '--stdin'];
-  const python = ['python3', './owner.py'];
-  for (const [id, argv] of [['python-owner', python], ['legacy-owner', transitional]] as const) {
-    const root = writeMinimalV2Package(path.join(sandbox.root, id), {
-      id, intent: 'app',
-      extraManifest: {
-        provides: { contribution_handler: { kind: 'cli', argv } },
-        ui: { declarative: { views: [
-          { id: 'owner.view', view_type: 'list_detail', slot: 'runtime.detail', title: label, data_ref: 'owner.read',
-            actions: [{ id: 'owner.run', label, action_ref: 'owner.run' }] },
-        ] } },
-      },
-    });
-    fs.writeFileSync(path.join(root, 'owner.py'), [
-      'import json, os, sys, opl_client',
-      'request = json.load(sys.stdin)',
-      'print(json.dumps({"sdk": opl_client.__file__, "root": os.environ["OPL_PYTHON_SDK_ROOT"],',
-      '  "pythonpath": os.environ["PYTHONPATH"], "request": request}))',
-    ].join('\n'));
-    const manifestPath = path.join(root, 'app-contribution-adapter.json');
-    const writeAdapter = (entry: unknown) => fs.writeFileSync(manifestPath, JSON.stringify({
-      schema_version: 'opl-package-app-contribution-adapter.v1',
-      reads: { 'owner.read': entry }, actions: { 'owner.run': { kind: 'command', argv: python, stdin: 'input_json' } },
-    }));
-    writeAdapter({ kind: 'command', argv: python, stdin: 'request_json' });
-    await rpc.call('pack.link', { dir: root, sync_codex: false });
-    const read = () => rpc.call('app.contribution.read', { package_id: id, ref: 'owner.read', input: { sample: true } }) as Promise<any>;
-    const response = await read();
-    const observation = response.result ?? response;
-    assert.ok(observation.sdk.startsWith(path.join(observation.root, 'src') + path.sep));
-    assert.equal(observation.pythonpath, [path.join(observation.root, 'src'), inheritedPath].join(path.delimiter));
-    assert.equal(observation.request.ref, 'owner.read');
-    if (id === 'python-owner') continue;
-    const executed = await rpc.call('app.action.execute', {
-      action_id: 'package_contribution_execute', payload: { package_id: id, ref: 'owner.run', input: { sample: true } },
-    }) as any;
-    assert.deepEqual(executed.opl_app_contribution.response.result.request, { sample: true });
-    fs.writeFileSync(path.join(root, 'payload.json'), '{"ready":true}');
-    writeAdapter({ kind: 'json_file', root: 'package', path: 'payload.json' });
-    assert.deepEqual((await read()).result, { ready: true });
-    fs.symlinkSync(path.join(root, 'payload.json'), path.join(root, 'link.json'));
-    for (const target of ['../payload.json', '/tmp/payload.json', 'link.json']) {
-      writeAdapter({ kind: 'json_file', path: target });
-      await assert.rejects(read);
-    }
-    fs.writeFileSync(path.join(root, 'payload.json'), ' '.repeat(2 * 1024 * 1024 + 1));
-    writeAdapter({ kind: 'json_file', path: 'payload.json' });
-    await assert.rejects(read, /exceeds its bounds/);
-  }
+  const id = 'python-owner';
+  const root = writeMinimalV2Package(path.join(sandbox.root, id), {
+    id, intent: 'app',
+    extraManifest: {
+      provides: { contribution_handler: { kind: 'cli', argv: ['python3', './owner.py'] } },
+      ui: { declarative: { views: [
+        { id: 'owner.view', view_type: 'list_detail', slot: 'runtime.detail', title: label, data_ref: 'owner.read',
+          actions: [{ id: 'owner.run', label, action_ref: 'owner.run' }] },
+      ] } },
+    },
+  });
+  fs.writeFileSync(path.join(root, 'owner.py'), [
+    'import json, os, sys, opl_client',
+    'request = json.load(sys.stdin)',
+    'print(json.dumps({"sdk": opl_client.__file__, "root": os.environ["OPL_PYTHON_SDK_ROOT"],',
+    '  "pythonpath": os.environ["PYTHONPATH"], "request": request}))',
+  ].join('\n'));
+  await rpc.call('pack.link', { dir: root, sync_codex: false });
+  const response = await rpc.call('app.contribution.read', { package_id: id, ref: 'owner.read', input: { sample: true } }) as any;
+  const observation = response.result ?? response;
+  assert.ok(observation.sdk.startsWith(path.join(observation.root, 'src') + path.sep));
+  assert.equal(observation.pythonpath, [path.join(observation.root, 'src'), inheritedPath].join(path.delimiter));
+  assert.equal(observation.request.ref, 'owner.read');
 });
