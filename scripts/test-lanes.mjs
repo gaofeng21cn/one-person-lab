@@ -53,6 +53,7 @@ const nodeTest = (files, o = {}) => ({
 });
 
 const v2PackageTests = expandTestFiles(['packages/*/tests/*.test.ts']);
+const v2PerformanceTests = expandTestFiles(['packages/daemon/tests/performance/*.test.ts']);
 const extensionTests = expandTestFiles(['extensions/*/tests/*.test.mjs']);
 const rootScriptTests = expandTestFiles(['tests/release-note-writer.test.mjs', 'tests/package-publication-authority.test.mjs', 'tests/flow-capability-compiler.test.mjs', 'tests/private-package-source-access.test.mjs']);
 const dependencyResolutionTests = expandTestFiles(['tests/dependency-release-resolution.test.ts']);
@@ -64,6 +65,7 @@ const lanes = {
     { kind: 'npm', phase: 'quality', args: ['run', 'v2:guard'] },
     { kind: 'command', phase: 'quality', command: process.execPath, args: ['--experimental-strip-types', './scripts/generate-v2-contracts.mjs', '--check'] },
     nodeTest(v2PackageTests, { phase: 'unit' }),
+    nodeTest(v2PerformanceTests, { phase: 'performance' }),
   ],
   fast: [
     { kind: 'command', phase: 'quality', command: process.execPath, args: ['scripts/test-lanes.mjs', 'assert-coverage'] },
@@ -72,6 +74,7 @@ const lanes = {
     { kind: 'npm', phase: 'quality', args: ['run', 'v2:guard'] },
     { kind: 'command', phase: 'quality', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest(v2PackageTests, { phase: 'unit' }),
+    nodeTest(v2PerformanceTests, { phase: 'performance' }),
     nodeTest([...extensionTests, ...rootScriptTests, ...e2eSelfTests], { phase: 'extensions', stripTypes: false }),
     nodeTest(dependencyResolutionTests, { phase: 'extensions' }),
   ],
@@ -172,6 +175,7 @@ export function runNodeTestStep(step, context) {
 function assertCoverage() {
   const discovered = new Set([
     ...expandTestFiles(['packages/*/tests/*.test.ts']),
+    ...expandTestFiles(['packages/daemon/tests/performance/*.test.ts']),
     ...expandTestFiles(['extensions/*/tests/*.test.mjs']),
     ...expandTestFiles(['tests/*.test.mjs']),
     ...expandTestFiles(['tests/built/*.test.mjs']),

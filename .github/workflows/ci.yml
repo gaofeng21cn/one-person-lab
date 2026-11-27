@@ -70,6 +70,9 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 node sdks/python-client/tests/test_opld_e2e.mjs
           PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest tests/product_release_test.py tests/package_daily_status_test.py tests/sync_private_package_publishers_test.py tests/package_channel_detection_test.py tests/v2_package_projection_test.py -v
 
+      - name: Run isolated AppStateCache performance SLA
+        run: npm run v2:performance
+
       - name: Run E2E harness self-tests & built CLI tests
         run: |
           node --test tests/built/cli.test.mjs
@@ -107,3 +110,7 @@ jobs:
           args=(--phase "${{ matrix.phase }}")
           if [[ -n "${{ matrix.shard }}" ]]; then args+=(--shard "${{ matrix.shard }}"); fi
           npm run test:fast -- "${args[@]}"
+
+      - name: Run isolated AppStateCache performance SLA
+        if: matrix.phase == 'unit'
+        run: npm run test:fast -- --phase performance
