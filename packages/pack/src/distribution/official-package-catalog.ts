@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '@opl/core';
@@ -6,7 +7,21 @@ import { KebabIdSchema } from '../manifest/schema.ts';
 import { parseOciRef } from './registry-client.ts';
 import type { InstallSourceSpec } from '../types.ts';
 
-const indexUrl = 'https://raw.githubusercontent.com/gaofeng21cn/opl-catalog/main/catalog-index.json';
+const catalogRoot = 'https://raw.githubusercontent.com/gaofeng21cn/opl-catalog/main/';
+const sha256 = /^sha256:[0-9a-f]{64}$/;
+
+function selectedV2Release(entry: OfficialPackageCatalogEntry) {
+  const release = entry.manifest?.v2_release;
+  if (release === undefined) return null;
+  if (!isRecord(release) || typeof release.version !== 'string'
+    || !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(release.version)
+    || typeof release.source_commit !== 'string' || !/^[0-9a-f]{40}$/.test(release.source_commit)
+    || release.payload_manifest_ref !== `payloads/${entry.package_id}-${release.version}.json`
+    || typeof release.payload_sha256 !== 'string' || !sha256.test(release.payload_sha256)) {
+    throw new PackError('INVALID_MANIFEST', `Invalid Catalog v2 release for '${entry.package_id}'.`);
+  }
+  return { version: release.version, commit: release.source_commit, path: release.payload_manifest_ref, digest: release.payload_sha256 };
+}
 
 export interface OfficialPackageCatalogOptions {
   /** Full uses its frozen seed. Explicit null selects the current online catalog for updates. */
@@ -39,7 +54,7 @@ export async function readOfficialPackageCatalog(
     const bytes = await fs.promises.readFile(path.join(root, 'opl', 'catalog-seed', 'catalog-index.json'), 'utf8');
     index = JSON.parse(bytes);
   } else {
-    const response = await (options.fetchImpl ?? fetch)(indexUrl, { signal: AbortSignal.timeout(30_000) });
+    const response = await (options.fetchImpl ?? fetch)(catalogRoot + 'catalog-index.json', { signal: AbortSignal.timeout(30_000) });
     if (!response.ok) throw new PackError('PACK_DOWNLOAD_FAILED', `Official Package catalog returned HTTP ${response.status}.`);
     index = await response.json();
   }
@@ -81,7 +96,8 @@ export function officialPackageInstallSource(entry: OfficialPackageCatalogEntry,
     if (registry !== 'ghcr.io' || repository !== `gaofeng21cn/one-person-lab-packages/${packageId}`) {
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' points outside its registered Package repository.`);
     }
-    return { kind: 'oci', package_id: packageId, ref };
+    const release = selectedV2Release(entry);
+    return { kind: 'oci', package_id: packageId, ref, ...(release && { version: release.version }) };
   }
 
   const payload = entry.payload;
@@ -146,4 +162,28 @@ export function officialPackageInstallSource(entry: OfficialPackageCatalogEntry,
     throw new PackError('PACK_NOT_FOUND', `Full Package seed has ${matches.length} matching modules for '${packageId}' at ${payload.source_commit}.`);
   }
   return { kind: 'local_dir', package_id: packageId, path: matches[0] };
+}
+
+// The index retains the legacy payload for older clients. The v2 release
+// refers to immutable payload JSON whose archive_sha256 pins the OCI source.
+export async function readOfficialV2Source(
+  entry: OfficialPackageCatalogEntry, fetchImpl: typeof fetch = fetch,
+) {
+  const release = selectedV2Release(entry);
+  if (!release) return null;
+  const response = await fetchImpl(catalogRoot + 'packages/' + release.path, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new PackError('PACK_DOWNLOAD_FAILED', `Catalog v2 payload for '${entry.package_id}' returned HTTP ${response.status}.`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if ('sha256:' + createHash('sha256').update(bytes).digest('hex') !== release.digest) {
+    throw new PackError('PACK_LOCK_MISMATCH', `Catalog v2 payload bytes differ for '${entry.package_id}'.`);
+  }
+  const payload: unknown = JSON.parse(bytes.toString('utf8'));
+  if (!isRecord(payload) || payload.package_format !== 'v2' || payload.package_id !== entry.package_id
+    || payload.package_version !== release.version || payload.source_commit !== release.commit
+    || typeof payload.source_repo !== 'string' || payload.source_repo !== entry.manifest?.source_repo
+    || typeof payload.archive_sha256 !== 'string' || !sha256.test(payload.archive_sha256)
+    || !isRecord(payload.content_lock) || typeof payload.content_lock.digest !== 'string' || !sha256.test(payload.content_lock.digest)) {
+    throw new PackError('INVALID_MANIFEST', `Catalog v2 payload does not match the selected release for '${entry.package_id}'.`);
+  }
+  return { version: release.version, commit: release.commit, contentDigest: payload.content_lock.digest, archiveDigest: payload.archive_sha256 };
 }
