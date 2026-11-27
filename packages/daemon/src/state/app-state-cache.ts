@@ -8,6 +8,7 @@ import { projectUiContributions } from './ui-projection.ts';
 import { readWorkspaceRoot, workspaceRootAction } from './workspace-root.ts';
 import { codexInstallAction } from '../rpc/codex-runtime.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
+import { projectSoftwareSources, softwareSourceActions } from '../rpc/software-source-actions.ts';
 import { projectConnectionAuthorization } from './connection-authorization.ts';
 import type { SqliteDb } from '@opl/core';
 import { readLocalCodexAccessState, readOplGatewayAccount, withGatewayStateDirectory, type ConnectService } from '@opl/connect';
@@ -95,7 +96,7 @@ export interface AppStateSnapshot {
   readonly recent_operations?: ReturnType<PackService['operationStatus']>;
   readonly app_state: {
     readonly operator: { readonly workbench: ReturnType<typeof buildRunwayWorkbench> };
-    readonly agent_packages: ReturnType<typeof projectPackageDirectory>;
+    readonly agent_packages: ReturnType<typeof projectPackageDirectory> & { readonly sources?: ReturnType<typeof projectSoftwareSources> };
     readonly ui_contributions: ReturnType<typeof projectUiContributions>;
     readonly actions: readonly Record<string, unknown>[];
     readonly packages: readonly ProjectedPackageSummary[];
@@ -169,12 +170,19 @@ export class AppStateCache {
     } catch {
       // The dedicated Gateway status RPC reports an unreadable private store.
     }
+    let sources: ReturnType<typeof projectSoftwareSources> | undefined;
+    try {
+      sources = projectSoftwareSources(gatewayStateDir);
+    } catch {
+      // A damaged source store is diagnosed by source_list and leaves other settings usable.
+    }
     return {
       ...snapshot,
       app_state: {
         ...snapshot.app_state,
+        agent_packages: { ...snapshot.app_state.agent_packages, ...(sources && { sources }) },
         paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },
-        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...(sources ? softwareSourceActions : []), codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
           app_settings_read_model: {

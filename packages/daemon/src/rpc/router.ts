@@ -25,6 +25,7 @@ import {
 import { RunwayError, type AttemptRole, type ExecuteStageOptions, type SandboxMode } from '@opl/runway';
 import { activateAppCodexRuntime, codexInstallAction, executeCodexInstall, readCodexRuntime } from './codex-runtime.ts';
 import { connectionActions, executeConnectionAction } from './connection-actions.ts';
+import { executeSoftwareSourceAction, softwareSourceActions } from './software-source-actions.ts';
 import { DaemonRpcError } from '../errors.ts';
 import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.ts';
 import { configureCodexApiKey } from './configure-codex-api-key.ts';
@@ -301,6 +302,16 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
       return executeWorkspaceRootAction(runtime.paths.state_dir, payload, dryRun);
+    }
+    const sourceAction = softwareSourceActions.find(action => action.action_id === actionId);
+    if (sourceAction) {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Software source actions do not accept a Package target.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.paths.state_dir);
     }
     const connectionAction = connectionActions.find(entry => entry.action_id === actionId);
     if (connectionAction) {
