@@ -132,6 +132,8 @@ export {
   type PackageDownloadPlan,
 } from './distribution/download-plan.ts';
 
+export { stageOfficialPackageSource } from './distribution/stage-official-source.ts';
+
 export {
   acceptsCurlChunkRange,
   downloadPackageArchive,

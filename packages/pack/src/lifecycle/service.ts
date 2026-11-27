@@ -27,10 +27,10 @@ import {
 import { resolveCodexPluginName } from '../carriers/codex-sync/project.ts';
 import type { CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
 import { extractPackageSourceArchive, packageSourceArchiveDigest } from '../distribution/archive.ts';
-import { downloadPackageArchive, type DownloadTransport } from '../distribution/download-worker.ts';
+import type { DownloadTransport } from '../distribution/download-worker.ts';
+import { copyDirectoryPhysical, downloadOciSource } from '../distribution/source-files.ts';
 import {
   resolveNpmTarball,
-  resolveOciArtifact,
   type RegistryFetch,
 } from '../distribution/registry-client.ts';
 import { migrateV1Package, type MigrateV1Result } from '../migrate/migrate-v1.ts';
@@ -168,48 +168,6 @@ function verifyExpectedArchiveIntegrity(
   }
 }
 
-function copyDirectoryPhysical(srcDir: string, destDir: string): void {
-  const realSrc = fs.realpathSync(srcDir);
-  fs.rmSync(destDir, { recursive: true, force: true });
-  fs.mkdirSync(destDir, { recursive: true });
-  const copyWalk = (curSrc: string, curDest: string): void => {
-    for (const entry of fs.readdirSync(curSrc, { withFileTypes: true })) {
-      if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === '.DS_Store') {
-        continue;
-      }
-      const fromPath = path.join(curSrc, entry.name);
-      const toPath = path.join(curDest, entry.name);
-      const lstat = fs.lstatSync(fromPath);
-      if (lstat.isSymbolicLink()) {
-        throw new PackError(
-          'PACK_SYMLINK_ESCAPE',
-          `Release package source contains forbidden symlink '${fromPath}'.`,
-        );
-      }
-      if (lstat.isDirectory()) {
-        if (
-          entry.name === '.codegraph' ||
-          entry.name === '.tsbuildinfo' ||
-          entry.name === '__pycache__' ||
-          entry.name === '.pytest_cache' ||
-          entry.name === '.ruff_cache' ||
-          entry.name === '.venv'
-        ) {
-          continue;
-        }
-        fs.mkdirSync(toPath, { recursive: true });
-        copyWalk(fromPath, toPath);
-      } else if (lstat.isFile()) {
-        if (entry.name.endsWith('.pyc') || entry.name.endsWith('.tsbuildinfo')) {
-          continue;
-        }
-        fs.copyFileSync(fromPath, toPath);
-      }
-    }
-  };
-  copyWalk(realSrc, destDir);
-}
-
 function resolveExtractedPackageRoot(extractRoot: string): string {
   if (fs.existsSync(path.join(extractRoot, 'opl-package.json'))) {
     return extractRoot;
@@ -335,27 +293,9 @@ export class PackService {
           status: 'downloading',
           progress: { stage: 'resolving_oci', bytes_done: 0 },
         });
-        const resolved = await resolveOciArtifact({
-          ociRef: input.source.ref,
-          version: input.source.version,
-          fetchImpl: this.#fetchImpl,
-          signal: input.signal,
-        });
-        if (input.source.expected_digest && resolved.digest !== input.source.expected_digest) {
-          throw new PackError(
-            'PACK_LOCK_MISMATCH',
-            `OCI digest mismatch: expected ${input.source.expected_digest}, got ${resolved.digest}.`,
-          );
-        }
-        const archivePath = await downloadPackageArchive({
-          url: resolved.blob_url,
-          token: resolved.token,
-          digest: resolved.digest,
-          size: resolved.size,
-          packageId: input.source.package_id ?? resolved.repository,
+        const archivePath = await downloadOciSource(input.source, {
           cacheRoot: this.cacheRoot,
-          allowInsecureHttp: resolved.blob_url.startsWith('http://127.0.0.1')
-            || resolved.blob_url.startsWith('http://localhost'),
+          fetchImpl: this.#fetchImpl,
           signal: input.signal,
           transport: this.#downloadTransport,
           onProgress: (progress) => {
