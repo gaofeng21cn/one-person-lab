@@ -54,7 +54,7 @@ const nodeTest = (files, o = {}) => ({
 
 const v2PackageTests = expandTestFiles(['packages/*/tests/*.test.ts']);
 const extensionTests = expandTestFiles(['extensions/*/tests/*.test.mjs']);
-const rootScriptTests = expandTestFiles(['tests/macos-sparkle-release.test.mjs', 'tests/release-note-writer.test.mjs', 'tests/package-publication-authority.test.mjs', 'tests/flow-capability-compiler.test.mjs']);
+const rootScriptTests = expandTestFiles(['tests/macos-sparkle-release.test.mjs', 'tests/release-note-writer.test.mjs', 'tests/package-publication-authority.test.mjs', 'tests/flow-capability-compiler.test.mjs', 'tests/private-package-source-access.test.mjs']);
 const dependencyResolutionTests = expandTestFiles(['tests/dependency-release-resolution.test.ts']);
 const builtTests = expandTestFiles(['tests/built/*.test.mjs']);
 const e2eSelfTests = expandTestFiles(['tests/e2e/*.self.test.mjs', 'tests/e2e/stubs/*.self.test.mjs']);

@@ -56,6 +56,8 @@ opl sources configure \
 
 可用的原生引用由 provider 决定；当前实现支持 `provider:github_packages:gh-cli`、`provider:github_packages:ghcr`、`provider:github_packages:docker` 和受控的 `env:OPL_GITHUB_PACKAGES_TOKEN` 引用。未经 provider 声明的任意 URL、明文 token 或 `credential:` 字符串都会被拒绝。需要切换账号时，先在 provider（例如 `gh auth login`）中完成账号切换，再重新执行 `check`；Framework 不复制 GitHub token。
 
+Flow 手工发布私有 Package 时，Framework 发布工具从该文件读取发布引用对应的 GitHub 命名空间，只使用已启用来源所选的 credential handle。检查前序发布只返回可用状态；验证签名回执时，Framework 将所选凭据写入调用方专用的临时 Docker 配置，仅用于读取 GHCR，由调用方在读取结束后删除。
+
 断开来源只移除本地 credential handle 和后续远端读取能力，不删除已经安装的 Package：
 
 ```bash
