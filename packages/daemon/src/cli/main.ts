@@ -4,6 +4,7 @@ import { isRecord, resolveStatePaths } from '@opl/core';
 import { buildPackage, ExactPackageReleaseSchema, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
 import { coerceInstallSourceSpec } from '../utils/normalize.ts';
+import { readLegacyRuns } from './legacy-runs.ts';
 import { prepareGatewayCommand } from './gateway-account.ts';
 import { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError } from '../errors.ts';
 import {
@@ -279,7 +280,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'restart', usage: 'restart [--detached]' },
     { name: 'status', usage: 'status' },
     { name: 'logs', usage: 'logs [--lines <n>]' },
-    { name: 'doctor', usage: 'doctor [--include-first-run]' },
+    { name: 'doctor', usage: 'doctor [--include-first-run] | doctor --legacy-runs [--limit <n>]' },
     { name: 'apply-codex-profile', usage: 'apply-codex-profile [--dry-run] < reviewed-profile.json' },
   ],
   workspace: [
@@ -545,6 +546,14 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           return 0;
         }
         if (sub === 'doctor') {
+          if (getBoolFlag(parsed, '--legacy-runs')) {
+            if (getBoolFlag(parsed, '--include-first-run')) {
+              throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Inspect legacy runs separately from live first-run checks.');
+            }
+            const paths = resolveStatePaths({ stateDir });
+            emitOutput(readLegacyRuns(paths.state_dir, parseIntegerFlag(parsed, '--limit', { min: 1 })), parsed);
+            return 0;
+          }
           const res = await rpc('daemon.doctor', {
             include_first_run: getBoolFlag(parsed, '--include-first-run'),
           });
