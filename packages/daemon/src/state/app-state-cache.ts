@@ -100,7 +100,6 @@ export interface AppStateSnapshot {
     readonly connections: ReturnType<ConnectService['list']>;
     readonly tasks: readonly Record<string, unknown>[];
     readonly schedules: readonly Record<string, unknown>[];
-    readonly actions?: readonly Readonly<Record<string, unknown>>[];
     readonly settings_control_center?: {
       readonly app_settings_read_model: {
         readonly opl_gateway_account?: ReturnType<typeof readOplGatewayAccount>;
