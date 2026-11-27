@@ -133,7 +133,9 @@ function toGrantSummary(
   consumerDisplayName: string,
   staleReason: string | null,
 ): GrantSummary {
-  const effectiveStatus = row.status === 'granted' && staleReason ? 'stale' : row.status;
+  let effectiveStatus: GrantSummary['status'] = row.status;
+  if (staleReason && row.status === 'granted') effectiveStatus = 'stale';
+  if (staleReason && row.status === 'requested') effectiveStatus = 'superseded';
   return Object.freeze({
     grant_id: row.grant_id,
     request_id: row.request_batch_id ?? row.grant_id,
@@ -145,7 +147,7 @@ function toGrantSummary(
     capability_title: row.capability_title,
     capability_risk: row.capability_risk,
     status: effectiveStatus,
-    stale_reason: row.status === 'granted' ? staleReason : null,
+    stale_reason: row.status === 'granted' || row.status === 'requested' ? staleReason : null,
     approved_by: row.approved_by,
     approved_at: row.approved_at,
     expires_at: row.expires_at,

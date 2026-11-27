@@ -17,6 +17,7 @@ import {
   type PackageOrigin,
 } from '@opl/pack';
 import { RunwayError, type AttemptRole, type ExecuteStageOptions, type SandboxMode } from '@opl/runway';
+import { connectionActions, executeConnectionAction } from './connection-actions.ts';
 import { DaemonRpcError } from '../errors.ts';
 import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.ts';
 import { configureCodexApiKey } from './configure-codex-api-key.ts';
@@ -225,7 +226,14 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     });
   };
   handlers.set('app.contribution.execute', handleContributionExecute);
-  handlers.set('app.action.execute', handleContributionExecute);
+  handlers.set('app.action.execute', async (params, conn) => {
+    const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef');
+    const action = connectionActions.find(entry => entry.action_id === actionId);
+    if (!action || pickString(params, 'package_id', 'packageId')) return handleContributionExecute(params, conn);
+    const context = requireTrustedHost(conn, action.action_id);
+    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || pickString(params, 'mode') === 'preview';
+    return executeConnectionAction(action, pickRecord(params, 'payload', 'input') ?? {}, dryRun, runtime.connectService, context);
+  });
 
   // ---- workspace.* ----
   const handleWorkspaceInit: RpcHandler = (params, conn) => {

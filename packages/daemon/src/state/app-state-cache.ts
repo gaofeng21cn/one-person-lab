@@ -1,3 +1,5 @@
+import { connectionActions } from '../rpc/connection-actions.ts';
+import { projectConnectionAuthorization } from './connection-authorization.ts';
 import type { SqliteDb } from '@opl/core';
 import { readLocalCodexAccessState, readOplGatewayAccount, withGatewayStateDirectory, type ConnectService } from '@opl/connect';
 import type { InstalledPackageRecord, PackService } from '@opl/pack';
@@ -92,6 +94,7 @@ export interface AppStateSnapshot {
     readonly actions?: readonly Readonly<Record<string, unknown>>[];
     readonly settings_control_center?: {
       readonly app_settings_read_model: {
+        readonly connections: { readonly authorization: ReturnType<typeof projectConnectionAuthorization> };
         readonly opl_gateway_account?: ReturnType<typeof readOplGatewayAccount>;
         readonly codex_model_policy?: ReturnType<typeof readCodexModelPolicy>;
       };
@@ -146,11 +149,12 @@ export class AppStateCache {
       ...snapshot,
       app_state: {
         ...snapshot.app_state,
-        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : [])],
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions],
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
           app_settings_read_model: {
             ...snapshot.app_state.settings_control_center?.app_settings_read_model,
+            connections: { authorization: projectConnectionAuthorization(this.#connectService.listProjection()) },
             codex_model_policy: readCodexModelPolicy(),
             ...(account && { opl_gateway_account: account }),
           },
