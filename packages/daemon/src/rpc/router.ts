@@ -1,3 +1,4 @@
+import { setTaskVisibility } from '../state/task-visibility.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord, type ClientContext } from '@opl/core';
@@ -231,6 +232,19 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.contribution.execute', handleContributionExecute);
   handlers.set('app.action.execute', async (params, conn) => {
     const actionId = pickString(params, 'action_id', 'actionId') ?? '';
+    if (actionId === 'work_item_visibility_set') {
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      if (!dryRun) requireTrustedHost(conn, 'app.action.execute');
+      const payload = pickRecord(params, 'payload') ?? {};
+      const items = runtime.appStateCache.getState('fast').app_state.operator.workbench.work_item_projection_v2.items;
+      const result = setTaskVisibility(runtime.db, payload, {
+        dryRun,
+        resolveTask: (agentId, projectId, itemId) => items.some(({ identity }) =>
+          identity.agent_id === agentId && identity.project_id === projectId && identity.work_item_id === itemId),
+      });
+      if (result.status === 'executed') runtime.appStateCache.invalidate();
+      return result;
+    }
     if (actionId === 'package_contribution_execute') {
       return handleContributionExecute(params, conn);
     }

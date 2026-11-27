@@ -1,3 +1,6 @@
+import { buildRunwayWorkbench } from './task-projection.ts';
+import { ensureTaskVisibilitySchema } from './task-visibility.ts';
+import { createDomainTaskInventoryReader, type DomainTaskInventory } from './domain-task-inventory.ts';
 import { projectPackageDirectory, packageActions } from './package-projection.ts';
 import { readAppPackagePreferences } from './app-package-preferences.ts';
 import { projectUiContributions } from './ui-projection.ts';
@@ -86,6 +89,7 @@ export interface AppStateSnapshot {
   readonly schedules: readonly Record<string, unknown>[];
   readonly recent_operations?: ReturnType<PackService['operationStatus']>;
   readonly app_state: {
+    readonly operator: { readonly workbench: ReturnType<typeof buildRunwayWorkbench> };
     readonly agent_packages: ReturnType<typeof projectPackageDirectory>;
     readonly ui_contributions: ReturnType<typeof projectUiContributions>;
     readonly actions: readonly Record<string, unknown>[];
@@ -110,6 +114,8 @@ export class AppStateCache {
   readonly #packService: PackService;
   readonly #connectService: ConnectService;
   readonly #version: string;
+  readonly #inventoryReader = createDomainTaskInventoryReader();
+  #lastInventory: DomainTaskInventory | undefined;
   #revision = 1;
   #fastSnapshot: AppStateSnapshot | null = null;
   #fullSnapshot: AppStateSnapshot | null = null;
@@ -121,6 +127,7 @@ export class AppStateCache {
     readonly version: string;
   }) {
     this.#db = options.db;
+    ensureTaskVisibilitySchema(this.#db);
     this.#packService = options.packService;
     this.#connectService = options.connectService;
     this.#version = options.version;
@@ -166,12 +173,13 @@ export class AppStateCache {
   }
 
   #getSharedState(profile: 'fast' | 'full'): AppStateSnapshot {
-    if (profile === 'fast' && this.#fastSnapshot) {
-      return this.#fastSnapshot;
+    const previous = this.#fastSnapshot ?? this.#fullSnapshot;
+    if (previous) {
+      const inventory = this.#inventoryReader.read(previous.packages, previous.workspaces);
+      if (inventory !== this.#lastInventory) this.invalidate();
     }
-    if (profile === 'full' && this.#fullSnapshot) {
-      return this.#fullSnapshot;
-    }
+    const cached = profile === 'fast' ? this.#fastSnapshot : this.#fullSnapshot;
+    if (cached) return cached;
 
     const installed = this.#packService.list();
     const packages = installed.map(toProjectedPackageSummary);
@@ -204,6 +212,8 @@ export class AppStateCache {
     const connections = this.#connectService.list();
     const generatedAt = new Date().toISOString();
 
+    const inventory = this.#inventoryReader.read(packages, workspaces);
+    this.#lastInventory = inventory;
     const base: AppStateSnapshot = {
       profile,
       revision: this.#revision,
@@ -221,9 +231,14 @@ export class AppStateCache {
       tasks,
       schedules,
       app_state: {
+        operator: { workbench: buildRunwayWorkbench(this.#db, packages, generatedAt, inventory) },
         agent_packages: projectPackageDirectory(installed, preferences),
         ui_contributions: projectUiContributions(appPackages),
-        actions: packageActions,
+        actions: [...packageActions, {
+          action_id: 'work_item_visibility_set', label: 'Change work item visibility',
+          owner: 'opl-framework', route: 'opld app.action.execute', dry_run_supported: true,
+          confirmation_required: true, payload_fields: ['agent_id', 'project_id', 'work_item_id', 'visibility_state', 'expected_generation'],
+        }],
         packages,
         installed_packages: packages,
         workspaces,
