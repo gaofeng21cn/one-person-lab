@@ -73,6 +73,8 @@ def markdown(report):
         for lane in row.get('lanes', [row]):
             published = lane.get('published_channel') or {}
             version = published.get('tag', published.get('version', '—'))
+            if lane.get('asset_status') == 'asset_missing':
+                version += ' (asset missing)'
             owner_run = lane.get('observed_publication_run', lane)
             run = f"[Actions]({owner_run['run_url']})" if owner_run.get('run_url') else '—'
             if 'observed_publication_run' in lane:

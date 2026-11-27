@@ -47,8 +47,14 @@ def channel_snapshot(repository, channel):
         return {'version': version, 'build': build, 'url': url}
     tag = release['tag_name']
     commit = gh(f'repos/{repository}/commits/{urllib.parse.quote(tag, safe="")}')
-    return {'tag': tag, 'source_commit': commit['sha'], 'url': release['html_url'],
-            'parent_commits': [parent['sha'] for parent in commit.get('parents', [])]}
+    result = {'tag': tag, 'source_commit': commit['sha'], 'url': release['html_url'],
+              'parent_commits': [parent['sha'] for parent in commit.get('parents', [])]}
+    if pattern := channel.get('asset_pattern'):
+        asset = next((asset for asset in release['assets'] if re.fullmatch(pattern, asset['name'])), None)
+        result['asset_present'] = asset is not None
+        if asset:
+            result['asset'] = asset['name']
+    return result
 
 
 def run_observation(run):
@@ -121,6 +127,10 @@ def observe_lanes(config, prepared):
                             elif receipt.get('status') == 'blocked':
                                 row['request_stage'] = 'blocked'
                                 row['failure_reason'] = receipt.get('reason')
+        except (ReleaseError, OSError, ValueError, KeyError, subprocess.TimeoutExpired) as exc:
+            row['observation'] = 'unavailable'
+            row['observation_error'] = type(exc).__name__
+        try:
             channel = lane.get('channel')
             if channel:
                 readback = prepared.get('published_channel') if lane is primary and not scheduled else channel_snapshot(repository, channel)
@@ -135,8 +145,13 @@ def observe_lanes(config, prepared):
                         row['status'] = 'publication_verified'
                     if lane.get('receipt') == 'cloud' and row.get('owner_stage') == 'published' and exact:
                         row['status'] = 'publication_verified'
+                    if readback.get('asset_present') is False:
+                        row['asset_status'] = 'asset_missing'
+                    elif readback.get('asset_present') and row['status'] == 'publisher_success':
+                        if readback.get('source_commit') == row['workflow_source_commit']:
+                            row['status'] = 'publication_verified'
         except (ReleaseError, OSError, ValueError, KeyError, ET.ParseError, subprocess.TimeoutExpired) as exc:
             row['observation'] = 'unavailable'
-            row['observation_error'] = type(exc).__name__
+            row['channel_error'] = type(exc).__name__
         rows.append(row)
     return rows
