@@ -29,7 +29,7 @@ function createTempPackage(dir: string, manifestObj: Record<string, unknown>, cu
   fs.writeFileSync(path.join(dir, 'opl-package.json'), JSON.stringify(manifestObj, null, 2));
 }
 
-test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, and marketplace manifests', async () => {
+test('carriers/codex-sync projects installable skill and icon files, mcp.json absolute paths, and marketplace manifests', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-codex-'));
   const pkgDir = path.join(tmpDir, 'pkg');
   const marketplaceRoot = path.join(tmpDir, 'marketplace');
@@ -124,13 +124,12 @@ test('carriers/codex-sync projects zero-copy symlinks, mcp.json absolute paths, 
     assert.equal(syncRes.verified_by_readback, true);
     assert.ok(syncRes.plugin_dir);
 
-    // Non-standard skill path creates per-skill zero-copy symlink under skills/
-    const skillLink = path.join(syncRes.plugin_dir, 'skills', 'my-skill');
-    assert.equal(fs.lstatSync(skillLink).isSymbolicLink(), true);
-    assert.equal(fs.realpathSync(skillLink), fs.realpathSync(path.join(pkgDir, 'custom', 'my-skill')));
-
-    const assetsLink = path.join(syncRes.plugin_dir, 'assets');
-    assert.equal(fs.lstatSync(assetsLink).isSymbolicLink(), true);
+    const skillFile = path.join(syncRes.plugin_dir, 'skills', 'my-skill', 'SKILL.md');
+    assert.ok(fs.lstatSync(path.dirname(skillFile)).isDirectory());
+    assert.deepEqual(fs.readFileSync(skillFile), fs.readFileSync(path.join(pkgDir, 'custom/my-skill/SKILL.md')));
+    const icon = path.join(syncRes.plugin_dir, 'assets/icon.png');
+    assert.ok(fs.lstatSync(path.dirname(icon)).isDirectory());
+    assert.deepEqual(fs.readFileSync(icon), fs.readFileSync(path.join(pkgDir, 'assets/icon.png')));
 
     // Verify plugin.json and mcp.json absolute path resolution
     const pluginJson = JSON.parse(
@@ -202,7 +201,17 @@ test('linked Codex plugins expose only declared skills as the checkout changes',
   fs.writeFileSync(path.join(added, 'SKILL.md'), '# Unlisted skill');
   const skillsDir = path.join(projected.plugin_dir, 'skills');
   assert.deepEqual(fs.readdirSync(skillsDir), ['selected']);
-  assert.equal(fs.realpathSync(path.join(skillsDir, 'selected')), fs.realpathSync(path.join(pkgDir, 'skills/selected')));
+  assert.ok(fs.lstatSync(path.join(skillsDir, 'selected')).isDirectory());
+  assert.equal(fs.readFileSync(path.join(skillsDir, 'selected/SKILL.md'), 'utf8'), '# My Skill\n');
+  const outside = path.join(root, 'outside');
+  fs.writeFileSync(outside, 'outside package');
+  fs.symlinkSync(outside, path.join(pkgDir, 'skills/selected/reference.md'));
+  assert.throws(() => projectPackageToCodexMarketplace({
+    manifest, installPath: pkgDir, marketplaceRoot: path.join(root, 'marketplace'),
+  }), (err: unknown) => err instanceof PackError && err.code === 'PACK_SYMLINK_ESCAPE');
+  assert.equal(fs.readFileSync(path.join(skillsDir, 'selected/SKILL.md'), 'utf8'), '# My Skill\n');
+  assert.equal(fs.existsSync(path.join(skillsDir, 'selected/reference.md')), false);
+
 });
 
 test('codex-sync imports external Codex plugins and handles marketplace transient retry & rollback', async () => {
