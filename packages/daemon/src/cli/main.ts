@@ -135,7 +135,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
         if (key === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
-      const sourcesCommand = positionals[0] === 'sources';
+      const sourcesCommand = positionals[0] === 'sources' || (positionals[0] === 'pack' && positionals[1] === 'sources');
       const valueFlag = VALUE_FLAGS.has(arg) || (sourcesCommand && (arg === '--source-id' || arg === '--provider-id'));
       if (valueFlag && i + 1 < argv.length && !((RELEASE_FLAGS.has(arg) || sourcesCommand) && argv[i + 1]!.startsWith('--'))) {
         const value = argv[++i]!;
@@ -301,6 +301,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'disconnect', usage: 'disconnect --source-id github-packages:<owner>' },
   ],
   pack: [
+    { name: 'sources', usage: 'sources <list|configure|check|disconnect> ...' },
     { name: 'search', usage: 'search [<query>] [--intent <intent>] [--origin <origin>]' },
     { name: 'list', usage: 'list [--intent <intent>] [--origin <origin>] [--query <q>]' },
     { name: 'inspect', usage: 'inspect <packageIdOrDir>' },
@@ -710,6 +711,10 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       }
 
       case 'pack': {
+        if (sub === 'sources') {
+          emitOutput(await runPackageSourcesCommand(rest, parsed.flags), parsed);
+          return 0;
+        }
         if (!sub || !(NAMESPACE_SUBCOMMANDS.pack?.some((c) => c.name === sub))) {
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown pack subcommand '${sub ?? ''}'.`);
         }

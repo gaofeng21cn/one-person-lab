@@ -104,6 +104,16 @@ class V2PackageProjectionTests(unittest.TestCase):
         self.prepare()
         self.assertNotIn('icon_ref', read(self.manifest_path)['v2_release'])
 
+    def test_nested_payload_freezes_declared_source_root(self):
+        source_root = 'plugins/example'
+        write(self.paths.allowlist('example'), {'package_id': 'example', 'source_root': source_root})
+        self.candidate['source_root'] = source_root
+        self.prepare()
+        self.assertEqual(read(self.new_payload)['source_root'], source_root)
+        self.candidate['source_root'] = '../example'
+        with self.assertRaisesRegex(ReleaseError, 'source_root differs'):
+            self.prepare()
+
     def test_failed_index_write_restores_previous_selection(self):
         original_index = self.index.read_bytes()
         replace_file = v2_projection._replace_file

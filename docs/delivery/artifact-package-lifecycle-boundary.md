@@ -74,10 +74,7 @@ digest，接口发现与 Hosted action 使用同一个父级源码根，不创�
 版本指针或源码缓存。缺失声明的 descriptor/action catalog 时，Package status 显示
 `hosted_agent_source_unavailable`，保留 carrier callable 的独立事实，提示重新安装 Package。
 显式选择 installed/managed 来源后，邻近开发仓和旧 module 镜像不覆盖该选择；显式环境路径仍作为开发覆盖。分离的开发运行根与安装 carrier 必须具有相同 owner 身份、版本、插件选择器、publication 和领域描述入口。启动前检查与实际调用共用身份读取与比较规则，不匹配时返回 `hosted_agent_runtime_identity_mismatch` 并关闭 launch。
-这些检查证明源码与入口文件可用；Runway、实际 StageRun 和领域业务验收分别回读。
-发布前可运行 `node scripts/verify-package-source-artifacts.ts --package-id <id>`（可重复参数），
-在独立临时目录复用同一下载、归档身份和内容摘要校验，再立即清理。该入口只验证明确选择的
-根包 payload，不注册原生插件、不修改用户安装状态，也不替代依赖安装、登录及 clean-VM 验收。
+这些检查证明源码与入口文件可用；Runway、实际 StageRun 和领域业务验收分别回读。当 Catalog 已选定 `v2_release` 时，若选定 OCI manifest 缺失或不可读，resolver 直接返回 `PACK_DOWNLOAD_FAILED` 并 fail closed，不静默回退旧版 v1 payload；发布前通过 `opl pack inspect` / `opl pack build --dry-run` 与 `scripts/prepare-v2-package-publication.mjs`（含非根 `source_root` 支持）验证源码归档、descriptor 身份与内容锁，不修改用户安装状态，也不替代依赖安装、登录及 clean-VM 验收。
 已安装在 OPL state 受管 marketplace 目录中的本地插件包，更新和修复复用安装时的
 payload 物化路径，不退回 descriptor 中的 Git 仓库地址另建 marketplace。已有 Git
 carrier 和显式开发目录继续使用原有生命周期，不因存在 payload 声明而切换安装来源。

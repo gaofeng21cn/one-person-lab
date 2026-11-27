@@ -34,8 +34,15 @@ test('only trusted clients can read or restore the selected Flow instructions', 
   }));
   const template = 'Synthetic selected Flow template.\n';
   const source = path.join(profiles, 'reviewed.md');
-  fs.writeFileSync(source, template);
   await host.call('pack.link', { dir: root, sync_codex: false });
+  const other = path.join(root, 'templates');
+  fs.mkdirSync(other);
+  const linked = path.join(other, 'default.md');
+  fs.symlinkSync(linked, source);
+  assert.equal((await app()).opl_flow_default_user_agents.status, 'invalid');
+  fs.writeFileSync(linked, 'First draft.\n');
+  assert.equal((await app()).opl_flow_default_user_agents.content, 'First draft.\n');
+  fs.writeFileSync(linked, template);
   assert.equal((await app()).opl_flow_default_user_agents.content, template);
   const restore = { action_id: 'codex_user_instructions_restore_opl_flow_default', payload: { expected_sha256: digest(previous) } };
   await assert.rejects(plugin.call('app.action.execute', restore), /trusted host/i);

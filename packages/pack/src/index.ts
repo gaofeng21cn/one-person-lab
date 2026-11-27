@@ -1,5 +1,4 @@
 export { PackError, type PackErrorCode } from './errors.ts';
-
 export type {
   BuildPackageResult,
   CodexSyncProjectionResult,
@@ -244,7 +243,7 @@ export {
   type OfficialPackageCatalogOptions,
 } from './distribution/official-package-catalog.ts';
 export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
-export { resolvePrivatePackageAuthHeader } from './distribution/private-package-source-provider.ts';
+export { preparePrivatePackageSourceCredential, probePrivatePackageSourceIdentity, resolvePrivatePackageAuthHeader } from './distribution/private-package-source-provider.ts';
 export { ensurePackage, type ResolvedPackageForInstall } from './lifecycle/ensure-package.ts';
 
 export {
@@ -252,5 +251,5 @@ export {
   configurePrivatePackageSource,
   disconnectPrivatePackageSource,
   listPrivatePackageSources,
-  privatePackageSourceStorePath,
 } from './distribution/private-package-sources.ts';
+export { initializePrivatePackageSourceStore, readConfiguredPrivatePackageHandle } from './distribution/private-package-source-store.ts';

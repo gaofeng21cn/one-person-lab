@@ -12,7 +12,19 @@ test('trusted Studio connects, checks and disconnects a private software source 
   let identityReads = 0;
   let identityStatus = 200;
   t.mock.method(globalThis, 'fetch', async (input: string | URL | Request, init?: RequestInit) => {
-    if (String(input) !== 'https://api.github.com/user') return new Response(null, { status: 404 });
+    const url = new URL(String(input));
+    if (url.pathname.endsWith('/catalog-index.json')) return Response.json({
+      schema_version: 'opl_software_catalog_index.v1', catalog_id: 'public-registry:opl',
+      packages: [{ package_id: 'fixture', visibility: 'authorized_only',
+        manifest: { source_repo: 'https://github.com/gaofeng21cn/fixture.git' } }],
+    });
+    if (url.origin === 'https://ghcr.io') {
+      if (url.pathname === '/token') return Response.json({ token: 'fixture-registry-token' });
+      assert.equal(init?.method, 'HEAD');
+      assert.equal(url.pathname, '/v2/gaofeng21cn/one-person-lab-private-packages/fixture/manifests/latest-stable');
+      return new Response(null, { status: 200 });
+    }
+    if (url.href !== 'https://api.github.com/user') return new Response(null, { status: 404 });
     ++identityReads;
     assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer ' + token);
     return Response.json({ id: 42, login: 'fixture-user' }, { status: identityStatus });
@@ -56,8 +68,9 @@ test('trusted Studio connects, checks and disconnects a private software source 
   const observed = (await state('full')).agent_packages.sources!.entries[0]!;
   assert.equal(observed.status, 'authorized');
   assert.equal(observed.credential_handle_present, true);
-  assert.equal(observed.verification_reason, 'provider_identity_verified_package_grants_checked_at_install');
-  assert.ok(!fs.readFileSync(path.join(sandbox.stateDir, 'software-sources.json'), 'utf8').includes(token));
+  assert.equal(observed.verification_reason, 'provider_identity_and_registry_package_read_verified');
+  assert.equal(fs.existsSync(path.join(sandbox.stateDir, 'software-sources.json')), false);
+  await assert.rejects(external.call('pack.sources.list', {}), /TRUSTED_HOST_REQUIRED/);
   await request('source_list', { confirmed: true });
   assert.equal(identityReads, 1);
 

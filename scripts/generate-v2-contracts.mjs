@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { syncPackageManifestV2SchemaFile } from '../packages/pack/src/manifest/generate-schema.ts';
+import { syncPackageManifestV2SchemaFile } from '@opl/pack';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const targetPath = path.join(repoRoot, 'contracts', 'opl-package.v2.schema.json');

@@ -1570,6 +1570,25 @@ function checkDqs0SqlLiterals(rootDir, violations, packagesChecked) {
   return { sqlFilesChecked };
 }
 
+function checkScriptImports(rootDir, violations) {
+  for (const file of walkFiles(path.join(rootDir, 'scripts')).filter(file => SOURCE_FILE_RE.test(file))) {
+    const { specifiers } = extractModuleImportsAndDynamics(fs.readFileSync(file, 'utf8'));
+    for (const { specifier, line } of specifiers) {
+      if (!specifier.startsWith('.')) continue;
+      const target = path.resolve(path.dirname(file), specifier);
+      const packageImport = /^packages\/([^/]+)\/src(?:\/|$)/.exec(path.relative(rootDir, target).split(path.sep).join('/'));
+      if (packageImport) {
+        violations.push({
+          rule: 'script-package-internal-import',
+          file: path.relative(rootDir, file).split(path.sep).join('/'),
+          line,
+          message: `Use a public @opl/${packageImport[1]} entrypoint instead of "${specifier}".`,
+        });
+      }
+    }
+  }
+}
+
 export function runV2ImportGuard(options = {}) {
   const rootDir = path.resolve(options.rootDir ?? process.cwd());
   const strictM4 = options.strictM4 === true;
@@ -1577,6 +1596,7 @@ export function runV2ImportGuard(options = {}) {
   const coreStats = checkCorePackage(rootDir, violations);
   const ledgerStats = checkLedgerPackage(rootDir, violations, { requireLedger: strictM4 });
   const dagStats = checkPackagesDagAndImports(rootDir, violations);
+  checkScriptImports(rootDir, violations);
   const sqlStats = checkDqs0SqlLiterals(rootDir, violations, dagStats.packagesChecked);
   const m4Stats = strictM4 ? checkStrictM4RepoInvariants(rootDir, violations) : { pythonLineCount: 0 };
 

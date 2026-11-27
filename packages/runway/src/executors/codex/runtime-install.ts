@@ -4,20 +4,36 @@ import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireAdvisoryLock, KernelError } from '@opl/core';
+import { RunwayError } from '../../errors.ts';
 import { codexRuntimeRoot, managedCodexBinary, resolveCodexBinary, resolveCodexFromRuntime } from './binary.ts';
 import { stageCodexPayload } from './runtime-payload.ts';
 import { activateLegacyCodexGeneration } from './runtime-pending.ts';
 import { checkCodexExecutable, verifyCodexAppServer } from './runtime-probe.ts';
 
-async function withInstallLock<T>(root: string, run: () => Promise<T>): Promise<T> {
+type InstallLockOptions = { timeoutMs?: number; signal?: AbortSignal };
+
+async function withInstallLock<T>(root: string, run: () => Promise<T>, options: InstallLockOptions): Promise<T> {
+  const timeoutMs = options.timeoutMs ?? 10 * 60_000;
+  if (!Number.isFinite(timeoutMs) || timeoutMs < 0) throw new RunwayError('INVALID_INPUT', 'Invalid Codex install lock timeout.');
+  const deadline = performance.now() + timeoutMs;
+  const busy = () => new RunwayError('CODEX_INSTALL_BUSY', 'Could not acquire the Codex installation lock.', { timeout_ms: timeoutMs });
   for (;;) {
+    if (options.signal?.aborted) throw busy();
     let lock;
     try {
       // Healthy downloads can outlive the default stale-lock interval.
       lock = acquireAdvisoryLock(path.join(root, 'codex-install.lock'), { preserveLiveHolder: true });
     } catch (error) {
       if (!(error instanceof KernelError) || error.code !== 'LOCK_CONTENTION') throw error;
-      await delay(250);
+      const remaining = deadline - performance.now();
+      if (remaining <= 0) throw busy();
+      try {
+        await delay(Math.min(250, remaining), undefined, { signal: options.signal });
+      } catch (error) {
+        if (options.signal?.aborted) throw busy();
+        throw error;
+      }
+      if (performance.now() >= deadline) throw busy();
       continue;
     }
     try {
@@ -77,7 +93,7 @@ function configuredRuntime(env: NodeJS.ProcessEnv) {
   return resolveCodexBinary(undefined, env);
 }
 
-export async function ensureCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
+export async function ensureCodexRuntime(env: NodeJS.ProcessEnv = process.env, options: InstallLockOptions = {}) {
   return withInstallLock(codexRuntimeRoot(env), async () => {
     await activateLegacyCodexGeneration(codexRuntimeRoot(env), env);
     // A configured external path is authoritative. Surface an unusable
@@ -92,7 +108,7 @@ export async function ensureCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
       }
     }
     return install(env);
-  });
+  }, options);
 }
 
 export async function readActiveCodexPath(env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
@@ -100,12 +116,12 @@ export async function readActiveCodexPath(env: NodeJS.ProcessEnv = process.env):
   return selected && await checkCodexExecutable(selected.path, env) ? selected.path : null;
 }
 
-export async function activateCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
+export async function activateCodexRuntime(env: NodeJS.ProcessEnv = process.env, options: InstallLockOptions = {}) {
   const root = codexRuntimeRoot(env);
   const pending = path.join(root, 'pending-codex-generation.json');
   let deferred = false;
   if (existsSync(pending)) {
-    deferred = await withInstallLock(root, () => activateLegacyCodexGeneration(root, env)) === 'deferred_same_app_instance';
+    deferred = await withInstallLock(root, () => activateLegacyCodexGeneration(root, env), options) === 'deferred_same_app_instance';
   }
   const binary = await readActiveCodexPath(env);
   return {

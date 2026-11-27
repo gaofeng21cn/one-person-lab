@@ -9,6 +9,7 @@ import {
   buildPackage,
   createPackageSourceArchive,
   extractPackageSourceArchive,
+  isSafeRelativePosixPath,
   packageSourceArchiveDigest,
   verifyReleaseLock,
 } from '@opl/pack';
@@ -26,9 +27,10 @@ function git(root, args, encoding = 'utf8') {
   });
 }
 
-function committedFiles(root, commit) {
+function committedFiles(root, commit, sourceRoot) {
   const files = new Map();
-  for (const record of git(root, ['ls-tree', '-rz', commit]).split('\0').filter(Boolean)) {
+  const tree = sourceRoot === '.' ? commit : `${commit}:${sourceRoot}`;
+  for (const record of git(root, ['ls-tree', '-rz', tree]).split('\0').filter(Boolean)) {
     const boundary = record.indexOf('\t');
     const [mode, kind, object] = record.slice(0, boundary).split(' ');
     if (kind === 'blob') files.set(record.slice(boundary + 1), { mode, object });
@@ -50,31 +52,36 @@ function verifyFrozenSource(staged, paths, files) {
   }
 }
 
-export function prepareV2PackagePublication({ ownerRoot, sourceCommit, packageId, packageVersion, outputDirectory }) {
+export function prepareV2PackagePublication({ ownerRoot, sourceCommit, packageId, packageVersion, outputDirectory, sourceRoot = '.' }) {
   if (!packageIdPattern.test(packageId ?? '') || !versionPattern.test(packageVersion ?? '')
     || !/^[a-f0-9]{40}$/.test(sourceCommit ?? '')) {
     throw new Error('Expected a Package id, stable SemVer, and exact owner Git commit.');
   }
-  const sourceRoot = fs.realpathSync(ownerRoot);
-  if (fs.realpathSync(git(sourceRoot, ['rev-parse', '--show-toplevel']).trim()) !== sourceRoot
-    || git(sourceRoot, ['rev-parse', '--verify', `${sourceCommit}^{commit}`]).trim() !== sourceCommit) {
+  if (sourceRoot !== '.' && (typeof sourceRoot !== 'string'
+    || !isSafeRelativePosixPath(sourceRoot) || sourceRoot.startsWith('./'))) {
+    throw new Error('Package source_root must be a safe owner-relative path.');
+  }
+  const ownerPath = fs.realpathSync(ownerRoot);
+  if (fs.realpathSync(git(ownerPath, ['rev-parse', '--show-toplevel']).trim()) !== ownerPath
+    || git(ownerPath, ['rev-parse', '--verify', `${sourceCommit}^{commit}`]).trim() !== sourceCommit) {
     throw new Error('Package selection must refer to an exact commit at the owner repository root.');
   }
-  const timestamp = new Date(Number(git(sourceRoot, ['show', '-s', '--format=%ct', sourceCommit]).trim()) * 1000);
+  const timestamp = new Date(Number(git(ownerPath, ['show', '-s', '--format=%ct', sourceCommit]).trim()) * 1000);
   const output = path.resolve(outputDirectory);
   fs.mkdirSync(output, { recursive: true });
   const temporary = fs.mkdtempSync(path.join(output, '.package-candidate-'));
   try {
     const sourceArchive = path.join(temporary, 'owner.tar');
     const staged = path.join(temporary, 'owner');
-    git(sourceRoot, ['archive', '--format=tar', `--output=${sourceArchive}`, sourceCommit]);
+    const archiveTree = sourceRoot === '.' ? sourceCommit : `${sourceCommit}:${sourceRoot}`;
+    git(ownerPath, ['archive', '--format=tar', `--output=${sourceArchive}`, archiveTree]);
     extractPackageSourceArchive(sourceArchive, staged);
 
     const built = buildPackage(staged, { gitCommit: sourceCommit, builtAt: timestamp.toISOString() });
     if (built.manifest.identity.id !== packageId || built.manifest.identity.version !== packageVersion) {
       throw new Error(`Owner descriptor does not select ${packageId}@${packageVersion}.`);
     }
-    verifyFrozenSource(staged, built.lock.paths, committedFiles(sourceRoot, sourceCommit));
+    verifyFrozenSource(staged, built.lock.paths, committedFiles(ownerPath, sourceCommit, sourceRoot));
     fs.chmodSync(built.lock_path, 0o644);
 
     const filename = `${packageId}-${packageVersion}.oplpack`;
@@ -101,6 +108,7 @@ export function prepareV2PackagePublication({ ownerRoot, sourceCommit, packageId
       package_id: packageId,
       package_version: packageVersion,
       source_commit: sourceCommit,
+      source_root: sourceRoot,
       content_digest: built.digest,
       file_count: verified.lock.file_count,
       manifest: built.manifest,
@@ -118,6 +126,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     'package-id': { type: 'string' },
     'package-version': { type: 'string' },
     'output-directory': { type: 'string' },
+    'source-root': { type: 'string' },
   } });
   const result = prepareV2PackagePublication({
     ownerRoot: values['owner-root'],
@@ -125,6 +134,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     packageId: values['package-id'],
     packageVersion: values['package-version'],
     outputDirectory: values['output-directory'],
+    sourceRoot: values['source-root'] ?? '.',
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }

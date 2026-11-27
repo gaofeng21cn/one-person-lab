@@ -9,6 +9,7 @@ import time
 import tomllib
 from pathlib import Path
 from .common import ReleaseError, gh, git, read, run, safe_path, version_tuple, write
+from .projection import package_source_roots
 from .v2_projection import build_v2_candidate
 
 
@@ -412,19 +413,20 @@ def release_version(root, base, current, previous):
     return current
 
 
-def root_v2_version(root, commit, package_id):
+def root_v2_version(root, commit, package_id, source_root='.'):
     # Read the selected Git commit, before any legacy preparation hook can change source files.
-    selected = git(root, 'ls-tree', commit, '--', 'opl-package.json')
+    descriptor = (Path(source_root) / 'opl-package.json').as_posix()
+    selected = git(root, 'ls-tree', commit, '--', f':(literal){descriptor}')
     if not selected:
         return None
     if not selected.startswith(('100644 blob ', '100755 blob ')):
-        raise ReleaseError('Root Package descriptor must be a regular file in the owner commit')
-    manifest = json.loads(git(root, 'show', f'{commit}:opl-package.json'))
+        raise ReleaseError('Package descriptor must be a regular file in the owner commit')
+    manifest = json.loads(git(root, 'show', f'{commit}:{descriptor}'))
     if not isinstance(manifest, dict) or manifest.get('schema_version') != 'opl.package.v2':
         return None
     identity = manifest.get('identity')
     if not isinstance(identity, dict) or identity.get('id') != package_id or not isinstance(identity.get('version'), str):
-        raise ReleaseError('Root v2 Package identity does not match its Catalog selection')
+        raise ReleaseError('v2 Package identity does not match its Catalog selection')
     return identity['version']
 
 
@@ -442,7 +444,7 @@ def v2_candidate_version(root, base, current, previous):
     return version
 
 
-def prepare_v2_owner(root, projection, repo, settings, current, controller, *, apply):
+def prepare_v2_owner(root, projection, repo, settings, current, controller, *, apply, source_root='.'):
     package_id = projection['package_id']
     previous = (projection.get('v2_release') or projection)['version']
     base = git(root, 'rev-parse', 'HEAD')
@@ -455,13 +457,13 @@ def prepare_v2_owner(root, projection, repo, settings, current, controller, *, a
     git(root, 'config', 'user.name', 'OPL Package Publisher')
     git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
     if version != current:
-        descriptor = root / 'opl-package.json'
+        descriptor = safe_path(root, (Path(source_root) / 'opl-package.json').as_posix())
+        refs = list(settings.get('version_files', []))
+        if any(safe_path(root, item['path']).resolve() == descriptor.resolve() for item in refs):
+            raise ReleaseError('The v2 descriptor version is managed through identity.version')
         manifest = read(descriptor)
         manifest['identity']['version'] = version
         write(descriptor, manifest)
-        refs = list(settings.get('version_files', []))
-        if any(item['path'] == 'opl-package.json' for item in refs):
-            raise ReleaseError('The v2 descriptor version is managed through identity.version')
         update_version_files(root, refs, version)
     execute_commands(root, settings, 'prepare')
     execute_commands(root, settings, 'verify')
@@ -470,9 +472,9 @@ def prepare_v2_owner(root, projection, repo, settings, current, controller, *, a
         git(root, 'add', '--all')
         git(root, 'commit', '-m', f'chore: prepare Package {version}')
         candidate_head = git(root, 'rev-parse', 'HEAD')
-        build_v2_candidate(controller, root, package_id, version, candidate_head)
+        build_v2_candidate(controller, root, package_id, version, candidate_head, source_root)
         source = merge_release_changes(root, repo, base, package_id, version)
-    candidate = build_v2_candidate(controller, root, package_id, version, source)
+    candidate = build_v2_candidate(controller, root, package_id, version, source, source_root)
     publish_owner_tag(root, repo, source, version, settings)
     return {**result, 'status': 'prepared', 'owner_source_commit': source, 'candidate': candidate}
 
@@ -498,11 +500,13 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
         return {'status': 'owner_manual', 'owner_source_commit': base}
     if base == payload['source_commit']:
         return {'status': 'unchanged', 'owner_source_commit': base}
-    v2_version = root_v2_version(root, base, projection['package_id'])
-    if v2_version is not None:
-        if v2_controller is None:
-            raise ReleaseError('v2 Package publication requires the official Catalog and current Framework publisher')
-        return prepare_v2_owner(root, projection, repo, settings, v2_version, v2_controller, apply=apply)
+    for source_root in package_source_roots(projection, allowlist):
+        v2_version = root_v2_version(root, base, projection['package_id'], source_root)
+        if v2_version is not None:
+            if v2_controller is None:
+                raise ReleaseError('v2 Package publication requires the official Catalog and current Framework publisher')
+            return prepare_v2_owner(root, projection, repo, settings, v2_version, v2_controller,
+                                    apply=apply, source_root=source_root)
     execute_commands(root, settings, 'prepare')
     if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}

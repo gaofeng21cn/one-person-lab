@@ -30,6 +30,7 @@ export {
 
 export {
   ensureStateDir,
+  legacyDefaultStateEntry,
   resolveStatePaths,
   type StatePaths,
 } from './paths.ts';

@@ -33,7 +33,7 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
     if (!model) return state;
     return {
       ...state,
-      app_state: { ...state.app_state, system_initialize: readSystemInitialize(runtime.paths.state_dir, model.model_access_ready) },
+      app_state: { ...state.app_state, system_initialize: readSystemInitialize(runtime.db, model.model_access_ready) },
     };
   });
 
@@ -58,7 +58,7 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       state,
       ...(model && {
         system_initialize: readSystemInitialize(
-          runtime.paths.state_dir,
+          runtime.db,
           model.model_access_ready,
           (await readCodexRuntime()).runtime_activation.status === 'active',
         ),
@@ -178,7 +178,7 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
         throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Workspace setup does not accept a Package target.');
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
-      const result = executeWorkspaceRootAction(runtime.paths.state_dir, payload, dryRun);
+      const result = executeWorkspaceRootAction(runtime.db, payload, dryRun);
       if (!dryRun) runtime.appStateCache.invalidate();
       return result;
     }
@@ -191,7 +191,7 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
       try {
-        return await executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.paths.state_dir);
+        return await executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.db, () => runtime.appStateCache.invalidate());
       } finally {
         if (!dryRun && actionId !== 'source_list') runtime.appStateCache.invalidate();
       }

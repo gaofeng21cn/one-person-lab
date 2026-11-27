@@ -11,7 +11,6 @@ import {
   ChannelError,
   ChannelProviderHost,
   MIGRATION_0002_CONNECT_CHANNELS,
-  RemoteCompanionConnectorHost,
   SqliteChannelPackageDiscovery,
   SqliteChannelThreadBindingStore,
   ensureConnectSchema,
@@ -21,9 +20,6 @@ import {
   type ChannelProvider,
   type ChannelThreadBinding,
   type ChannelThreadHostCallback,
-  type RemoteCompanionActivationContext,
-  type RemoteCompanionConversationBridge,
-  type RemoteCompanionProtectedBlobHost,
 } from '../src/index.ts';
 
 function makeTempDir(prefix = 'connect-channels-'): string {
@@ -309,153 +305,7 @@ test('ChannelProviderHost enforces status lifecycle, confirmation_required, safe
   }
 });
 
-test('RemoteCompanionConnectorHost enforces activation digests, \\0-scoped ProtectedBlobPort, unavailable mode, and safe disconnect', async () => {
-  const bridge: RemoteCompanionConversationBridge = {
-    listDirectory: async () => [],
-    readHistory: async () => [],
-    startConversation: async () => ({ id: 'c1' }),
-    openConversation: async () => ({}),
-    sendMessage: async () => ({}),
-    subscribeEvents: () => ({
-      dispose: () => {
-        eventSubDisposed += 1;
-      },
-    }),
-    stopTurn: async () => ({}),
-    respondApproval: async () => ({}),
-    refresh: async () => ({}),
-  };
-
-  let eventSubDisposed = 0;
-  let connectorDisposed = 0;
-  const contentDigest = `sha256:${'1'.repeat(64)}`;
-  const artifactDigest = `sha256:${'2'.repeat(64)}`;
-  const activationContext: RemoteCompanionActivationContext = {
-    surface_kind: 'opl_remote_companion_activation_context.v1',
-    package_id: 'comp-alpha',
-    environment: 'prod',
-    cohort_id: 'default',
-    protocol_version: 'opl_remote_transport.v1',
-    provider: 'tunnel',
-    service_origin: 'https://companion.example.com',
-    config_digest: `sha256:${'3'.repeat(64)}`,
-    package_content_digest: contentDigest,
-    package_artifact_digest: artifactDigest,
-  };
-
-  // 1. Unavailable mode when ProtectedBlobHost absent -> start() not called
-  let startCalledWhenAbsent = false;
-  const absentHost = new RemoteCompanionConnectorHost({ bridge });
-  await absentHost.attach({
-    package_id: 'comp-alpha',
-    content_digest: contentDigest,
-    artifact_digest: artifactDigest,
-    activation_context: activationContext,
-    connector: {
-      start: () => {
-        startCalledWhenAbsent = true;
-        return { dispose: () => {} };
-      },
-    },
-    ui_views: [
-      {
-        id: 'comp.view',
-        view_type: 'remote_companion_access',
-        data_ref: 'comp.state#status',
-        actions: [],
-      },
-    ],
-  });
-  assert.equal(startCalledWhenAbsent, false);
-  const absentRead = await absentHost.readRemoteCompanionAccess({
-    package_id: 'comp-alpha',
-    ref: 'comp.state#status',
-  });
-  assert.equal((absentRead.result as { unavailable_reason: string }).unavailable_reason, 'protected_blob_host_absent');
-
-  // 2. Active mode with \0-scoped ProtectedBlobPort, 256 KiB cap, and safe disconnect on reportError
-  const rawBlobStore = new Map<string, Uint8Array>();
-  const protectedBlobHost: RemoteCompanionProtectedBlobHost = {
-    forPackage: (pkgId) => ({
-      read: async (key) => rawBlobStore.get(`${pkgId}\0${key}`) ?? null,
-      replace: async (key, bytes) => {
-        rawBlobStore.set(`${pkgId}\0${key}`, new Uint8Array(bytes));
-      },
-      clear: async (key) => {
-        rawBlobStore.delete(`${pkgId}\0${key}`);
-      },
-    }),
-  };
-
-  const eventBus = new EventBus<ChannelHostEvents>();
-  const companionErrors: string[] = [];
-  eventBus.on('channel.companion.error', (ev) => {
-    companionErrors.push(ev.reason);
-  });
-
-  const host = new RemoteCompanionConnectorHost({
-    bridge,
-    protectedBlobHost,
-    eventBus,
-  });
-
-  // Digest mismatch fails closed
-  await assert.rejects(
-    () =>
-      host.attach({
-        package_id: 'comp-alpha',
-        content_digest: `sha256:${'9'.repeat(64)}`,
-        artifact_digest: artifactDigest,
-        activation_context: activationContext,
-        connector: { start: () => ({ dispose: () => {} }) },
-      }),
-    (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_DIGEST_MISMATCH',
-  );
-
-  let reportErrorFn!: (err: unknown) => void;
-  let capturedBlob!: Parameters<Parameters<RemoteCompanionConnectorHost['attach']>[0]['connector']['start']>[0]['protected_blob'];
-  let capturedBridge!: RemoteCompanionConversationBridge;
-
-  await host.attach({
-    package_id: 'comp-alpha',
-    content_digest: contentDigest,
-    artifact_digest: artifactDigest,
-    activation_context: activationContext,
-    connector: {
-      start: ({ protected_blob, canonical_conversation_bridge, reportError }) => {
-        capturedBlob = protected_blob;
-        capturedBridge = canonical_conversation_bridge;
-        reportErrorFn = reportError!;
-        return {
-          dispose: () => {
-            connectorDisposed += 1;
-          },
-        };
-      },
-    },
-  });
-
-  // ProtectedBlob enforces package isolation & 256 KiB limit
-  await capturedBlob.replace('session_key', new Uint8Array([1, 2, 3]));
-  assert.equal(rawBlobStore.has('comp-alpha\0session_key'), true);
-  assert.deepEqual(await capturedBlob.read('session_key'), new Uint8Array([1, 2, 3]));
-  await assert.rejects(
-    () => capturedBlob.replace('too_big', new Uint8Array(262_145)),
-    (err: unknown) => err instanceof ChannelError && err.code === 'COMPANION_BLOB_LIMIT_EXCEEDED',
-  );
-
-  capturedBridge.subscribeEvents({ onEvent: () => {} });
-  reportErrorFn(new ChannelError('CHANNEL_AUTH_ERROR', 'Remote auth expired'));
-  // Wait microtask queue for async safeDisconnect triggered from reportError
-  await new Promise((resolve) => setTimeout(resolve, 20));
-
-  assert.equal(eventSubDisposed, 1);
-  assert.equal(connectorDisposed, 1);
-  assert.deepEqual(companionErrors, ['auth_error']);
-  assert.equal(host.getStateProjection().connectors[0]?.status, 'error');
-});
-
-test('ChannelProviderHost and RemoteCompanionConnectorHost do not resurrect or leak disposable on in-start detach or sync reportError', async () => {
+test('ChannelProviderHost does not resurrect or leak disposable on in-start detach or sync reportError', async () => {
   // 1. ChannelProviderHost: detach() while provider.start() is pending
   {
     let disposedCount = 0;
@@ -561,93 +411,7 @@ test('ChannelProviderHost and RemoteCompanionConnectorHost do not resurrect or l
     assert.equal(host.getStateProjection().providers[0]?.status, 'disconnected');
   }
 
-  // 4. RemoteCompanionConnectorHost: detach() during pending start() and sync reportError() during start()
-  {
-    const bridge: RemoteCompanionConversationBridge = {
-      listDirectory: async () => [],
-      readHistory: async () => [],
-      startConversation: async () => ({ id: 'c1' }),
-      openConversation: async () => ({}),
-      sendMessage: async () => ({}),
-      subscribeEvents: () => ({ dispose: () => {} }),
-      stopTurn: async () => ({}),
-      respondApproval: async () => ({}),
-      refresh: async () => ({}),
-    };
-    const protectedBlobPort = {
-      read: async () => null,
-      replace: async () => {},
-      clear: async () => {},
-    };
-    const contentDigest = `sha256:${'1'.repeat(64)}`;
-    const artifactDigest = `sha256:${'2'.repeat(64)}`;
-    const mkCtx = (pkgId: string): RemoteCompanionActivationContext => ({
-      surface_kind: 'opl_remote_companion_activation_context.v1',
-      package_id: pkgId,
-      environment: 'prod',
-      cohort_id: 'default',
-      protocol_version: 'opl_remote_transport.v1',
-      provider: 'tunnel',
-      service_origin: 'https://companion.example.com',
-      config_digest: `sha256:${'3'.repeat(64)}`,
-      package_content_digest: contentDigest,
-      package_artifact_digest: artifactDigest,
-    });
-
-    const host = new RemoteCompanionConnectorHost({ bridge, protectedBlobPort });
-    let disposedA = 0;
-    let resolveStartA!: (d: { dispose(): void }) => void;
-    const attachA = host.attach({
-      package_id: 'comp-race',
-      content_digest: contentDigest,
-      artifact_digest: artifactDigest,
-      activation_context: mkCtx('comp-race'),
-      connector: {
-        start: () =>
-          new Promise((resolve) => {
-            resolveStartA = resolve;
-          }),
-      },
-    });
-    await host.detach('comp-race');
-    resolveStartA({
-      dispose: () => {
-        disposedA += 1;
-      },
-    });
-    await assert.rejects(
-      () => attachA,
-      (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_PROVIDER_UNAVAILABLE',
-    );
-    assert.equal(disposedA, 1);
-    assert.equal(host.getStateProjection().connectors.find((c) => c.package_id === 'comp-race')?.status, 'disconnected');
-
-    let disposedB = 0;
-    await assert.rejects(
-      () =>
-        host.attach({
-          package_id: 'comp-sync-err',
-          content_digest: contentDigest,
-          artifact_digest: artifactDigest,
-          activation_context: mkCtx('comp-sync-err'),
-          connector: {
-            start: ({ reportError }) => {
-              reportError?.(new ChannelError('CHANNEL_AUTH_ERROR', 'sync auth fail'));
-              return {
-                dispose: () => {
-                  disposedB += 1;
-                },
-              };
-            },
-          },
-        }),
-      (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_PROVIDER_UNAVAILABLE',
-    );
-    assert.equal(disposedB, 1);
-    assert.equal(host.getStateProjection().connectors.find((c) => c.package_id === 'comp-sync-err')?.status, 'error');
-  }
-
-  // 5. SqliteChannelPackageDiscovery isolates per-package invalid entrypoints
+  // 4. SqliteChannelPackageDiscovery isolates per-package invalid entrypoints
   {
     const tmpDir = makeTempDir('connect-chandisc-iso-');
     const db = openSqliteStore(path.join(tmpDir, 'opl.db'));
@@ -694,7 +458,7 @@ test('ChannelProviderHost and RemoteCompanionConnectorHost do not resurrect or l
   }
 });
 
-test('stale reportError, stale attach().dispose(), and artifact_digest drift enforce state-identity and reconciliation guards', async () => {
+test('ChannelProviderHost ignores callbacks and disposal from a detached provider', async () => {
   const callback: ChannelThreadHostCallback = {
     startThread: async () => ({ canonical_thread_host: 'h', canonical_thread_id: 't' }),
     resumeThread: async () => {},
@@ -732,110 +496,6 @@ test('stale reportError, stale attach().dispose(), and artifact_digest drift enf
 
     assert.equal(disposed2, 0);
     assert.equal(host.getStateProjection().providers[0]?.status, 'active');
-  }
-
-  // 2. RemoteCompanionConnectorHost: stale reportError, stale attach1.dispose(), and artifact_digest drift
-  {
-    const bridge: RemoteCompanionConversationBridge = {
-      listDirectory: async () => [],
-      readHistory: async () => [],
-      startConversation: async () => ({ id: 'c1' }),
-      openConversation: async () => ({}),
-      sendMessage: async () => ({}),
-      subscribeEvents: () => ({ dispose: () => {} }),
-      stopTurn: async () => ({}),
-      respondApproval: async () => ({}),
-      refresh: async () => ({}),
-    };
-    const protectedBlobPort = {
-      read: async () => null,
-      replace: async () => {},
-      clear: async () => {},
-    };
-    const contentDigest = `sha256:${'1'.repeat(64)}`;
-    const artifactDigestV1 = `sha256:${'2'.repeat(64)}`;
-    const artifactDigestV2 = `sha256:${'4'.repeat(64)}`;
-    const mkCtx = (pkgId: string, artDigest = artifactDigestV1): RemoteCompanionActivationContext => ({
-      surface_kind: 'opl_remote_companion_activation_context.v1',
-      package_id: pkgId,
-      environment: 'prod',
-      cohort_id: 'default',
-      protocol_version: 'opl_remote_transport.v1',
-      provider: 'tunnel',
-      service_origin: 'https://companion.example.com',
-      config_digest: `sha256:${'3'.repeat(64)}`,
-      package_content_digest: contentDigest,
-      package_artifact_digest: artDigest,
-    });
-
-    let currentArtifactDigest: string | null = artifactDigestV1;
-    const host = new RemoteCompanionConnectorHost({
-      bridge,
-      protectedBlobPort,
-      discovery: {
-        listEnabledChannelPackages: () => [
-          {
-            package_id: 'comp-reattach',
-            version: '1.0.0',
-            intent: 'channel',
-            install_path: '/tmp/comp-reattach',
-            content_digest: contentDigest,
-            artifact_digest: currentArtifactDigest,
-            channels: [],
-            remote_companions: [],
-            ui_views: [],
-          },
-        ],
-      },
-    });
-
-    let disposed1 = 0;
-    let disposed2 = 0;
-    let staleReportError!: (err: unknown) => void;
-    const handle1 = await host.attach({
-      package_id: 'comp-reattach',
-      content_digest: contentDigest,
-      artifact_digest: artifactDigestV1,
-      activation_context: mkCtx('comp-reattach'),
-      connector: {
-        start: ({ reportError }) => {
-          staleReportError = reportError!;
-          return { dispose: () => { disposed1 += 1; } };
-        },
-      },
-    });
-    await host.detach('comp-reattach');
-    assert.equal(disposed1, 1);
-
-    await host.attach({
-      package_id: 'comp-reattach',
-      content_digest: contentDigest,
-      artifact_digest: artifactDigestV1,
-      activation_context: mkCtx('comp-reattach'),
-      connector: {
-        start: () => ({ dispose: () => { disposed2 += 1; } }),
-      },
-    });
-    assert.equal(host.getStateProjection().connectors[0]?.status, 'active');
-
-    staleReportError(new ChannelError('CHANNEL_AUTH_ERROR', 'late auth error from connector1'));
-    await handle1.dispose();
-    await new Promise((r) => setTimeout(r, 20));
-    assert.equal(disposed2, 0);
-    assert.equal(host.getStateProjection().connectors[0]?.status, 'active');
-
-    // Null artifact_digest in discovery does not spuriously disconnect
-    currentArtifactDigest = null;
-    await host.reconcileWithInstalledPackages();
-    assert.equal(disposed2, 0);
-    assert.equal(host.getStateProjection().connectors[0]?.status, 'active');
-
-    // Changed artifact_digest triggers digest_changed disconnect
-    currentArtifactDigest = artifactDigestV2;
-    await host.reconcileWithInstalledPackages();
-    assert.equal(disposed2, 1);
-    assert.equal(host.getStateProjection().connectors[0]?.status, 'error');
-    assert.equal(host.getStateProjection().connectors[0]?.last_reason, 'digest_changed');
   }
 });
 

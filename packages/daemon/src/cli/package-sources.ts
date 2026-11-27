@@ -1,9 +1,4 @@
-import {
-  checkPrivatePackageSource,
-  configurePrivatePackageSource,
-  disconnectPrivatePackageSource,
-  listPrivatePackageSources,
-} from '@opl/pack';
+import { callDaemonRpc } from './client.ts';
 import { DaemonRpcError } from '../errors.ts';
 
 const optionsByCommand = {
@@ -31,25 +26,20 @@ export async function runPackageSourcesCommand(
     if (typeof value !== 'string' || !value.trim() || value.startsWith('--')) invalid(`Flag '${name}' requires a value.`);
   }
   const stateDir = flags.get('--state-dir') as string | undefined;
-  if (command === 'list') {
-    return { software_sources: { entries: listPrivatePackageSources({ stateDir }) } };
-  }
+  const options = { stateDir, timeoutMs: 50_000 };
+  if (command === 'list') return callDaemonRpc('pack.sources.list', {}, options);
   const sourceId = flags.get('--source-id');
   if (typeof sourceId !== 'string') invalid('This software source command requires --source-id.');
-  if (command === 'disconnect') {
-    return { software_source: disconnectPrivatePackageSource({ stateDir, sourceId }), local_installations_preserved: true };
+  if (command === 'disconnect' || command === 'check') {
+    return callDaemonRpc('pack.sources.' + command, { source_id: sourceId }, options);
   }
-  if (command === 'check') {
-    return { software_source: await checkPrivatePackageSource({ stateDir, sourceId }) };
-  }
-  const providerId = flags.get('--provider-id');
-  if (providerId !== undefined && providerId !== 'github_packages') invalid('--provider-id must be github_packages.');
+  const providerId = flags.get('--provider-id') ?? 'github_packages';
+  if (providerId !== 'github_packages') invalid('--provider-id must be github_packages.');
   const enabled = flags.get('--enabled');
   if (enabled !== undefined && enabled !== 'true' && enabled !== 'false') invalid('--enabled must be true or false.');
-  const credentialHandle = flags.get('--credential-handle') as string | undefined;
-  const source = configurePrivatePackageSource({
-    stateDir, sourceId, credentialHandle: credentialHandle ?? 'provider:github_packages:gh-cli', enabled: enabled !== 'false',
-  });
-  const checked = source.enabled ? await checkPrivatePackageSource({ stateDir, sourceId }) : source;
-  return { software_source: checked, next_action: 'source_list' };
+  return callDaemonRpc('pack.sources.configure', {
+    source_id: sourceId, provider_id: providerId,
+    credential_handle: flags.get('--credential-handle') ?? 'provider:github_packages:gh-cli',
+    enabled: enabled !== 'false',
+  }, options);
 }

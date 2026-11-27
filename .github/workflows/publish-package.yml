@@ -339,12 +339,15 @@ jobs:
             trap 'rm -f "$prepared"' EXIT
             node --conditions=opl-source --experimental-strip-types scripts/prepare-v2-package-publication.mjs \
               --owner-root .owner-source --source-commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
-              --package-id "$PACKAGE_ID" --package-version "$EXPECTED_PACKAGE_VERSION" --output-directory "$package_root" > "$prepared"
+              --package-id "$PACKAGE_ID" --package-version "$EXPECTED_PACKAGE_VERSION" \
+              --source-root "$(jq -er '.source_root' "$payload")" \
+              --output-directory "$package_root" > "$prepared"
             jq -e --arg repo "$source_repo" --arg image "$image" --slurpfile result "$prepared" \
               --arg visibility "$PACKAGE_VISIBILITY" --arg policy "$PACKAGE_ACCESS_POLICY_REF" \
               --arg credential "$PACKAGE_CREDENTIAL_PROVIDER" \
               '$result[0] as $build
-               | .package_format == "v2" and .source_repo == $repo and .archive_sha256 == $build.archive_sha256
+               | .package_format == "v2" and .source_repo == $repo and .source_root == $build.source_root
+               and .archive_sha256 == $build.archive_sha256
                and .content_lock.digest == $build.content_digest and .file_count == $build.file_count
                and .content_lock.canonicalization == $build.lock.canonicalization and .content_lock.algorithm == $build.lock.algorithm
                and ($build.manifest.distribution.oci | . == $image or . == ($image + ":latest-stable"))

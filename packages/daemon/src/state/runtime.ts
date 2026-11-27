@@ -35,6 +35,7 @@ import {
   createPackService,
   createOfficialPackageResolver,
   createProcessCodexRunner,
+  initializePrivatePackageSourceStore,
   PackError,
   prunePackStateArtifacts,
   readPackageManifestFromDir,
@@ -49,6 +50,7 @@ import {
 import {
   AntigravityExecutorAdapter,
   CodexExecutorAdapter,
+  codexStartupReady,
   ExecutorRegistry,
   RunwayRuntime,
   ScheduleRunner,
@@ -67,6 +69,7 @@ import { DaemonRpcError } from '../errors.ts';
 import { runCliEntrypoint, runEsmEntrypoint, runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
 import { AppStateCache } from './app-state-cache.ts';
 import { initializeAppPackagePreferences, isAppPackageEnabled } from './app-package-preferences.ts';
+import { initializeWorkspaceRoot } from './workspace-root.ts';
 
 export interface DaemonRuntimeOptions {
   readonly stateDir?: string;
@@ -178,7 +181,7 @@ export class DaemonRuntime {
     const officialUpdateSource = {
       resolveOfficialUpdate: (id: string) => createOfficialPackageResolver({
         runtimeRoot: null,
-        stateDir: this.paths.state_dir,
+        db: this.db,
       })(id),
     };
     this.packService = createPackService({
@@ -503,6 +506,7 @@ export class DaemonRuntime {
       emitPush('event.connect.changed', { topic: 'channel.transport.error', ...ev });
     });
 
+    codexStartupReady();
     this.packService.reconcileOperations();
     this.syncDeclaredProviders();
   }
@@ -523,6 +527,8 @@ export class DaemonRuntime {
       ensureConnectSchema(db);
       ensureWorkspaceSchema(db);
       ensureRunwaySchema(db);
+      initializePrivatePackageSourceStore(db, paths);
+      initializeWorkspaceRoot(db, paths.state_dir);
       try {
         prunePackStateArtifacts({
           stateDir: paths.state_dir,

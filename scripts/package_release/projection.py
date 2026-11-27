@@ -11,6 +11,20 @@ from .common import ReleaseError, safe_path
 CATALOG_REPOSITORY = 'gaofeng21cn/opl-catalog'
 CATEGORIES = ('agents', 'applications', 'extensions', 'channels', 'dependencies')
 
+def package_source_roots(manifest, allowlist):
+    declared = manifest.get('source_root')
+    if declared is not None:
+        roots = (declared,)
+    else:
+        carrier = allowlist.get('source_root', '.')
+        roots = ('.',) if carrier == '.' else (carrier, '.')
+    for root in roots:
+        if root != '.' and (not isinstance(root, str) or re.match(r'^[A-Za-z]:', root)
+                            or '\\' in root or '\0' in root
+                            or any(part in ('', '.', '..') for part in root.split('/'))):
+            raise ReleaseError('Package source_root must be a safe owner-relative path')
+    return roots
+
 
 def catalog_root_from(args):
     root = getattr(args, 'catalog_root', None) or os.getenv('OPL_CATALOG_ROOT')

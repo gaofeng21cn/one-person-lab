@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 import type { readSystemInitialize } from '../src/state/initialize.ts';
 import { connectTestRpc, createDaemonSandbox, E2E_CODEX_STUB } from './helpers/sandbox.ts';
 
@@ -23,6 +24,8 @@ test('Studio startup checks track actual local readiness independently of instal
 
   assert.equal(await fast(app), undefined);
   assert.equal(await fast(sdk, true), undefined);
+  for (let attempt = 0; attempt < 100 && !(await fast(app, true))?.checklist.some(item =>
+    item.item_id === 'codex' && item.status === 'ready'); attempt += 1) await delay(25);
   assert.deepEqual((await fast(app, true))?.setup_flow.blocking_items, ['codex_config']);
   const initial = await read();
   assert.deepEqual(initial.setup_flow.blocking_items, ['codex_config']);
@@ -74,6 +77,7 @@ test('a present but broken Codex stays unavailable until the selected executable
   assert.equal(await activePath('app.codexRuntime.activate'), null);
   fs.unlinkSync(binary);
   fs.symlinkSync(E2E_CODEX_STUB, binary);
+  for (let attempt = 0; attempt < 100 && !(await fastReady()); attempt += 1) await delay(25);
   assert.equal(await fastReady(), true);
   assert.equal(await assistantReady(), true);
   assert.equal(await activePath('app.codexRuntime.get'), binary);

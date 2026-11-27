@@ -36,6 +36,7 @@ class PrivatePackagePublisherTests(unittest.TestCase):
             legacy_commit = 'b' * 40
             controller_commit = 'c' * 40
             with patch.object(publisher, 'git', return_value=legacy_commit), \
+                    patch.object(publisher, 'gh', side_effect=ReleaseError('HTTP 404')), \
                     patch.object(publisher, 'sync_publisher', return_value='unchanged') as sync_publisher:
                 results = publisher.sync(catalog, catalog=catalog, controller_source_commit=controller_commit)
                 self.assertEqual([row['status'] for row in results], ['unchanged', 'unchanged'])
@@ -47,6 +48,38 @@ class PrivatePackagePublisherTests(unittest.TestCase):
                 results = publisher.sync(catalog, catalog=catalog)
                 self.assertEqual([row['status'] for row in results], ['unchanged', 'blocked'])
                 self.assertEqual(sync_publisher.call_count, 1)
+
+    def test_first_v2_pin_uses_valid_main_descriptor_at_root_or_declared_subdirectory(self):
+        controller = 'c' * 40
+        legacy = 'b' * 40
+        for source_root, version, expected in (
+                ('.', '1.2.4', controller),
+                ('plugins/fixture', '1.2.4', controller),
+                ('plugins/fixture', '1.2.4-beta.1', legacy)):
+            with self.subTest(source_root=source_root, version=version), tempfile.TemporaryDirectory() as temporary:
+                catalog = Path(temporary)
+                manifest = {'package_id': 'sample', 'visibility': 'authorized_only',
+                            'source_repo': 'https://github.com/example/owner.git'}
+                if source_root == '.':
+                    manifest['source_root'] = source_root
+                else:
+                    write(catalog / 'allowlists/sample.json', {'source_root': source_root})
+                write(catalog / 'packages/agents/sample.json', manifest)
+                label = {'en-US': 'Sample', 'zh-CN': '样例'}
+                descriptor = {
+                    'schema_version': 'opl.package.v2',
+                    'identity': {'id': 'sample', 'version': version, 'intent': 'extension', 'publisher': 'sample',
+                                 'name': label, 'summary': label},
+                }
+                response = {'type': 'file', 'encoding': 'base64',
+                            'content': base64.b64encode(json.dumps(descriptor).encode()).decode()}
+                with patch.object(publisher, 'git', return_value=legacy), \
+                        patch.object(publisher, 'gh', return_value=response) as api, \
+                        patch.object(publisher, 'sync_publisher', return_value='synchronized') as sync:
+                    result = publisher.sync(catalog, catalog=catalog, controller_source_commit=controller)
+                api.assert_called_once_with(f'repos/example/owner/contents/{Path(source_root) / "opl-package.json"}?ref=main')
+                sync.assert_called_once_with(manifest, expected, catalog=True)
+                self.assertEqual(result, [{'package_id': 'sample', 'status': 'synchronized'}])
 
     def test_failed_pin_keeps_healthy_packages_eligible_for_detection(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -1,5 +1,5 @@
 import { App, applyDocumentTheme, applyHostFonts, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
-import { mountOplMcpAppView } from '../packages/mcp-app-shared/src/view.ts';
+import { mountOplMcpAppView } from '@opl/mcp-app-shared/view';
 
 const host = new App({ name: 'opl-apps', version: '2.0.0' }, {}, { strict: true });
 

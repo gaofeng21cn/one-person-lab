@@ -109,7 +109,18 @@ test('compiled dist/ ESM entrypoints resolve cleanly for @opl/connect', async ()
   assert.equal(typeof mod.createConnectService, 'function');
   assert.equal(typeof mod.EncryptedFileSecretVault, 'function');
   assert.equal(typeof mod.ChannelProviderHost, 'function');
-  assert.equal(typeof mod.RemoteCompanionConnectorHost, 'function');
+});
+
+test('v2:guard rejects script imports of workspace package internals', t => {
+  const fixture = makeTempFixture({
+    'scripts/direct.mjs': "import { read } from '../packages/pack/src/read.ts';",
+    'scripts/nested/lazy.ts': "export const load = () => import('../../packages/core/src/paths.ts');",
+    'scripts/public.js': "export { read } from '@opl/pack';",
+  });
+  t.after(() => fs.rmSync(fixture, { recursive: true, force: true }));
+  const violations = runV2ImportGuard({ rootDir: fixture }).violations
+    .filter(violation => violation.rule === 'script-package-internal-import');
+  assert.deepEqual(violations.map(violation => violation.file), ['scripts/direct.mjs', 'scripts/nested/lazy.ts']);
 });
 
 test('v2:guard tokenizeTsForImports handles regex literals and nested templates inside ${...} without desync', () => {

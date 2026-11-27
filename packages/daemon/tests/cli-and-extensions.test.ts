@@ -29,15 +29,17 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
-  it('manages a first private Package source through bin/opl using only its credential reference', async () => {
+  it('manages one daemon software source through both bin/opl command paths', async () => {
     const sb = trackSandbox();
-    const selected = path.join(sb.root, 'selected-state');
+    const selected = sb.stateDir;
     const sourceId = 'github-packages:example';
     const prefix = ['--state-dir', selected, 'sources'];
     const sourceArg = ['--source-id', sourceId];
     const handle = 'env:OPL_GITHUB_PACKAGES_TOKEN';
     const env = { OPL_GITHUB_PACKAGES_TOKEN: '' };
-    const run = (args: string[]) => sb.spawnRootCli([...prefix, ...args, '--json'], env);
+    const run = (args: string[], alias = false) => sb.spawnRootCli(
+      [...(alias ? ['--state-dir', selected, 'pack', 'sources'] : prefix), ...args, '--json'], env,
+    );
     const configFile = path.join(selected, 'software-sources.json');
 
     const missingStateDir = await sb.spawnRootCli(['--state-dir', '--quiet', 'sources', 'configure', ...sourceArg, '--enabled', 'false', '--json'], env);
@@ -53,7 +55,8 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     assert.equal(fs.existsSync(configFile), false);
 
     type Entry = { source_id: string; enabled: boolean; status: string; credential_handle_present: boolean };
-    const initial = await run(['list']);
+    const daemon = await sb.startInProcess();
+    const initial = await run(['list'], true);
     assert.equal(initial.code, 0, initial.stdout + initial.stderr);
     const args = ['configure', ...sourceArg, '--provider-id', 'github_packages', '--credential-handle', handle];
     const configured = await run(args);
@@ -63,17 +66,17 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     assert.equal(source.enabled, true);
     assert.equal(source.credential_handle_present, true);
     assert.doesNotMatch(configured.stdout, /env:OPL_GITHUB_PACKAGES_TOKEN/);
-    const entries = (JSON.parse(fs.readFileSync(configFile, 'utf8')) as { sources: { source_id: string; credential_handle: string }[] }).sources;
-    assert.equal(entries.find(entry => entry.source_id === sourceId)?.credential_handle, handle);
-    assert.equal(fs.existsSync(path.join(sb.stateDir, 'software-sources.json')), false);
+    const row = daemon.runtime.db.prepare('SELECT credential_handle FROM package_sources WHERE source_id = ?').get(sourceId);
+    assert.equal(row?.credential_handle, handle);
+    assert.equal(fs.existsSync(configFile), false);
 
-    const checked = await run(['check', ...sourceArg]);
+    const checked = await run(['check', ...sourceArg], true);
     assert.equal(checked.code, 0, checked.stdout + checked.stderr);
     assert.equal((checked.json as { software_source: Entry }).software_source.status, 'signed_out');
     const disabled = await run([...args, '--enabled=false']);
     assert.equal(disabled.code, 0, disabled.stdout + disabled.stderr);
     assert.equal((disabled.json as { software_source: Entry }).software_source.enabled, false);
-    const disconnected = await run(['disconnect', ...sourceArg]);
+    const disconnected = await run(['disconnect', ...sourceArg], true);
     assert.equal(disconnected.code, 0, disconnected.stdout + disconnected.stderr);
     const list = await run(['list']);
     const sourceAfterDisconnect = (list.json as { software_sources: { entries: Entry[] } }).software_sources.entries.find(

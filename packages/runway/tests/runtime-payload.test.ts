@@ -60,6 +60,24 @@ test('a second installer waits across a slow download and never reclaims the liv
   assert.match(String(result), /missing its verified Codex offline seed/);
 });
 
+test('Codex install lock timeout and cancellation preserve a live holder', async t => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-install-busy-'));
+  const env = { HOME: home, OPL_RUNTIME_ROOT: home };
+  const lockPath = path.join(home, 'codex-install.lock');
+  const holder = acquireAdvisoryLock(lockPath);
+  t.after(() => {
+    holder.release();
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  const original = fs.readFileSync(lockPath, 'utf8');
+  await assert.rejects(ensureCodexRuntime(env, { timeoutMs: 20 }), { code: 'CODEX_INSTALL_BUSY' });
+  const controller = new AbortController();
+  const waiting = ensureCodexRuntime(env, { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(waiting, { code: 'CODEX_INSTALL_BUSY' });
+  assert.equal(fs.readFileSync(lockPath, 'utf8'), original);
+});
+
 test('Full Codex staging verifies frozen bytes and refuses an archive for another platform', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-seed-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 
 import { isRecord } from '@opl/core';
 import { ConnectError } from '../errors.ts';
-import { gatewayStorePaths } from './state-directory.ts';
+import { gatewayStorePaths, legacyGatewayDirectory } from './state-directory.ts';
 import { buildGatewayInstallation } from './identity.ts';
 import type {
   GatewayAccountState,
@@ -55,10 +55,36 @@ function lstatOrNull(filePath: string) {
   }
 }
 
+function migrateLegacyGateway(directory: string) {
+  if (lstatOrNull(directory)) return;
+  const legacy = legacyGatewayDirectory();
+  if (!legacy || !lstatOrNull(path.join(legacy, 'account.json'))) return;
+  assertPrivatePath(legacy, 'directory');
+  const staged = fs.mkdtempSync(path.join(path.dirname(directory), '.gateway-import-'));
+  try {
+    for (const name of ['installation.json', 'credentials.json', 'account.json']) {
+      const source = path.join(legacy, name);
+      if (!lstatOrNull(source)) continue;
+      assertPrivatePath(source, 'file');
+      fs.writeFileSync(path.join(staged, name), fs.readFileSync(source), { mode: 0o600, flag: 'wx' });
+    }
+    try {
+      fs.renameSync(staged, directory);
+    } catch (error) {
+      if (!['EEXIST', 'ENOTEMPTY', 'EPERM'].includes((error as NodeJS.ErrnoException).code ?? '') || !lstatOrNull(directory)) {
+        throw error;
+      }
+    }
+  } finally {
+    fs.rmSync(staged, { recursive: true, force: true });
+  }
+}
+
 export function ensureGatewayPrivateDir() {
   const paths = gatewayStorePaths();
   const parent = path.dirname(paths.gateway_account_dir);
   fs.mkdirSync(parent, { recursive: true });
+  migrateLegacyGateway(paths.gateway_account_dir);
   // Multiple startup readers can initialize the same state root at once.
   // Recursive creation makes the directory operation idempotent and leaves
   // the existing ownership, symlink, type and permission checks authoritative.
