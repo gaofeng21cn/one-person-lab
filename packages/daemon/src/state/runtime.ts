@@ -38,6 +38,7 @@ import {
   OPL_LOCAL_MARKETPLACE_NAME,
   PackError,
   projectPackageToCodexMarketplace,
+  prunePackStateArtifacts,
   readPackageManifestFromDir,
   removeCodexMarketplaceProjection,
   resolveCodexPluginName,
@@ -508,6 +509,15 @@ export class DaemonRuntime {
       ensureConnectSchema(db);
       ensureWorkspaceSchema(db);
       ensureRunwaySchema(db);
+      try {
+        prunePackStateArtifacts({
+          stateDir: paths.state_dir,
+          env: process.env,
+          skipCodexHomeTmp: Boolean(process.env.NODE_TEST_CONTEXT && !process.env.CODEX_HOME?.trim()),
+        });
+      } catch {
+        // Best-effort state hygiene must never block daemon startup.
+      }
       return new DaemonRuntime({
         paths,
         version: options.version ?? readPackageVersion(),
