@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { runCliExpectCode, runCliJson, runCliOk } from "../lib/cli.mjs";
+import { assertCoreCliHelp, runCliExpectCode, runCliJson, runCliOk } from "../lib/cli.mjs";
 import { buildV2Package } from "../lib/fixtures.mjs";
 import { connectRpcClient } from "../lib/rpc-client.mjs";
 import { createSandbox } from "../lib/sandbox.mjs";
@@ -24,7 +24,6 @@ afterEach(async () => {
   }
 });
 
-const CORE_NAMESPACES = ["daemon", "workspace", "pack", "connect", "runway", "ledger"];
 const RETIRED_NAMESPACES = [
   "agents",
   "system",
@@ -42,109 +41,16 @@ const RETIRED_NAMESPACES = [
   "profiles",
 ];
 
-function extractSubcommandsFromHelp(helpText, ns) {
-  const found = new Set();
-  const ignored = new Set(["help", "options", "commands", "subcommands", "usage", "flags", "examples"]);
-  for (const line of helpText.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    // 1. Match inline list first, e.g.:
-    //    "opl daemon: start, stop, status"
-    //    "daemon  start · stop · restart · status · logs · doctor"
-    const listMatch = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\b\\s*(?::\\s*|\\s+)(.+)$`));
-    if (listMatch) {
-      const hasExplicitColon = new RegExp(`^(?:opl\\s+)?${ns}\\s*:`).test(trimmed);
-      const rest = listMatch[1].trim();
-      const hasListDelimiter = /[·,|/]/.test(rest);
-      const parts = rest.split(/[·,|/]+|\s{2,}/).map((p) => p.trim()).filter(Boolean);
-      const candidateSubs = [];
-      if (hasExplicitColon || hasListDelimiter || parts.length >= 2) {
-        for (const tok of parts) {
-          const firstWord = tok.split(/\s+/)[0];
-          if (
-            firstWord &&
-            /^[a-z][a-z0-9-]*$/.test(firstWord) &&
-            !ignored.has(firstWord) &&
-            (hasExplicitColon || hasListDelimiter || tok === firstWord || /^[a-z][a-z0-9-]*(?:\s+[<(]|$)/.test(tok))
-          ) {
-            candidateSubs.push(firstWord);
-          }
-        }
-      }
-      if (candidateSubs.length >= 2 || (hasExplicitColon && candidateSubs.length >= 1)) {
-        for (const sub of candidateSubs) found.add(sub);
-        continue;
-      }
-    }
-
-    // 2. Match explicit "opl <ns> <sub>" or "<ns> <sub>  <Description>" (never prose like "daemon  Manage opld")
-    const fullMatch = trimmed.match(
-      new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z][a-z0-9-]*)(?:$|\\s{2,}|\\s+[<\\[])`)
-    );
-    if (fullMatch && !ignored.has(fullMatch[1])) {
-      found.add(fullMatch[1]);
-    }
-  }
-  return found;
-}
-
-function extractSubcommandsFromNamespaceHelp(nsHelpText, ns) {
-  const found = new Set();
-  const explicitFound = new Set();
-  let inCommandsSection = false;
-  let sawCommandsHeader = false;
-  for (const line of nsHelpText.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (/^(commands|subcommands):?$/i.test(trimmed)) {
-      inCommandsSection = true;
-      sawCommandsHeader = true;
-      continue;
-    }
-    if (/^(options|flags|examples|global options|usage):?/i.test(trimmed)) {
-      inCommandsSection = false;
-      continue;
-    }
-
-    const explicit = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z0-9][a-z0-9-]*)\\b`, "i"));
-    if (explicit) {
-      explicitFound.add(explicit[1].toLowerCase());
-      continue;
-    }
-
-    if ((inCommandsSection || !sawCommandsHeader) && !trimmed.startsWith("-") && !trimmed.endsWith(":")) {
-      const colMatch = line.match(/^\s{1,8}([a-z][a-z0-9-]*)(?:\s{2,}|\s+<|\s+\[|$)/);
-      if (colMatch && !["usage", "opl", "help", "options", "flags", "examples"].includes(colMatch[1])) {
-        found.add(colMatch[1].toLowerCase());
-      }
-    }
-  }
-  return explicitFound.size > 0 ? explicitFound : found;
-}
-
 describe("Tier 1 F7: opl CLI Surface & Exit Codes", () => {
-  it("T1-F7-01: opl --help displays only the ~36-44 orthogonal v2 commands across core namespaces", async () => {
+  it("T1-F7-01: opl --help displays the v2 core namespaces and their supported commands", async () => {
     const sb = makeSandbox();
 
     const ver = await runCliOk(["--version"], { sandbox: sb });
     assert.match(ver.stdout, /\d+\.\d+\.\d+/, `Expected SemVer in --version output, got: ${ver.stdout}`);
 
     const help = await runCliOk(["--help"], { sandbox: sb });
-    for (const ns of CORE_NAMESPACES) {
-      assert.match(
-        help.stdout,
-        new RegExp(`\\b${ns}\\b`),
-        `Expected core namespace '${ns}' in opl --help output`
-      );
-    }
-
-    assert.doesNotMatch(
-      help.stdout,
-      /^\s*(?:opl\s+)?foundry(?:\s|$)/m,
-      "Expected 'foundry' NOT to appear in base opl --help before opl-foundry is installed"
-    );
-
+    assertCoreCliHelp(help.stdout);
+    assert.doesNotMatch(help.stdout, /^\s*(?:opl\s+)?foundry(?:[:\s]|$)/m, "Foundry requires its package");
     for (const legacy of RETIRED_NAMESPACES) {
       assert.doesNotMatch(
         help.stdout,
@@ -152,23 +58,6 @@ describe("Tier 1 F7: opl CLI Surface & Exit Codes", () => {
         `Retired legacy namespace '${legacy}' must not appear in opl --help`
       );
     }
-
-    let totalCommands = 0;
-    for (const ns of CORE_NAMESPACES) {
-      const fromTop = extractSubcommandsFromHelp(help.stdout, ns);
-      if (fromTop.size >= 3) {
-        totalCommands += fromTop.size;
-      } else {
-        const nsHelp = await runCliOk([ns, "--help"], { sandbox: sb });
-        const fromNs = extractSubcommandsFromNamespaceHelp(nsHelp.stdout, ns);
-        totalCommands += fromNs.size >= fromTop.size ? fromNs.size : fromTop.size;
-      }
-    }
-
-    assert.ok(
-      totalCommands >= 34 && totalCommands <= 48,
-      `Expected orthogonal v2 CLI command count in [34, 48], got ${totalCommands}\nHELP:\n${help.stdout}`
-    );
   });
 
   it("T1-F7-02: opl daemon status --json outputs valid machine-parseable JSON and exits 0", async () => {

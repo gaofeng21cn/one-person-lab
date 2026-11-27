@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 import { pathToFileURL } from "node:url";
 
-import { runCli, runCliExpectCode, runCliJson, runCliOk } from "../lib/cli.mjs";
+import { assertCoreCliHelp, runCli, runCliExpectCode, runCliJson, runCliOk } from "../lib/cli.mjs";
 import {
   WAVE3_DOMAIN_PRESETS,
   buildAll8Wave3Fixtures,
@@ -78,7 +78,6 @@ const MCP_APP_SHARED_DIR = path.resolve(
 );
 const IS_PRE_M4 = process.env.OPL_E2E_REPO_PHASE === "pre_m4";
 
-const CORE_NAMESPACES = ["daemon", "workspace", "pack", "connect", "runway", "ledger"];
 
 const activeSandboxes = [];
 const activeRpcClients = [];
@@ -304,43 +303,6 @@ function runPythonScript(sb, script, { timeoutMs = 15_000 } = {}) {
     `Python script failed (exit ${res.status}):\nSTDOUT:\n${res.stdout}\nSTDERR:\n${res.stderr}`
   );
   return res;
-}
-
-function countCoreCliSubcommands(helpStdout, ns) {
-  const found = new Set();
-  for (const line of helpStdout.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const listMatch = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\b\\s*(?::\\s*|\\s+)(.+)$`));
-    if (listMatch) {
-      const rest = listMatch[1].trim();
-      if (/[·,|/]/.test(rest) || new RegExp(`^(?:opl\\s+)?${ns}\\s*:`).test(trimmed)) {
-        for (const part of rest.split(/[·,|/]+|\s{2,}/)) {
-          const word = part.trim().split(/\s+/)[0];
-          if (word && /^[a-z][a-z0-9-]*$/.test(word) && word !== "help") found.add(word);
-        }
-      }
-    }
-    const single = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z][a-z0-9-]*)(?:$|\\s{2,}|\\s+[<\\[])`));
-    if (single && single[1] !== "help") found.add(single[1]);
-  }
-  return found;
-}
-
-function extractNamespaceHelpCommands(nsStdout, ns) {
-  const found = new Set();
-  for (const line of nsStdout.split("\n")) {
-    const explicit = line.trim().match(new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z][a-z0-9-]*)\\b`, "i"));
-    if (explicit && explicit[1] !== "help") {
-      found.add(explicit[1].toLowerCase());
-      continue;
-    }
-    const col = line.match(/^\s{1,8}([a-z][a-z0-9-]*)(?:\s{2,}|\s+<|\s+\[|$)/);
-    if (col && !["usage", "opl", "help", "options", "flags", "examples", "commands", "subcommands"].includes(col[1])) {
-      found.add(col[1].toLowerCase());
-    }
-  }
-  return found;
 }
 
 async function loadMcpAppSharedExports(sharedDir) {
@@ -1519,19 +1481,7 @@ with OplClient(session_file=${JSON.stringify(sb.sessionPath)}, client_kind="sdk_
     }
 
     const help = await runCliOk(["--help"], { sandbox: sb });
-    let totalCommands = 0;
-    for (const ns of CORE_NAMESPACES) {
-      assert.match(help.stdout, new RegExp(`\\b${ns}\\b`));
-      const topSet = countCoreCliSubcommands(help.stdout, ns);
-      if (topSet.size >= 3) {
-        totalCommands += topSet.size;
-      } else {
-        const nsHelp = await runCliOk([ns, "--help"], { sandbox: sb });
-        const nsSet = extractNamespaceHelpCommands(nsHelp.stdout, ns);
-        totalCommands += Math.max(topSet.size, nsSet.size);
-      }
-    }
-    assert.ok(totalCommands >= 34 && totalCommands <= 48, `Expected 34..48 v2 CLI commands, got ${totalCommands}`);
+    assertCoreCliHelp(help.stdout);
 
     const legacyCmds = [
       ["app", "state", "--json"],

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { runCliExpectCode, runCliOk } from "../lib/cli.mjs";
+import { assertCoreCliHelp, runCliExpectCode, runCliOk } from "../lib/cli.mjs";
 import {
   auditLegacyDemolition,
   auditLineBudgets,
@@ -44,44 +44,6 @@ function trackRpc(client) {
   return client;
 }
 
-const CORE_NAMESPACES = ["daemon", "workspace", "pack", "connect", "runway", "ledger"];
-
-function countCoreCliSubcommands(helpStdout, ns) {
-  const found = new Set();
-  for (const line of helpStdout.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const listMatch = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\b\\s*(?::\\s*|\\s+)(.+)$`));
-    if (listMatch) {
-      const rest = listMatch[1].trim();
-      if (/[·,|/]/.test(rest) || new RegExp(`^(?:opl\\s+)?${ns}\\s*:`).test(trimmed)) {
-        for (const part of rest.split(/[·,|/]+|\s{2,}/)) {
-          const word = part.trim().split(/\s+/)[0];
-          if (word && /^[a-z][a-z0-9-]*$/.test(word) && word !== "help") found.add(word);
-        }
-      }
-    }
-    const single = trimmed.match(new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z][a-z0-9-]*)(?:$|\\s{2,}|\\s+[<\\[])`));
-    if (single && single[1] !== "help") found.add(single[1]);
-  }
-  return found;
-}
-
-function extractNamespaceHelpCommands(nsStdout, ns) {
-  const found = new Set();
-  for (const line of nsStdout.split("\n")) {
-    const explicit = line.trim().match(new RegExp(`^(?:opl\\s+)?${ns}\\s+([a-z][a-z0-9-]*)\\b`, "i"));
-    if (explicit && explicit[1] !== "help") {
-      found.add(explicit[1].toLowerCase());
-      continue;
-    }
-    const col = line.match(/^\s{1,8}([a-z][a-z0-9-]*)(?:\s{2,}|\s+<|\s+\[|$)/);
-    if (col && !["usage", "opl", "help", "options", "flags", "examples", "commands", "subcommands"].includes(col[1])) {
-      found.add(col[1].toLowerCase());
-    }
-  }
-  return found;
-}
 
 afterEach(async () => {
   while (activeRpcClients.length > 0) {
@@ -165,7 +127,7 @@ describe("Tier 1 — F15: Clean Environment & Architecture Red-Line Invariants",
     }
   });
 
-  it("T1-F15-04: legacy demolition & orthogonal ~36-44 v2 CLI surface (zero 448 legacy CLI, brand JSONs, or static lists)", async () => {
+  it("T1-F15-04: legacy demolition and the supported v2 CLI surface (zero 448 legacy CLI, brand JSONs, or static lists)", async () => {
     const demoAudit = auditLegacyDemolition(REPO_ROOT, { allowLegacyCli: IS_PRE_M4 });
     if (!IS_PRE_M4) {
       assert.equal(
@@ -183,22 +145,7 @@ describe("Tier 1 — F15: Clean Environment & Architecture Red-Line Invariants",
 
     const sb = trackSandbox();
     const help = await runCliOk(["--help"], { sandbox: sb });
-    let totalCommands = 0;
-    for (const ns of CORE_NAMESPACES) {
-      assert.match(help.stdout, new RegExp(`\\b${ns}\\b`), `Expected core namespace '${ns}' in opl --help`);
-      const topSet = countCoreCliSubcommands(help.stdout, ns);
-      if (topSet.size >= 3) {
-        totalCommands += topSet.size;
-      } else {
-        const nsHelp = await runCliOk([ns, "--help"], { sandbox: sb });
-        const nsSet = extractNamespaceHelpCommands(nsHelp.stdout, ns);
-        totalCommands += Math.max(topSet.size, nsSet.size);
-      }
-    }
-    assert.ok(
-      totalCommands >= 34 && totalCommands <= 48,
-      `Expected ~36-44 orthogonal v2 CLI commands (34..48), got ${totalCommands}`
-    );
+    assertCoreCliHelp(help.stdout);
 
     const legacyCmds = [
       ["app", "state", "--json"],

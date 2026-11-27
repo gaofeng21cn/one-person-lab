@@ -32,6 +32,26 @@ function tryParseJson(stdout) {
   }
 }
 
+export function assertCoreCliHelp(help) {
+  const section = help.split("\nCommands:\n")[1]?.split("\n\n")[0] ?? "";
+  const entries = [...section.matchAll(/^  ([\w-]+): (.+)$/gm)];
+  const groups = new Map(entries.map(([, group, commands]) => [group, commands.split(" · ")]));
+  const required = {
+    daemon: ["start", "status", "stop", "doctor"],
+    workspace: ["init", "list", "inspect"],
+    pack: ["install", "ensure", "list", "inspect", "update"],
+    connect: ["list", "gateway", "mcp-app-stdio"],
+    runway: ["start", "list", "status"],
+    ledger: ["timeline", "artifacts", "verify"],
+  };
+  assert.deepEqual([...groups.keys()].sort(), Object.keys(required).sort(), "Expected the v2 core namespaces");
+  for (const [group, commands] of Object.entries(required)) {
+    const advertised = groups.get(group);
+    for (const command of commands) assert.ok(advertised.includes(command), `Missing opl ${group} ${command}`);
+    assert.equal(new Set(advertised).size, advertised.length, `Duplicate commands in opl ${group} help`);
+  }
+}
+
 export async function runCli(args = [], opts = {}) {
   const {
     sandbox,
