@@ -242,6 +242,7 @@ export class OpldContributionBridge {
   async executeContribution(input: {
     readonly packageId?: string;
     readonly actionId: string;
+    readonly confirmed?: boolean;
     readonly payload?: Record<string, unknown>;
     readonly dryRun?: boolean;
     readonly mode?: string;
@@ -250,6 +251,7 @@ export class OpldContributionBridge {
       ...(input.packageId ? { package_id: input.packageId } : {}),
       action_id: input.actionId,
       payload: input.payload ?? {},
+      ...(input.confirmed !== undefined ? { confirmed: input.confirmed } : {}),
       dry_run: input.dryRun ?? false,
       ...(input.mode ? { mode: input.mode } : {}),
     });
@@ -669,6 +671,7 @@ export function createOpldMcpAppHostAdapter(
             packageId,
             actionId,
             payload: asRecord(args.input ?? args.payload) ?? {},
+            confirmed: args.confirmed === true,
             dryRun,
             mode: typeof args.mode === 'string' ? args.mode : undefined,
           });

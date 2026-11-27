@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ClientContext } from '@opl/core';
+import { isRecord, type ClientContext } from '@opl/core';
 import type { ConnectService } from '@opl/connect';
 import { isWithinDirectory, type PackService } from '@opl/pack';
 import type { WorkspaceService } from '@opl/workspace';
@@ -28,6 +28,7 @@ export interface ContributionExecuteRequest {
   readonly actionId: string;
   readonly payload: Record<string, unknown>;
   readonly dryRun: boolean;
+  readonly confirmed?: boolean;
   readonly mode?: string;
 }
 
@@ -35,15 +36,24 @@ export class ContributionDispatcher {
   readonly #packService: PackService;
   readonly #connectService: ConnectService;
   readonly #workspaceService: WorkspaceService;
+  readonly #isAppPackageEnabled: (packageId: string) => boolean;
 
   constructor(options: {
     readonly packService: PackService;
     readonly connectService: ConnectService;
     readonly workspaceService: WorkspaceService;
+    readonly isAppPackageEnabled?: (packageId: string) => boolean;
   }) {
     this.#packService = options.packService;
     this.#connectService = options.connectService;
     this.#workspaceService = options.workspaceService;
+    this.#isAppPackageEnabled = options.isAppPackageEnabled ?? (() => true);
+  }
+
+  private requireAppPackageEnabled(packageId: string): void {
+    if (!this.#isAppPackageEnabled(packageId)) {
+      throw new DaemonRpcError(-32003, 'PACKAGE_DISABLED_IN_APP', `Package '${packageId}' is disabled in the App.`);
+    }
   }
 
   async readContribution(req: ContributionReadRequest): Promise<Record<string, unknown>> {
@@ -66,6 +76,7 @@ export class ContributionDispatcher {
       };
     }
 
+    this.requireAppPackageEnabled(req.packageId);
     const pkg = this.#packService.inspect(req.packageId);
     if (!pkg || !pkg.enabled) {
       throw new DaemonRpcError(
@@ -258,44 +269,71 @@ export class ContributionDispatcher {
       );
     }
 
-    if (req.packageId) {
-      const pkg = this.#packService.inspect(req.packageId);
-      if (!pkg || !pkg.enabled) {
-        throw new DaemonRpcError(
-          -32004,
-          'PACKAGE_NOT_FOUND',
-          `Package '${req.packageId}' is not installed or disabled.`,
-        );
-      }
-      const handler = pkg.manifest.provides?.contribution_handler;
-      if (handler && !dryRun) {
-        const out = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
-          schema_version: 'opl-package-app-contribution-request.v1',
-          operation: 'execute',
-          package_id: pkg.package_id,
-          action_id: req.actionId,
-          payload: req.payload,
-          dry_run: dryRun,
-        });
-        return {
-          ok: true,
-          dryRun,
-          dry_run: dryRun,
-          authorityBoundary: 'app_bridge_no_domain_authority',
-          action_id: req.actionId,
-          result: out,
-        };
-      }
+    const appAction = req.actionId === 'package_contribution_execute';
+    const packageId = req.packageId ?? (appAction ? req.payload.package_id : undefined);
+    const ref = appAction ? req.payload.ref : req.actionId;
+    const input = appAction ? req.payload.input ?? {} : req.payload;
+    if (typeof packageId !== 'string' || !packageId || typeof ref !== 'string' || !ref || !isRecord(input)) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A Package contribution needs a package_id, action ref and object input.');
     }
-
-    return {
-      ok: true,
+    if (appAction && req.payload.package_id !== undefined && req.payload.package_id !== packageId) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Package contribution identities do not match.');
+    }
+    this.requireAppPackageEnabled(packageId);
+    const pkg = this.#packService.inspect(packageId);
+    if (!pkg?.enabled) {
+      throw new DaemonRpcError(-32004, 'PACKAGE_NOT_FOUND', `Package '${packageId}' is not installed or enabled.`);
+    }
+    const handler = pkg.manifest.provides?.contribution_handler;
+    if (!handler) {
+      throw new DaemonRpcError(-32004, 'CONTRIBUTION_HANDLER_UNAVAILABLE', `Package '${packageId}' has no contribution handler.`);
+    }
+    const declarative = pkg.manifest.ui?.declarative;
+    const commands = (declarative?.views ?? []).flatMap(view => view.actions ?? []).filter(command => command.action_ref === ref);
+    const canSubmit = declarative?.settings_forms?.some(form => form.submit_action_ref === ref);
+    if (!commands.length && !canSubmit) {
+      throw new DaemonRpcError(-32004, 'CONTRIBUTION_ACTION_NOT_FOUND', `Package '${packageId}' does not declare action '${ref}'.`);
+    }
+    const confirmationRequired = commands.some(command => command.confirm === true);
+    const receipt = {
+      action_id: req.actionId,
       dryRun,
       dry_run: dryRun,
       authorityBoundary: 'app_bridge_no_domain_authority',
-      action_id: req.actionId,
-      payload: req.payload,
-      status: dryRun ? 'preview' : 'executed',
+      confirmation_required: confirmationRequired,
+    };
+    if (dryRun) return { ...receipt, ok: true, status: 'preview' };
+    const confirmed = appAction ? req.payload.confirmed : req.confirmed;
+    if (confirmationRequired && confirmed !== true) {
+      throw new DaemonRpcError(-32003, 'CONFIRMATION_REQUIRED', `Package action '${ref}' requires confirmation.`);
+    }
+
+    const response = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
+      schema_version: 'opl-package-app-contribution-request.v1',
+      operation: 'execute',
+      package_id: packageId,
+      ...(appAction ? { ref, input } : { action_id: ref, payload: input, dry_run: false }),
+    });
+    // Direct SDK callers receive the Package's native result. The Studio action
+    // additionally binds its declared receipt to the requested Package and ref.
+    if (appAction || (isRecord(response) && response.schema_version !== undefined)) {
+      if (!isRecord(response) || response.schema_version !== 'opl-package-app-contribution-response.v1'
+        || response.ref !== ref || response.operation !== 'execute' || typeof response.ok !== 'boolean'
+        || (response.package_id !== undefined && response.package_id !== packageId)
+        || (response.ok && !isRecord(response.result))) {
+        throw new DaemonRpcError(-32000, 'CONTRIBUTION_RESPONSE_INVALID', `Package '${packageId}' returned an invalid receipt for '${ref}'.`);
+      }
+    }
+    if (isRecord(response) && response.ok === false) {
+      throw new DaemonRpcError(-32000, 'CONTRIBUTION_OWNER_REJECTED', `Package '${packageId}' rejected '${ref}'.`,
+        isRecord(response.error) ? { owner_error: response.error } : {});
+    }
+    return {
+      ...receipt, ok: true, status: 'executed', result: response,
+      ...(appAction ? { opl_app_contribution: {
+        surface_kind: 'opl_app_package_contribution.v1', package_id: packageId,
+        operation: 'execute', ref, confirmation_required: confirmationRequired, response,
+      } } : {}),
     };
   }
 }
