@@ -141,10 +141,10 @@ describe('contributions, workspace.read capability gate, workspace/runway/ledger
 
     // Dry-run execute preserves authorityBoundary
     const execRes = (await appRpc.call('app.action.execute', {
-      actionId: 'package_operation_start',
+      actionId: 'agent_package_uninstall',
       dryRun: true,
       mode: 'preview',
-      payload: { test: 1 },
+      payload: { package_id: 'app-allowed' },
     })) as Record<string, unknown>;
     assert.equal(execRes.dryRun, true);
     assert.equal(execRes.authorityBoundary, 'app_bridge_no_domain_authority');
@@ -152,6 +152,44 @@ describe('contributions, workspace.read capability gate, workspace/runway/ledger
     await appRpc.close();
     await extRpc.close();
     await otherExtRpc.close();
+  });
+
+  it('previews and executes supported App Package actions through the Pack owner', async () => {
+    const sb = trackSandbox();
+    await sb.startInProcess();
+    const rpc = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
+    const external = await connectTestRpc(sb.sessionPath, 'external', '2.0');
+    try {
+      const id = 'lifecycle-example';
+      const dir = writeMinimalV2Package(path.join(sb.root, id), { id, intent: 'app' });
+      await rpc.call('pack.link', { dir, sync_codex: false });
+      const toggle = { action_id: 'agent_package_preferences_set', payload: { package_id: id, exposure_action: 'disable' } };
+      const read = async () => ((await rpc.call('app.state.get', {})) as {
+        packages: { package_id: string; enabled: boolean }[];
+      }).packages.find(item => item.package_id === id);
+      await rpc.call('app.action.execute', { ...toggle, mode: 'preview' });
+      assert.equal((await read())?.enabled, true);
+      await assert.rejects(external.call('app.action.execute', toggle), /TRUSTED_HOST_REQUIRED/);
+      await assert.rejects(rpc.call('app.action.execute', { ...toggle, package_id: 'different' }), /INVALID_INPUT/);
+      await rpc.call('app.action.execute', toggle);
+      assert.equal((await read())?.enabled, false);
+      await rpc.call('app.action.execute', { ...toggle, payload: { package_id: id, exposure_action: 'enable' } });
+      assert.equal((await read())?.enabled, true);
+
+      await assert.rejects(
+        rpc.call('app.action.execute', { action_id: 'not_a_real_action', payload: { package_id: id } }),
+        /ACTION_NOT_FOUND/,
+      );
+      const remove = { action_id: 'agent_package_uninstall', payload: { package_id: id } };
+      await assert.rejects(rpc.call('app.action.execute', remove), /CONFIRMATION_REQUIRED/);
+      assert.ok(await read());
+      await rpc.call('app.action.execute', { ...remove, payload: { package_id: id, confirmed: true } });
+      assert.equal(await read(), undefined);
+      assert.ok(fs.existsSync(path.join(dir, 'opl-package.json')), 'uninstalling a development link preserves its source');
+    } finally {
+      await rpc.close();
+      await external.close();
+    }
   });
 
   it('handles workspace writeback revision conflicts, atomic runway humanGate REVISION_CONFLICT, and ledger verify', async () => {

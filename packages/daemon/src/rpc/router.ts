@@ -1,3 +1,6 @@
+import { executeWorkspaceRootAction } from '../state/workspace-root.ts';
+import { readDomainTaskDetail } from '../state/domain-task-detail.ts';
+import { setTaskVisibility } from '../state/task-visibility.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord, type ClientContext } from '@opl/core';
@@ -25,6 +28,8 @@ import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.t
 import { configureCodexApiKey } from './configure-codex-api-key.ts';
 import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts';
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
+import { executeAppPackageAction } from './app-package-actions.ts';
+import { readSystemInitialize } from '../state/initialize.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
 import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
 import { readCodexPersonalization, restoreCodexUserInstructions } from '../state/codex-personalization.ts';
@@ -148,11 +153,13 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
   handlers.set('app.initialize.get', (_params, conn) => {
-    const doc = runtime.doctor(true);
+    const doc = runtime.doctor(true, { repairPermissions: false });
     const state = appState('fast', conn);
+    const model = state.app_state.settings_control_center?.app_settings_read_model.codex_model_policy;
     return {
       ...doc,
       state,
+      ...(model && { system_initialize: readSystemInitialize(runtime.paths.state_dir, model.model_access_ready) }),
     };
   });
 
@@ -166,6 +173,9 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     if (ifRevision !== undefined && ifRevision < 0) {
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'ifRevision must be >= 0.');
     }
+    const item = runtime.appStateCache.getState('fast').app_state.operator.workbench.work_item_projection_v2.items
+      .find(entry => entry.item_id === itemId);
+    if (item) return readDomainTaskDetail(runtime.packService.inspect(item.identity.agent_id), item, viewId, ifRevision);
     const pkg = runtime.packService.inspect(itemId);
     const view =
       pkg?.manifest.ui?.declarative?.views?.find((v) => v.id === viewId)
@@ -209,27 +219,24 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
 
   const handleContributionExecute: RpcHandler = async (params, conn) => {
     const ctx = requireClientContext(conn);
-    const packageId = pickString(params, 'package_id', 'packageId');
+    const explicitPackage = pickString(params, 'package_id', 'packageId');
     const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef') ?? '';
     const payload = pickRecord(params, 'payload', 'input') ?? {};
+    const payloadPackage = pickString(payload, 'package_id');
+    if (explicitPackage && payloadPackage && explicitPackage !== payloadPackage) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Conflicting Package identities.');
+    }
+    const packageId = explicitPackage ?? payloadPackage;
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     const mode = pickString(params, 'mode');
-
-    const gatewayAction = !packageId && gatewayAccountActions.find(action => action.action_id === actionId);
-    if (gatewayAction) {
-      requireTrustedHost(conn, actionId);
-      try {
-        return await executeGatewayAction(gatewayAction, payload, dryRun || mode === 'preview', runtime.paths.state_dir);
-      } finally {
-        runtime.appStateCache.invalidate();
-      }
-    }
+    const confirmed = pickBoolean(params, 'confirmed');
 
     return runtime.contributionDispatcher.executeContribution({
       callerSessionId: ctx.session_id,
       clientContext: ctx,
       packageId,
       actionId,
+      ...(confirmed !== undefined ? { confirmed } : {}),
       payload,
       dryRun,
       mode,
@@ -237,7 +244,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   };
   handlers.set('app.contribution.execute', handleContributionExecute);
   handlers.set('app.action.execute', async (params, conn) => {
-    const actionId = pickString(params, 'action_id', 'actionId', 'action_ref', 'actionRef');
+    const actionId = pickString(params, 'action_id', 'actionId') ?? '';
     if (!pickString(params, 'package_id', 'packageId') &&
         (actionId === 'codex_user_instructions_set' || actionId === 'codex_user_instructions_restore_opl_flow_default')) {
       requireTrustedHost(conn, actionId);
@@ -249,11 +256,53 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       const execution = { action_id: actionId, dry_run: dryRun, status: dryRun ? 'preview' : 'executed', result };
       return { ...execution, app_action_execution: execution };
     }
-    const action = connectionActions.find(entry => entry.action_id === actionId);
-    if (!action || pickString(params, 'package_id', 'packageId')) return handleContributionExecute(params, conn);
-    const context = requireTrustedHost(conn, action.action_id);
-    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || pickString(params, 'mode') === 'preview';
-    return executeConnectionAction(action, pickRecord(params, 'payload', 'input') ?? {}, dryRun, runtime.connectService, context);
+    if (actionId === 'workspace_root_set') {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId') || pickString(payload, 'package_id')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Workspace setup does not accept a Package target.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeWorkspaceRootAction(runtime.paths.state_dir, payload, dryRun);
+    }
+    const connectionAction = connectionActions.find(entry => entry.action_id === actionId);
+    if (connectionAction) {
+      const context = requireTrustedHost(conn, actionId);
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeConnectionAction(connectionAction, pickRecord(params, 'payload', 'input') ?? {}, dryRun, runtime.connectService, context);
+    }
+    if (actionId === 'work_item_visibility_set') {
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      if (!dryRun) requireTrustedHost(conn, 'app.action.execute');
+      const payload = pickRecord(params, 'payload') ?? {};
+      const items = runtime.appStateCache.getState('fast').app_state.operator.workbench.work_item_projection_v2.items;
+      const result = setTaskVisibility(runtime.db, payload, {
+        dryRun,
+        resolveTask: (agentId, projectId, itemId) => items.some(({ identity }) =>
+          identity.agent_id === agentId && identity.project_id === projectId && identity.work_item_id === itemId),
+      });
+      if (result.status === 'executed') runtime.appStateCache.invalidate();
+      return result;
+    }
+    const gatewayAction = gatewayAccountActions.find(action => action.action_id === actionId);
+    if (gatewayAction) {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId') || pickString(payload, 'package_id')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Gateway actions do not accept Package targets.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      try {
+        return await executeGatewayAction(gatewayAction, payload, dryRun, runtime.paths.state_dir);
+      } finally {
+        runtime.appStateCache.invalidate();
+      }
+    }
+
+    if (actionId === 'package_contribution_execute') {
+      return handleContributionExecute(params, conn);
+    }
+    return executeAppPackageAction(runtime, handlers, actionId, params, conn);
   });
 
   // ---- workspace.* ----

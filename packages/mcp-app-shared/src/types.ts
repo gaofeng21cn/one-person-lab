@@ -49,6 +49,7 @@ export interface V2DeclarativeSettingsForm {
   readonly title: I18nText;
   readonly data_ref: string;
   readonly submit_action_ref: string;
+  readonly actions?: readonly V2DeclarativeAction[];
   readonly search_keywords?: readonly string[];
   readonly sort_order?: number;
 }

@@ -426,11 +426,6 @@ export class PackService {
         throw new PackError('PACK_OPERATION_CANCELLED', 'Operation was cancelled.');
       }
 
-      this.store.transitionOperation(opId, {
-        status: 'verifying',
-        progress: { stage: 'verifying' },
-      });
-
       const { manifest } = readPackageManifestFromDir(staged.stagingDir);
       if (input.source.package_id && manifest.identity.id !== input.source.package_id) {
         throw new PackError(
@@ -452,6 +447,12 @@ export class PackService {
         throw new PackError('PACK_OPERATION_BUSY', 'Package or source version changed during update. Check for updates again.');
       }
       const enabled = installedBefore?.enabled ?? true;
+      this.store.transitionOperation(opId, {
+        status: 'verifying',
+        package_id: manifest.identity.id,
+        progress: { stage: 'verifying' },
+      });
+
       verifyManifestPathsExist(staged.stagingDir, manifest, { allowSymlinks: false });
       this.assertDependenciesSatisfied(manifest);
 

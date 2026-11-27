@@ -246,6 +246,7 @@ export class OpldContributionBridge {
   async executeContribution(input: {
     readonly packageId?: string;
     readonly actionId: string;
+    readonly confirmed?: boolean;
     readonly payload?: Record<string, unknown>;
     readonly dryRun?: boolean;
     readonly confirmed?: boolean;
@@ -258,6 +259,7 @@ export class OpldContributionBridge {
       ...(input.packageId ? { package_id: input.packageId } : {}),
       action_id: input.actionId,
       payload: input.payload ?? {},
+      ...(input.confirmed !== undefined ? { confirmed: input.confirmed } : {}),
       dry_run: input.dryRun ?? false,
       ...(input.mode ? { mode: input.mode } : {}),
     });
@@ -500,7 +502,13 @@ export function buildCatalogFromAppState(
           data_ref: form.data_ref,
           entry_kind: pkgViews.length === 0 ? 'product_entry' : 'settings_form',
           sort_order: form.sort_order,
-          commands: [
+          commands: form.actions?.length ? form.actions.map(action => ({
+            command_id: action.id,
+            action_ref: action.action_ref,
+            label_i18n: action.label,
+            confirmation_required: action.confirm === true,
+            effect_timing: action.effect_timing,
+          })) : [
             {
               command_id: `${form.id}.submit`,
               action_ref: form.submit_action_ref,
@@ -691,6 +699,7 @@ export function createOpldMcpAppHostAdapter(
             packageId,
             actionId,
             payload: asRecord(args.input ?? args.payload) ?? {},
+            confirmed: args.confirmed === true,
             dryRun,
             confirmed: args.confirmed === true,
             mode: typeof args.mode === 'string' ? args.mode : undefined,

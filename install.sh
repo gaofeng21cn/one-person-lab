@@ -528,6 +528,9 @@ if [ -n "$PREFILLED_NODE_MODULES_DIR" ]; then
   log "Restoring prefilled OPL dependencies"
   rm -rf node_modules
   cp -R "$PREFILLED_NODE_MODULES_DIR" node_modules
+  if [ "$CARRIER_ONLY" != "1" ]; then
+    npm run build
+  fi
   link_cli_carrier --ignore-scripts
 elif [ "$CARRIER_ONLY" = "1" ]; then
   install_node_dependencies --omit=dev --ignore-scripts
@@ -545,6 +548,12 @@ fi
 OPL_INSTALL_CLI="$(resolve_cli_prefix)/bin/opl"
 log "Checking the installed OPL daemon"
 "$OPL_INSTALL_CLI" daemon doctor --include-first-run
+
+if command -v "${OPL_CODEX_BIN:-codex}" >/dev/null 2>&1; then
+  if ! node "$INSTALL_DIR/scripts/register-codex-workbench.mjs" "$OPL_INSTALL_CLI" "$(command -v node)"; then
+    log "OPL Apps registration in Codex was unavailable. Rerun the installer after checking the Codex configuration."
+  fi
+fi
 
 log "OPL Framework is ready"
 if [ "$WITH_APP" = "1" ]; then

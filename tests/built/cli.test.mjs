@@ -5,6 +5,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/client';
+import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -50,7 +52,7 @@ test('built v2 daemon CLI entrypoints exist and load via OPL_USE_DIST=1', () => 
   assert.equal(versionNodeRoot.stdout.trim(), versionDirect.stdout.trim());
 });
 
-test('installer verifies the fresh v2 daemon and keeps carrier-only updates offline', () => {
+test('installer verifies the fresh v2 daemon and keeps carrier-only updates offline', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-'));
   const source = path.join(root, 'source');
   const installDir = path.join(root, 'installed');
@@ -97,6 +99,33 @@ test('installer verifies the fresh v2 daemon and keeps carrier-only updates offl
     assert.equal(readiness.api_version, '2.0');
     assert.equal(readiness.paths.state_dir, stateDir);
     assert.equal(readiness.first_run.installed_package_count, 0);
+    const codex = env.OPL_CODEX_BIN || 'codex';
+    if (spawnSync(codex, ['--version'], { cwd: root, env }).status === 0) {
+      const registered = JSON.parse(run(codex, ['mcp', 'get', 'opl-apps', '--json']));
+      assert.equal(fs.realpathSync(registered.transport.command), fs.realpathSync(process.execPath));
+      assert.deepEqual(registered.transport.args, [cli, 'connect', 'mcp-app-stdio']);
+      assert.equal(registered.transport.env.OPL_STATE_DIR, stateDir);
+      const client = new Client({ name: 'fresh-install-test', version: '1' });
+      try {
+        await client.connect(new StdioClientTransport({
+          command: registered.transport.command,
+          args: registered.transport.args,
+          env: { ...env, ...registered.transport.env, PATH: '' },
+        }));
+        assert.ok((await client.listTools()).tools.some(tool => tool.name === 'open_opl_apps'));
+        const { contents } = await client.readResource({ uri: 'ui://opl/apps.html' });
+        assert.equal(contents[0]?.mimeType, 'text/html;profile=mcp-app');
+        assert.ok(contents[0]?.text?.includes('<!DOCTYPE html>') || contents[0]?.text?.includes('<!doctype html>'));
+      } finally {
+        await client.close();
+      }
+
+      const config = path.join(env.CODEX_HOME, 'config.toml');
+      fs.writeFileSync(config, '[mcp_servers.opl-apps]\ncommand = "custom-workbench"\nenabled = false\n');
+      const previous = fs.readFileSync(config, 'utf8');
+      run(process.execPath, [path.join(installDir, 'scripts/register-codex-workbench.mjs'), cli]);
+      assert.equal(fs.readFileSync(config, 'utf8'), previous);
+    }
     run(cli, ['daemon', 'stop']);
 
     run('git', ['-C', source, '-c', 'user.name=Bootstrap fixture', '-c', 'user.email=bootstrap@example.invalid',

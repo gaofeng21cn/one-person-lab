@@ -360,6 +360,7 @@ export class PackStore {
     opId: string,
     patch: {
       readonly status: PackageOperationStatus;
+      readonly package_id?: string;
       readonly target_version?: string | null;
       readonly reload_mode?: ReloadMode | null;
       readonly progress?: PackageOperationProgress;
@@ -392,8 +393,9 @@ export class PackStore {
           : existing.error_json;
 
       db.prepare(
-        'UPDATE package_operations SET target_version = ?, status = ?, reload_mode = ?, progress_json = ?, error_json = ?, updated_at = ? WHERE op_id = ?',
+        'UPDATE package_operations SET package_id = ?, target_version = ?, status = ?, reload_mode = ?, progress_json = ?, error_json = ?, updated_at = ? WHERE op_id = ?',
       ).run(
+        patch.package_id ?? existing.package_id,
         nextTargetVersion,
         patch.status,
         nextReloadMode,

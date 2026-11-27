@@ -6,6 +6,29 @@ import test from 'node:test';
 import { openSqliteStore } from '@opl/core';
 import { PackError, buildPackage, createPackService, migrateV1Package } from '../src/index.ts';
 
+test('migrated Settings forms preserve the owner command identifier, ref and confirmation', (t) => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-settings-migration-'));
+  t.after(() => fs.rmSync(repoDir, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(repoDir, 'bin'));
+  fs.writeFileSync(path.join(repoDir, 'bin', 'sample'), '#!/bin/sh\n');
+  const label = { 'en-US': 'Save settings', 'zh-CN': '保存配置' };
+  fs.writeFileSync(path.join(repoDir, 'opl-package.json'), JSON.stringify({
+    surface_kind: 'opl_agent_package_manifest.v1', package_id: 'sample', version: '1.0.0',
+    app_contributions: {
+      views: [{
+        view_id: 'settings', view_type: 'settings_form', settings_destination: 'capabilities',
+        title_i18n: label, data_ref: 'sample.settings#state', command_ids: ['save-settings'],
+      }],
+      commands: [{
+        command_id: 'save-settings', action_ref: 'sample.settings#save', label_i18n: label, confirmation_required: true,
+      }],
+    },
+  }));
+  const form = migrateV1Package({ repoDir, apply: false }).manifest.ui?.declarative?.settings_forms?.[0];
+  assert.equal(form?.submit_action_ref, 'sample.settings#save');
+  assert.deepEqual(form?.actions?.map(command => [command.id, command.confirm]), [['save-settings', true]]);
+});
+
 test('migrateV1Package handles all E2E-M2 cases: string[] requires, blank extra_entrypoints, cli->cli_bin, declarative.navigation, nested plugins/<name>/', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-mig-'));
   const repoDir = path.join(tmpDir, 'synthetic-repo');

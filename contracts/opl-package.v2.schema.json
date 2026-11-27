@@ -782,6 +782,45 @@
                     "minLength": 1,
                     "maxLength": 256
                   },
+                  "actions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128,
+                          "pattern": "^(?:[a-z0-9][a-z0-9._-]*[a-z0-9]|[a-z0-9])$"
+                        },
+                        "label": {
+                          "$ref": "#/$defs/I18nText"
+                        },
+                        "action_ref": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "confirm": {
+                          "type": "boolean"
+                        },
+                        "effect_timing": {
+                          "type": "string",
+                          "enum": [
+                            "immediate",
+                            "next_task",
+                            "restart_required"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "label",
+                        "action_ref"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "search_keywords": {
                     "type": "array",
                     "items": {
