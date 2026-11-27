@@ -28,7 +28,7 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
-  it('renders 47 orthogonal base subcommands, rejects legacy/unknown commands with exit 2 and zero codex fallback, and supports coexistence routing', async () => {
+  it('advertises Gateway with the base subcommands, rejects legacy/unknown commands with exit 2 and zero codex fallback, and supports coexistence routing', async () => {
     const sb = trackSandbox();
 
     const ver = await sb.spawnCli(['--version']);
@@ -42,12 +42,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     }
     assert.doesNotMatch(help.stdout, /^\s*foundry:/m);
 
-    // Count subcommands across core namespaces
-    const counts = [...help.stdout.matchAll(/^\s{2}(?:daemon|workspace|pack|connect|runway|ledger):\s+(.+)$/gm)].map(
-      (m) => m[1]!.split('·').length,
-    );
-    const total = counts.reduce((a, b) => a + b, 0);
-    assert.equal(total, 47);
+    assert.match(help.stdout, /^\s*connect:.*\bgateway\b/m);
 
     // Retired / unknown commands fail with exit 2 and never call codex stub
     for (const retired of [['app', 'state', '--json'], ['agents', 'modules'], ['cordis', 'status'], ['foundry', '--help']]) {

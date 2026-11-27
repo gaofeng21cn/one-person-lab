@@ -18,6 +18,9 @@ import {
 } from '@opl/pack';
 import { RunwayError, type AttemptRole, type ExecuteStageOptions, type SandboxMode } from '@opl/runway';
 import { DaemonRpcError } from '../errors.ts';
+import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.ts';
+import { configureCodexApiKey } from './configure-codex-api-key.ts';
+import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts';
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
@@ -69,6 +72,22 @@ function resolveSocketSessionId(
 export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHandler> {
   const handlers = new Map<string, RpcHandler>();
 
+  handlers.set('connect.configureCodexApiKey', (params, conn) => {
+    requireTrustedHost(conn, 'connect.configureCodexApiKey');
+    return configureCodexApiKey(params);
+  });
+  for (const method of gatewayAccountMethods) {
+    handlers.set(method, async (params, conn) => {
+      requireTrustedHost(conn, method);
+      try {
+        return await callGatewayAccount(method, params, runtime.paths.state_dir);
+      } finally {
+        // Failed refresh or disconnect can still update the visible account status.
+        if (method !== 'connect.gateway.status') runtime.appStateCache.invalidate();
+      }
+    });
+  }
+
   // ---- daemon.* ----
   handlers.set('daemon.health', () => ({
     ok: true,
@@ -108,15 +127,15 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   });
 
   // ---- app.* ----
-  handlers.set('app.state.get', (params) => {
+  handlers.set('app.state.get', (params, conn) => {
     const rawProfile = pickString(params, 'profile') ?? 'fast';
     const profile = rawProfile === 'full' ? 'full' : 'fast';
-    return runtime.appStateCache.getState(profile);
+    return runtime.appStateCache.getState(profile, conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
   });
 
-  handlers.set('app.initialize.get', () => {
+  handlers.set('app.initialize.get', (_params, conn) => {
     const doc = runtime.doctor(true);
-    const state = runtime.appStateCache.getState('fast');
+    const state = runtime.appStateCache.getState('fast', conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
     return {
       ...doc,
       state,
@@ -181,6 +200,16 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const payload = pickRecord(params, 'payload', 'input') ?? {};
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     const mode = pickString(params, 'mode');
+
+    const gatewayAction = !packageId && gatewayAccountActions.find(action => action.action_id === actionId);
+    if (gatewayAction) {
+      requireTrustedHost(conn, actionId);
+      try {
+        return await executeGatewayAction(gatewayAction, payload, dryRun || mode === 'preview', runtime.paths.state_dir);
+      } finally {
+        runtime.appStateCache.invalidate();
+      }
+    }
 
     return runtime.contributionDispatcher.executeContribution({
       callerSessionId: ctx.session_id,
@@ -598,6 +627,20 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const endpoint = pickOptionalString(params, 'endpoint');
     const secret = pickOptionalString(params, 'secret');
     const credentialHandle = pickOptionalString(params, 'credential_handle', 'credentialHandle');
+
+    // Early Studio v2 used these specific connect.add envelopes for its sign-in forms.
+    const legacyStudioForm = !connectionId && !endpoint && !credentialHandle && !params.capabilities && secret !== undefined;
+    if (legacyStudioForm && providerType === 'opl_gateway' && accountLabel === displayName) {
+      try {
+        await callGatewayAccount('connect.gateway.login', { email: displayName, password: secret }, runtime.paths.state_dir);
+        return { ok: true };
+      } finally {
+        runtime.appStateCache.invalidate();
+      }
+    }
+    if (legacyStudioForm && providerType === 'openai_codex' && displayName === 'Codex API Key' && accountLabel === undefined) {
+      return configureCodexApiKey({ api_key: secret });
+    }
 
     let capabilities = Array.isArray(params.capabilities)
       ? (params.capabilities as Array<{

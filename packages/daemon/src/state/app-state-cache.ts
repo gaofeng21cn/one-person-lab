@@ -1,6 +1,7 @@
 import type { SqliteDb } from '@opl/core';
-import type { ConnectService } from '@opl/connect';
+import { readLocalCodexAccessState, readOplGatewayAccount, withGatewayStateDirectory, type ConnectService } from '@opl/connect';
 import type { InstalledPackageRecord, PackService } from '@opl/pack';
+import { gatewayAccountActions } from '../rpc/gateway-actions.ts';
 
 export interface ProjectedPackageSummary {
   readonly package_id: string;
@@ -50,6 +51,18 @@ export function toProjectedPackageSummary(pkg: InstalledPackageRecord): Projecte
   };
 }
 
+function readCodexModelPolicy() {
+  const access = readLocalCodexAccessState();
+  return {
+    api_key_present: access.api_key_present,
+    model_access_source: access.model_access_source,
+    model_access_ready: access.model_access_ready,
+    model: access.model,
+    reasoning_effort: access.reasoning_effort,
+    config_path: access.config_path,
+  };
+}
+
 export interface AppStateSnapshot {
   readonly profile: 'fast' | 'full';
   readonly revision: number;
@@ -76,6 +89,13 @@ export interface AppStateSnapshot {
     readonly connections: ReturnType<ConnectService['list']>;
     readonly tasks: readonly Record<string, unknown>[];
     readonly schedules: readonly Record<string, unknown>[];
+    readonly actions?: readonly Readonly<Record<string, unknown>>[];
+    readonly settings_control_center?: {
+      readonly app_settings_read_model: {
+        readonly opl_gateway_account?: ReturnType<typeof readOplGatewayAccount>;
+        readonly codex_model_policy?: ReturnType<typeof readCodexModelPolicy>;
+      };
+    };
   };
 }
 
@@ -110,7 +130,36 @@ export class AppStateCache {
     this.#fullSnapshot = null;
   }
 
-  getState(profile: 'fast' | 'full' = 'fast'): AppStateSnapshot {
+  getState(profile: 'fast' | 'full' = 'fast', gatewayStateDir?: string): AppStateSnapshot {
+    const snapshot = this.#getSharedState(profile);
+    if (!gatewayStateDir) return snapshot;
+
+    // Only the trusted App/CLI reads private account settings. Keep them out
+    // of shared snapshots and observe account changes made by another process.
+    let account: ReturnType<typeof readOplGatewayAccount> | undefined;
+    try {
+      account = withGatewayStateDirectory(gatewayStateDir, readOplGatewayAccount);
+    } catch {
+      // The dedicated Gateway status RPC reports an unreadable private store.
+    }
+    return {
+      ...snapshot,
+      app_state: {
+        ...snapshot.app_state,
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : [])],
+        settings_control_center: {
+          ...snapshot.app_state.settings_control_center,
+          app_settings_read_model: {
+            ...snapshot.app_state.settings_control_center?.app_settings_read_model,
+            codex_model_policy: readCodexModelPolicy(),
+            ...(account && { opl_gateway_account: account }),
+          },
+        },
+      },
+    };
+  }
+
+  #getSharedState(profile: 'fast' | 'full'): AppStateSnapshot {
     if (profile === 'fast' && this.#fastSnapshot) {
       return this.#fastSnapshot;
     }

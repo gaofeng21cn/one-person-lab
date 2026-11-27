@@ -3,6 +3,7 @@ import path from 'node:path';
 import { resolveStatePaths } from '@opl/core';
 import { buildPackage, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
+import { prepareGatewayCommand } from './gateway-account.ts';
 import { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError } from '../errors.ts';
 import {
   callDaemonRpc,
@@ -43,6 +44,8 @@ const VALUE_FLAGS = new Set([
   '--account-label',
   '--secret',
   '--credential-handle',
+  '--credential-file',
+  '--group-id',
   '--endpoint',
   '--input',
   '--agent',
@@ -298,6 +301,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'migrate-v1', usage: 'migrate-v1 [<dir>] [--dry-run] [--no-clean]' },
   ],
   connect: [
+    { name: 'gateway', usage: 'gateway <status|login|refresh|complete-setup|repair|use-for-model-access|authorize-companion|disconnect> ...' },
     { name: 'list', usage: 'list [--provider-type <t>] [--status <s>]' },
     { name: 'add', usage: 'add --provider-type <t> --display-name <n> [--connection-id <id>] [--secret <s>]' },
     { name: 'check', usage: 'check <connectionId>' },
@@ -785,6 +789,11 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
       }
 
       case 'connect': {
+        if (sub === 'gateway') {
+          const { method, params } = await prepareGatewayCommand(rest, parsed.flags);
+          emitOutput(await callDaemonRpc(method, params, { stateDir, timeoutMs: 60_000 }), parsed);
+          return 0;
+        }
         if (!sub || !(NAMESPACE_SUBCOMMANDS.connect?.some((c) => c.name === sub))) {
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect subcommand '${sub ?? ''}'.`);
         }

@@ -16,6 +16,7 @@
   "dependencies": {
     "@opl/core": "2.0.0",
     "@opl/ledger": "2.0.0",
+    "toml-eslint-parser": "1.0.3",
     "zod": "^4.6.7"
   }
 }
