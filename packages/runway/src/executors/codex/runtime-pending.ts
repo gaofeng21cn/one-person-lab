@@ -11,6 +11,22 @@ function assertDirectory(dir: string) {
   if (!stat(dir)?.isDirectory()) throw new Error('Invalid pending Codex generation directory.');
 }
 
+const appliedKind = 'opl_runtime_applied_codex_generation.v2';
+
+function finishActivation(metadata: string, generations: string, generation: string) {
+  if (typeof generation !== 'string' || path.basename(generation) !== generation
+      || !generation || generation === '.' || generation === '..') {
+    throw new Error('Invalid applied Codex generation name.');
+  }
+  const staged = path.join(generations, generation);
+  if (stat(staged)) {
+    assertDirectory(staged);
+    fs.rmSync(staged, { recursive: true });
+  }
+  fs.unlinkSync(metadata);
+  return 'activated' as const;
+}
+
 // v1 stored a full previous bin directory for rollback. The swap lives on
 // the same filesystem and can be undone after either an exception or a crash.
 function undoActivation(transaction: string, live: string, previous: string) {
@@ -26,6 +42,8 @@ function undoActivation(transaction: string, live: string, previous: string) {
     }
     if (stat(old)) fs.renameSync(old, live);
     if (stat(retired)) fs.renameSync(retired, previous);
+    // A later interruption during recursive cleanup must never replay a swap.
+    fs.unlinkSync(prepared);
   }
   fs.rmSync(transaction, { recursive: true, force: true });
 }
@@ -37,6 +55,16 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
   if (!pendingFile) return 'none';
   if (!pendingFile.isFile()) throw new Error('Invalid pending Codex metadata file.');
   const pending = JSON.parse(fs.readFileSync(metadata, 'utf8'));
+  const root = fs.realpathSync(runtimeRoot);
+  for (let dir = root; ; dir = path.dirname(dir)) {
+    if (stat(path.join(dir, '.git'))) throw new Error('Refusing to activate Codex in a source checkout.');
+    if (dir === path.dirname(dir)) break;
+  }
+  const generations = path.join(root, 'generations');
+  assertDirectory(generations);
+  if (pending?.surface_kind === appliedKind) {
+    return finishActivation(metadata, generations, pending.generation);
+  }
   if (pending?.surface_kind !== 'opl_runtime_pending_generation.v1' || pending.dependency_id !== 'codex-cli'
       || pending.activation !== 'next_app_start' || typeof pending.generation_root !== 'string'
       || !path.isAbsolute(pending.generation_root)
@@ -47,10 +75,7 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
     throw new Error('Invalid pending Codex generation metadata.');
   }
 
-  const root = fs.realpathSync(runtimeRoot);
-  const generations = path.join(root, 'generations');
   const staged = pending.generation_root;
-  assertDirectory(generations);
   assertDirectory(staged);
   if (path.dirname(fs.realpathSync(staged)) !== generations) {
     throw new Error('Pending Codex generation is outside the runtime generations directory.');
@@ -61,10 +86,6 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
   if (stat(current)) assertDirectory(current);
   if (stat(live)) assertDirectory(live);
   if (stat(previous)) assertDirectory(previous);
-  for (let dir = root; ; dir = path.dirname(dir)) {
-    if (stat(path.join(dir, '.git'))) throw new Error('Refusing to activate Codex in a source checkout.');
-    if (dir === path.dirname(dir)) break;
-  }
 
   const transaction = path.join(staged, '.opl-v2-activation');
   if (stat(transaction)) {
@@ -104,20 +125,23 @@ export async function activateLegacyCodexGeneration(runtimeRoot: string, env: No
       fs.copyFileSync(source, target, fs.constants.COPYFILE_FICLONE);
     }
     fs.mkdirSync(current, { recursive: true });
-    fs.writeFileSync(path.join(transaction, 'prepared.json'), JSON.stringify({ hadLive }));
+    const preparing = path.join(transaction, 'preparing.json');
+    fs.writeFileSync(preparing, JSON.stringify({ hadLive }));
+    fs.renameSync(preparing, path.join(transaction, 'prepared.json'));
     if (hadLive) fs.renameSync(live, old);
     fs.renameSync(next, live);
     if (hadLive) {
       if (stat(previous)) fs.renameSync(previous, path.join(transaction, 'retired'));
       fs.renameSync(old, previous);
     }
-    // Removing the pending marker commits the swap. Before this point every
-    // changed path still has a reversible rename within the runtime directory.
-    fs.renameSync(metadata, path.join(transaction, 'applied.json'));
+    // Keep the startup entry point until cleanup finishes. Replacing its
+    // receipt commits the swap and makes interrupted cleanup replayable.
+    const applied = path.join(transaction, 'applied.json');
+    fs.writeFileSync(applied, JSON.stringify({ surface_kind: appliedKind, generation: path.basename(staged) }));
+    fs.renameSync(applied, metadata);
   } catch (error) {
     undoActivation(transaction, live, previous);
     throw error;
   }
-  fs.rmSync(staged, { recursive: true, force: true });
-  return 'activated';
+  return finishActivation(metadata, generations, path.basename(staged));
 }
