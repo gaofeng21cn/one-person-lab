@@ -1,14 +1,11 @@
 # OPL Framework 源码模块边界
 
-本文是维护 `contracts/opl-framework/source-module-map.json` 的操作参考。contract 是 source unit、root 和 dependency policy 的唯一 machine owner。
-
-源码层次见 [架构](../architecture.md#source-topology)；每个文件所属 source unit 及允许的
-依赖由 machine map 定义。本页只说明怎样维护该边界。
+源码按[架构中的包职责](../architecture.md#source-topology)维护。依赖关系由 workspace 包的公开入口、TypeScript 项目引用与[导入检查](../../scripts/check-v2-import-guard.mjs)共同约束。
 
 ## Import 规则
 
 1. unit 外调用优先使用目标 unit 的 public entrypoint。
-2. 允许直接依赖明确登记的 Host plugin leaf，不允许无合同 deep import。
+2. 相邻包按已声明的依赖方向调用公开入口。
 3. entrypoint 只装配，不持有业务状态。
 4. adapter 实现外部协议，不拥有对应事实。
 5. read model 只能投影，不写 authority。
@@ -26,11 +23,11 @@
 2. 确定唯一新 owner 与公开 entrypoint。
 3. 切换真实 caller。
 4. 同批删除旧 barrel、facade、schema、fixture 和仅保护旧接口的测试。
-5. 更新 `contracts/opl-framework/source-module-map.json`。
+5. 若包边界确实改变，同步对应的 manifest、TypeScript 项目引用和导入检查。
 6. 运行：
 
 ```bash
-npm run source:modules -- --strict-imports --strict-cycles
+npm run v2:guard
 npm run typecheck
 npm run test:structure
 ```
