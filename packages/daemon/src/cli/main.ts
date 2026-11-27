@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveStatePaths } from '@opl/core';
+import { isRecord, resolveStatePaths } from '@opl/core';
 import { buildPackage, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
 import { prepareGatewayCommand } from './gateway-account.ts';
@@ -276,6 +276,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'status', usage: 'status' },
     { name: 'logs', usage: 'logs [--lines <n>]' },
     { name: 'doctor', usage: 'doctor [--include-first-run]' },
+    { name: 'apply-codex-profile', usage: 'apply-codex-profile [--dry-run] < reviewed-profile.json' },
   ],
   workspace: [
     { name: 'init', usage: 'init <path> [--name <name>] [--domain <id>]' },
@@ -514,6 +515,28 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           const content = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8') : '';
           const lines = content.split('\n').filter(Boolean).slice(-linesCount);
           emitOutput(parsed.json ? { ok: true, log_path: logPath, lines } : lines.join('\n'), parsed);
+          return 0;
+        }
+        if (sub === 'apply-codex-profile') {
+          if (process.stdin.isTTY) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Provide reviewed Profile JSON on stdin.');
+          }
+          let payload: unknown;
+          try {
+            payload = JSON.parse(fs.readFileSync(0, 'utf8'));
+          } catch {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Expected reviewed Profile JSON on stdin.');
+          }
+          if (!isRecord(payload) || typeof payload.content !== 'string'
+            || typeof payload.expected_path !== 'string' || !path.isAbsolute(payload.expected_path)
+            || !(payload.expected_sha256 === null || (typeof payload.expected_sha256 === 'string' && /^[a-f0-9]{64}$/.test(payload.expected_sha256)))) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Expected content, expected_path and expected_sha256 for this Profile.');
+          }
+          emitOutput(await rpc('app.action.execute', {
+            action_id: 'codex_user_instructions_set',
+            payload: { content: payload.content, expected_path: payload.expected_path, expected_sha256: payload.expected_sha256 },
+            dry_run: getBoolFlag(parsed, '--dry-run'),
+          }), parsed);
           return 0;
         }
         if (sub === 'doctor') {
