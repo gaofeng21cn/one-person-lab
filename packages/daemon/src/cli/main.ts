@@ -497,13 +497,15 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           emitOutput({ ok: true, started: true, ...sess }, parsed);
           return 0;
         }
-        if (sub === 'stop') {
+        if (sub === 'stop' || sub === 'restart') {
           const out = await stopDaemonGracefully(stateDir);
-          emitOutput(out, parsed);
-          return 0;
-        }
-        if (sub === 'restart') {
-          await stopDaemonGracefully(stateDir);
+          if (!out.stopped) {
+            throw new DaemonRpcError(-32000, 'DAEMON_STOP_INCOMPLETE', 'Could not confirm shutdown of the selected daemon.');
+          }
+          if (sub === 'stop') {
+            emitOutput(out, parsed);
+            return 0;
+          }
           const paths = resolveStatePaths({ stateDir });
           const sess = await spawnDetachedDaemon(paths);
           emitOutput({ ok: true, restarted: true, ...sess }, parsed);

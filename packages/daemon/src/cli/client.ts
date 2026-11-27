@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { acquireAdvisoryLock, isProcessAlive, isRecord, resolveStatePaths, type AdvisoryLockHandle, type StatePaths } from '@opl/core';
+import { acquireAdvisoryLock, isProcessAlive, isRecord, KernelError, reclaimLockFileAtomically, resolveStatePaths, type AdvisoryLockHandle, type StatePaths } from '@opl/core';
 import { resolveCodexHome } from '@opl/connect';
 import { DaemonRpcError } from '../errors.ts';
 import type { DaemonSessionFilePayload } from '../server/socket-server.ts';
@@ -234,33 +234,28 @@ export async function getDaemonStatus(stateDir?: string): Promise<{
   }
 }
 
-async function shutdownSessionTarget(
-  sess: DaemonSessionFilePayload,
-  stateDir?: string,
-): Promise<void> {
-  const reachable = await probeSocket(sess.socket_path, 300);
-  if (reachable) {
-    try {
-      await callDaemonRpc('daemon.shutdown', {}, { stateDir, autoStart: false, timeoutMs: 3000 });
-    } catch (error) {
-      if (isProcessAlive(sess.pid)) {
-        try {
-          process.kill(sess.pid, 'SIGTERM');
-        } catch {
-          // ignore
-        }
-      }
-      if (error instanceof DaemonRpcError && error.rpcCode === -32001) {
-        throw error;
-      }
-    }
-  } else if (isProcessAlive(sess.pid)) {
-    try {
-      process.kill(sess.pid, 'SIGTERM');
-    } catch {
-      // ignore
-    }
+function readDaemonLock(lockPath: string): { pid: number; acquired_at: string } | null {
+  try {
+    const raw: unknown = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    if (!isRecord(raw) || raw.owner_id !== 'opld' || typeof raw.pid !== 'number'
+      || !Number.isSafeInteger(raw.pid) || raw.pid <= 0 || typeof raw.acquired_at !== 'string') return null;
+    return { pid: raw.pid, acquired_at: raw.acquired_at };
+  } catch {
+    return null;
   }
+}
+
+function requestSignal(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(pid, signal);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+  }
+}
+
+function runtimeFilesGone(paths: StatePaths): boolean {
+  return !fs.existsSync(paths.session_file) && !fs.existsSync(paths.lock_file)
+    && (process.platform === 'win32' || !fs.existsSync(paths.socket_path));
 }
 
 export async function stopDaemonGracefully(stateDir?: string): Promise<{
@@ -268,83 +263,75 @@ export async function stopDaemonGracefully(stateDir?: string): Promise<{
   readonly stopped: boolean;
 }> {
   const paths = resolveStatePaths({ stateDir });
-  const bootLockPath = path.join(paths.run_dir, 'opld.boot.lock');
-  let bootLock: AdvisoryLockHandle | null = null;
-  if (fs.existsSync(paths.run_dir)) {
-    try {
-      bootLock = await acquireBootLockAsync(bootLockPath, 5_000);
-    } catch {
-      bootLock = null;
-    }
-  }
-
+  if (!fs.existsSync(paths.run_dir)) return { ok: true, stopped: true };
+  const bootLock = await acquireBootLockAsync(path.join(paths.run_dir, 'opld.boot.lock'));
   try {
-    const trackedPids = new Set<number>();
-    const initialSess = readSessionFile(paths.session_file);
-    if (initialSess) {
-      trackedPids.add(initialSess.pid);
-      await shutdownSessionTarget(initialSess, stateDir);
-    } else if (fs.existsSync(paths.lock_file)) {
-      try {
-        const rawLock = JSON.parse(fs.readFileSync(paths.lock_file, 'utf8')) as { pid?: unknown };
-        if (typeof rawLock.pid === 'number' && rawLock.pid > 0) {
-          trackedPids.add(rawLock.pid);
-          if (isProcessAlive(rawLock.pid)) {
-            process.kill(rawLock.pid, 'SIGTERM');
-          }
-        }
-      } catch {
-        // ignore
-      }
-    } else {
-      return { ok: true, stopped: true };
-    }
+    const session = readSessionFile(paths.session_file);
+    const lock = readDaemonLock(paths.lock_file);
+    const pid = lock?.pid ?? session?.pid;
+    if (!pid) return { ok: true, stopped: runtimeFilesGone(paths) };
+    const sameSession = (current: DaemonSessionFilePayload) => current.pid === pid
+      && (!session || current.token === session.token) && current.socket_path === paths.socket_path;
+    const sameLock = () => {
+      const current = readDaemonLock(paths.lock_file);
+      return lock !== null && current?.pid === pid && current.acquired_at === lock.acquired_at;
+    };
+    if (session && !sameSession(session)) return { ok: true, stopped: false };
 
-    const deadline = Date.now() + 3000;
-    let sentForceSigterm = false;
-    while (Date.now() < deadline) {
-      const latestSess = readSessionFile(paths.session_file);
-      if (latestSess && latestSess.pid > 0 && !trackedPids.has(latestSess.pid)) {
-        trackedPids.add(latestSess.pid);
-        await shutdownSessionTarget(latestSess, stateDir);
-      }
-
-      const sockPath = latestSess?.socket_path ?? initialSess?.socket_path ?? paths.socket_path;
-      const sockGone = process.platform === 'win32' || !fs.existsSync(sockPath);
-      const lockGone = !fs.existsSync(paths.lock_file);
-      const allProcsGone = [...trackedPids].every((pid) => !isProcessAlive(pid));
-      if (sockGone && lockGone && allProcsGone) {
-        return { ok: true, stopped: true };
-      }
-
-      if (!sentForceSigterm && Date.now() >= deadline - 600) {
-        sentForceSigterm = true;
-        for (const pid of trackedPids) {
-          if (isProcessAlive(pid)) {
-            try {
-              process.kill(pid, 'SIGTERM');
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-      await sleepMs(25);
-    }
-
-    for (const pid of trackedPids) {
-      if (isProcessAlive(pid)) {
+    if (isProcessAlive(pid)) {
+      if (session) {
         try {
-          process.kill(pid, 'SIGKILL');
-        } catch {
-          // ignore
+          await sendSingleRpcOverSocket(session, 'daemon.shutdown', {}, 3000);
+        } catch (error) {
+          if (error instanceof DaemonRpcError && error.rpcCode === -32001) throw error;
+          if (sameLock()) requestSignal(pid, 'SIGTERM');
         }
+      } else if (sameLock()) requestSignal(pid, 'SIGTERM');
+
+      const deadline = Date.now() + 3000;
+      let signaled = false;
+      while (isProcessAlive(pid) && Date.now() < deadline) {
+        if (!signaled && Date.now() >= deadline - 600 && sameLock()) {
+          signaled = true;
+          requestSignal(pid, 'SIGTERM');
+        }
+        await sleepMs(25);
+      }
+      if (isProcessAlive(pid) && sameLock()) {
+        requestSignal(pid, 'SIGKILL');
+        await sleepMs(50);
       }
     }
-    await sleepMs(50);
-    return { ok: true, stopped: [...trackedPids].every((pid) => !isProcessAlive(pid)) };
+
+    if (isProcessAlive(pid)) return { ok: true, stopped: false };
+    if (runtimeFilesGone(paths)) return { ok: true, stopped: true };
+    // A foreground daemon can start independently of the CLI boot lock. Take
+    // the runtime lock before unlinking anything it could already have replaced.
+    if (fs.existsSync(paths.lock_file) && !reclaimLockFileAtomically(paths.lock_file, sameLock)) {
+      return { ok: true, stopped: false };
+    }
+    let cleanup: AdvisoryLockHandle;
+    try {
+      cleanup = acquireAdvisoryLock(paths.lock_file, { ownerId: 'opld_stop_cleanup', staleAfterMs: 0 });
+    } catch (error) {
+      if (error instanceof KernelError && error.code === 'LOCK_CONTENTION') return { ok: true, stopped: false };
+      throw error;
+    }
+    try {
+      const current = readSessionFile(paths.session_file);
+      if ((current && !sameSession(current)) || (!current && fs.existsSync(paths.session_file))) {
+        return { ok: true, stopped: false };
+      }
+      if (process.platform !== 'win32' && fs.lstatSync(paths.socket_path, { throwIfNoEntry: false })?.isSocket()) {
+        fs.unlinkSync(paths.socket_path);
+      }
+      if (current) fs.unlinkSync(paths.session_file);
+    } finally {
+      cleanup.release();
+    }
+    return { ok: true, stopped: runtimeFilesGone(paths) };
   } finally {
-    bootLock?.release();
+    bootLock.release();
   }
 }
 
