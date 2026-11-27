@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { connectTestRpc, createDaemonSandbox, TestRpcClient } from './helpers/sandbox.ts';
+import { connectTestRpc, createDaemonSandbox, TestRpcClient, WORKTREE_ROOT } from './helpers/sandbox.ts';
 
 test('saving a manual Gateway key configures the selected Codex home through trusted IPC', async (t) => {
   const sandbox = createDaemonSandbox();
@@ -71,4 +72,36 @@ test('two Studio profiles sharing an opld read and write their own Codex configu
     return state.app_state.settings_control_center.app_settings_read_model.codex_model_policy.api_key_present;
   }
   assert.deepEqual(await Promise.all([read(first), read(second)]), [false, true]);
+});
+
+test('opl connect configure-codex reads bounded UTF-8 from stdin via the daemon', async t => {
+  const sandbox = createDaemonSandbox();
+  t.after(() => sandbox.cleanup());
+  await sandbox.startInProcess();
+  const key = 'local-test-key-stdin';
+  const command = ['connect', 'configure-codex', '--api-key-stdin', '--json'];
+  const invoke = (stdin: string | Buffer, args = command) => new Promise<{ code: number | null; output: string }>((resolve, reject) => {
+    const child = spawn(path.join(WORKTREE_ROOT, 'bin', 'opl'), args, { env: sandbox.env, cwd: sandbox.workspaceDir });
+    let output = '';
+    child.stdout.on('data', chunk => { output += String(chunk); });
+    child.stderr.on('data', chunk => { output += String(chunk); });
+    child.stdin.on('error', () => {});
+    child.once('error', reject);
+    child.once('close', code => resolve({ code, output }));
+    child.stdin.end(stdin);
+  });
+  for (const input of ['', Buffer.from([0xc3, 0x28]), 'a'.repeat(8193)]) {
+    const failure = await invoke(input);
+    assert.equal(failure.code, 2, failure.output);
+    assert.match(failure.output, /INVALID_INPUT/);
+  }
+  const rejected = await invoke('', [...command, '--api-key=' + key]);
+  assert.equal(rejected.code, 2);
+  assert.ok(!rejected.output.includes(key));
+  const config = path.join(sandbox.codexHome, 'config.toml');
+  assert.equal(fs.existsSync(config), false);
+  const success = await invoke(key + '\n');
+  assert.equal(success.code, 0, success.output);
+  assert.deepEqual(JSON.parse(success.output), { ok: true });
+  assert.ok(fs.readFileSync(config, 'utf8').includes(key));
 });

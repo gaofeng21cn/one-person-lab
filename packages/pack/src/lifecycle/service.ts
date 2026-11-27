@@ -49,6 +49,7 @@ import type {
   PackEventBus,
   PackageIntent,
   PackageOperationAction,
+  PackageOperationProgress,
   PackageOperationRecord,
   PackageOrigin,
   ReloadMode,
@@ -59,14 +60,21 @@ import { classifyReloadMode, combineReloadModes } from './reload-mode.ts';
 
 import { managedUpdateProjection, type PackageUpdateFailure, type PackageUpdateRow } from './managed-update-projection.ts';
 
-type OfficialUpdateResolver = (packageId: string) => Promise<{
-  readonly manifest: OplPackageManifestV2;
+type OperationDownload = {
+  readonly opId: string;
+  readonly signal: AbortSignal;
+  readonly onProgress: (progress: PackageOperationProgress) => void;
+};
+type OfficialUpdateResolver = (packageId: string, operation: OperationDownload) => Promise<{
+  readonly manifest?: OplPackageManifestV2;
   readonly source: InstallSourceSpec;
   dispose(): Promise<void> | void;
 }>;
+type OfficialUpdateVersionResolver = (packageId: string) => Promise<string | null>;
 
 export interface CreatePackServiceOptions {
   readonly resolveOfficialUpdate?: OfficialUpdateResolver;
+  readonly resolveOfficialUpdateVersion?: OfficialUpdateVersionResolver;
   readonly probeCliExtensions?: (root: string, manifest: OplPackageManifestV2) => Promise<void>;
   readonly db: SqliteDb;
   readonly stateDir?: string;
@@ -212,6 +220,7 @@ export class PackService {
   readonly #fetchImpl?: RegistryFetch;
   readonly #downloadTransport?: DownloadTransport;
   readonly #resolveOfficialUpdate?: OfficialUpdateResolver;
+  readonly #resolveOfficialUpdateVersion?: OfficialUpdateVersionResolver;
   readonly #probeCliExtensions?: CreatePackServiceOptions['probeCliExtensions'];
   readonly #packageMutations = new Map<string, Promise<void>>();
   readonly #activeControllers = new Map<string, AbortController>();
@@ -231,6 +240,7 @@ export class PackService {
     this.#codexRunner = options.codexRunner;
     this.#fetchImpl = options.fetchImpl;
     this.#resolveOfficialUpdate = options.resolveOfficialUpdate;
+    this.#resolveOfficialUpdateVersion = options.resolveOfficialUpdateVersion;
     this.#probeCliExtensions = options.probeCliExtensions;
     this.#downloadTransport = options.downloadTransport;
   }
@@ -334,6 +344,7 @@ export class PackService {
         });
         const archivePath = await downloadOciSource(input.source, {
           cacheRoot: this.cacheRoot,
+          opId: input.opId,
           fetchImpl: this.#fetchImpl,
           signal: input.signal,
           transport: this.#downloadTransport,
@@ -397,10 +408,61 @@ export class PackService {
     }
   }
 
+  runPackageOperation<T>(input: {
+    packageId: string;
+    action: 'install' | 'update' | 'repair';
+    targetVersion?: string;
+    batchId?: string | null;
+  }, execute: (operation: OperationDownload) => Promise<T>) {
+    const opId = newId('packop');
+    const controller = new AbortController();
+    this.#activeControllers.set(opId, controller);
+    const operation = this.store.createOperation({
+      op_id: opId, batch_id: input.batchId ?? null, package_id: input.packageId,
+      action: input.action, target_version: input.targetVersion ?? null,
+      status: 'preparing', progress: { stage: 'preparing' },
+    });
+    const completion = Promise.resolve().then(async () => {
+      try {
+        controller.signal.throwIfAborted();
+        const result = await execute({
+          opId, signal: controller.signal,
+          onProgress: progress => {
+            if (!controller.signal.aborted) this.store.transitionOperation(opId, {
+              status: progress.stage === 'verifying' ? 'verifying' : 'downloading', progress,
+            });
+          },
+        });
+        controller.signal.throwIfAborted();
+        if (this.store.getOperation(opId)?.status !== 'succeeded') {
+          this.store.transitionOperation(opId, { status: 'succeeded', progress: { stage: 'completed' } });
+        }
+        return result;
+      } catch (error) {
+        if (this.store.getOperation(opId)?.status !== 'cancelled') {
+          const cancelled = controller.signal.aborted || (error instanceof PackError
+            && (error.code === 'PACK_OPERATION_CANCELLED' || error.code === 'PACK_DOWNLOAD_CANCELLED'));
+          this.store.transitionOperation(opId, {
+            status: cancelled ? 'cancelled' : 'failed',
+            error: { code: error instanceof PackError ? error.code : 'PACK_OPERATION_FAILED',
+              message: error instanceof Error ? error.message : String(error) },
+          });
+        }
+        throw error;
+      } finally {
+        this.#activeControllers.delete(opId);
+      }
+    });
+    return { operation, completion };
+  }
+
   private async installOrUpdateFromSource(input: {
     readonly source: InstallSourceSpec;
     readonly action: 'install' | 'update';
     readonly updateSource?: PackageUpdateSource;
+    readonly resolveSource?: (operation: OperationDownload) => ReturnType<OfficialUpdateResolver>;
+    readonly operation?: OperationDownload;
+    readonly onStarted?: (operation: PackageOperationRecord) => void;
     readonly ensure?: { exactRelease?: ExactPackageRelease };
     readonly expectedUpdate?: { installedVersion: string; installedDigest: string; availableVersion: string; background?: boolean };
     readonly batchId?: string | null;
@@ -408,34 +470,30 @@ export class PackService {
     readonly clientContext?: ClientContext;
   }): Promise<InstallPackageResult> {
     assertTrustedIfProvided(input.clientContext, `pack.${input.action}`);
-    const opId = newId('packop');
-    const pkgHint = input.source.package_id ?? input.source.path ?? input.source.ref ?? 'unknown';
-    const controller = new AbortController();
-    this.#activeControllers.set(opId, controller);
+    if (input.operation) return this.commitPackageSource(input, input.operation);
+    const run = this.runPackageOperation({
+      packageId: input.source.package_id ?? input.source.path ?? input.source.ref ?? 'unknown',
+      action: input.action, targetVersion: input.source.version, batchId: input.batchId,
+    }, operation => this.commitPackageSource(input, operation));
+    input.onStarted?.(run.operation);
+    return run.completion;
+  }
 
-    this.store.createOperation({
-      op_id: opId,
-      batch_id: input.batchId ?? null,
-      package_id: pkgHint,
-      action: input.action,
-      target_version: input.source.version ?? null,
-      status: 'preparing',
-      progress: { stage: 'preparing' },
-    });
-
+  private async commitPackageSource(input: Parameters<PackService['installOrUpdateFromSource']>[0], operation: OperationDownload): Promise<InstallPackageResult> {
+    const { opId, signal } = operation;
+    let disposeSource: (() => Promise<void> | void) | undefined;
     let cleanupStaging: (() => void) | undefined;
     let releaseMutation: (() => void) | undefined;
     try {
+      const resolved = await input.resolveSource?.(operation);
+      if (resolved) disposeSource = () => resolved.dispose();
+      signal.throwIfAborted();
       const staged = await this.materializeSourceToStaging({
-        source: input.source,
-        opId,
-        signal: controller.signal,
+        source: resolved?.source ?? input.source, opId, signal,
       });
       cleanupStaging = staged.cleanup;
 
-      if (controller.signal.aborted) {
-        throw new PackError('PACK_OPERATION_CANCELLED', 'Operation was cancelled.');
-      }
+      signal.throwIfAborted();
 
       const { manifest } = readPackageManifestFromDir(staged.stagingDir);
       if (input.source.package_id && manifest.identity.id !== input.source.package_id) {
@@ -446,6 +504,7 @@ export class PackService {
         );
       }
       releaseMutation = await this.acquirePackageMutation(manifest.identity.id, manifest);
+      signal.throwIfAborted();
       const installedBefore = this.store.getInstalledPackage(manifest.identity.id);
       if (input.action === 'update' && !installedBefore) {
         throw new PackError('PACK_NOT_FOUND', 'Package was removed before the update.');
@@ -571,27 +630,16 @@ export class PackService {
         }
         throw postMoveError;
       }
-    } catch (error) {
-      const cancelled =
-        controller.signal.aborted
-        || (error instanceof PackError &&
-          (error.code === 'PACK_OPERATION_CANCELLED' || error.code === 'PACK_DOWNLOAD_CANCELLED'));
-      const code = error instanceof PackError ? error.code : 'PACK_OPERATION_FAILED';
-      const message = error instanceof Error ? error.message : String(error);
-      this.store.transitionOperation(opId, {
-        status: cancelled ? 'cancelled' : 'failed',
-        error: { code, message },
-      });
-      throw error;
     } finally {
       releaseMutation?.();
-      this.#activeControllers.delete(opId);
       cleanupStaging?.();
+      await disposeSource?.();
     }
   }
 
   async install(input: {
     readonly ensure?: { exactRelease?: ExactPackageRelease };
+    readonly operation?: OperationDownload;
     readonly updateSource?: PackageUpdateSource;
     readonly source: InstallSourceSpec;
     readonly syncCodex?: boolean;
@@ -601,6 +649,7 @@ export class PackService {
       source: input.source,
       updateSource: input.updateSource,
       action: 'install',
+      operation: input.operation,
       ensure: input.ensure,
       syncCodex: input.syncCodex,
       clientContext: input.clientContext,
@@ -655,12 +704,14 @@ export class PackService {
   // Use the original installation source. The installed copy alone cannot establish
   // ownership of a remote package that happens to have the same ID.
   private async visitManagedUpdates(
-    apply?: { batchId: string; syncCodex?: boolean; clientContext?: ClientContext; background?: boolean },
+    apply?: { batchId: string; syncCodex?: boolean; clientContext?: ClientContext; background?: boolean; onStarted?: (operation: PackageOperationRecord) => void },
+    packageId?: string,
   ) {
     const packages: PackageUpdateRow[] = [];
     const failures: PackageUpdateFailure[] = [];
     const results: InstallPackageResult[] = [];
     for (const pkg of this.store.listInstalledPackages()) {
+      if (packageId && pkg.package_id !== packageId) continue;
       const row = { package_id: pkg.package_id, installed_version: pkg.version };
       const provenance = this.store.getInstallSource(pkg.package_id);
       if (pkg.install_mode === 'dev_link' || pkg.origin !== 'opl' || !provenance) {
@@ -670,37 +721,46 @@ export class PackService {
       }
       let cleanup: (() => Promise<void> | void) | undefined;
       try {
-        let source: InstallSourceSpec;
-        let manifest: OplPackageManifestV2;
+        let source: InstallSourceSpec | undefined;
+        let manifest: OplPackageManifestV2 | undefined;
+        let version: string | undefined;
         if (provenance.kind === 'official') {
-          if (!this.#resolveOfficialUpdate || provenance.package_id !== pkg.package_id) {
+          if (!this.#resolveOfficialUpdateVersion || provenance.package_id !== pkg.package_id) {
             throw new PackError('PACK_NOT_FOUND', 'Official update source is unavailable.');
           }
-          const resolved = await this.#resolveOfficialUpdate(pkg.package_id);
-          cleanup = () => resolved.dispose();
-          source = resolved.source;
-          manifest = resolved.manifest;
+          version = await this.#resolveOfficialUpdateVersion(pkg.package_id) ?? undefined;
+          if (!version) throw new PackError('PACK_NOT_FOUND', 'Official update metadata is unavailable.');
         } else if (provenance.kind === 'local_dir' && provenance.path) {
           source = provenance;
           manifest = readPackageManifestFromDir(provenance.path).manifest;
+          version = manifest.identity.version;
+        } else if (provenance.kind === 'oci' && provenance.version) {
+          source = provenance;
+          version = provenance.version;
         } else {
+          if (!apply) throw new PackError('PACK_NOT_FOUND', 'Update source has no verified version metadata.');
           const staged = await this.materializeSourceToStaging({
             source: provenance, signal: AbortSignal.timeout(120_000),
           });
           cleanup = staged.cleanup;
           source = { kind: 'local_dir', path: staged.stagingDir };
           manifest = readPackageManifestFromDir(staged.stagingDir).manifest;
+          version = manifest.identity.version;
         }
-        if (manifest.identity.id !== pkg.package_id) {
+        if (manifest && manifest.identity.id !== pkg.package_id) {
           throw new PackError('INVALID_MANIFEST', 'Update source contains a different package.');
         }
-        const version = manifest.identity.version;
+        if (!version) throw new PackError('INVALID_MANIFEST', 'Update source has no version.');
         const available = semver.gt(version, pkg.version);
         if (available && apply && (!apply.background || pkg.enabled)) {
+          const resolveOfficial = this.#resolveOfficialUpdate;
+          if (!source && !resolveOfficial) throw new PackError('PACK_NOT_FOUND', 'Update source is unavailable.');
           const result = await this.installOrUpdateFromSource({
-            action: 'update', source: { ...source, package_id: pkg.package_id }, updateSource: provenance,
+            action: 'update', source: { ...(source ?? { kind: 'local_dir' }), version, package_id: pkg.package_id },
+            updateSource: provenance,
+            resolveSource: !source && resolveOfficial ? operation => resolveOfficial(pkg.package_id, operation) : undefined,
             expectedUpdate: { installedVersion: pkg.version, installedDigest: pkg.content_digest, availableVersion: version, background: apply.background },
-            batchId: apply.batchId, syncCodex: apply.syncCodex, clientContext: apply.clientContext,
+            batchId: apply.batchId, syncCodex: apply.syncCodex, clientContext: apply.clientContext, onStarted: apply.onStarted,
           });
           results.push(result);
           packages.push({ ...row, installed_version: result.package.version, available_version: version, status: 'current' });
@@ -719,12 +779,14 @@ export class PackService {
     return { packages, failures, results };
   }
 
-  async updatePlan() {
-    const { packages, failures } = await this.visitManagedUpdates();
+  async updatePlan(packageId?: string) {
+    const { packages, failures } = await this.visitManagedUpdates(undefined, packageId);
     return { packages, failures, managed_update: managedUpdateProjection(packages, failures) };
   }
 
   async updateAll(input: {
+    readonly packageId?: string;
+    readonly onStarted?: (operation: PackageOperationRecord) => void;
     readonly updates?: ReadonlyArray<{ readonly packageId: string; readonly source: InstallSourceSpec }>;
     readonly syncCodex?: boolean;
     readonly background?: boolean;
@@ -733,7 +795,7 @@ export class PackService {
     assertTrustedIfProvided(input.clientContext, 'pack.updateAll');
     const batchId = newId('packbatch');
     if (input.updates === undefined) {
-      const batch = await this.visitManagedUpdates({ ...input, batchId });
+      const batch = await this.visitManagedUpdates({ ...input, batchId }, input.packageId);
       const mode = combineReloadModes(batch.results.map(result => result.reload_mode));
       return { batch_id: batchId, reload_mode: mode, ...batch,
         managed_update: managedUpdateProjection(batch.packages, batch.failures, mode) };
@@ -1158,22 +1220,18 @@ export class PackService {
     return this.store.listOperations({ batch_id: input.batchId });
   }
 
+  canCancelOperation(operation: PackageOperationRecord): boolean {
+    return this.#activeControllers.has(operation.op_id)
+      && ['preparing', 'downloading', 'verifying'].includes(operation.status);
+  }
+
   cancelOperation(opId: string): PackageOperationRecord {
-    const controller = this.#activeControllers.get(opId);
-    if (controller) {
-      controller.abort();
-    }
     const existing = this.store.getOperation(opId);
     if (!existing) {
       throw new PackError('PACK_NOT_FOUND', `Package operation '${opId}' not found.`);
     }
-    if (
-      existing.status === 'succeeded'
-      || existing.status === 'failed'
-      || existing.status === 'cancelled'
-    ) {
-      return existing;
-    }
+    if (!this.canCancelOperation(existing)) return existing;
+    this.#activeControllers.get(opId)?.abort();
     return this.store.transitionOperation(opId, {
       status: 'cancelled',
       error: {

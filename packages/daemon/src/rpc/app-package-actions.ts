@@ -15,11 +15,12 @@ export async function executeAppPackageAction(
 ) {
   const payload = pickRecord(params, 'payload') ?? {};
   const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
-  // Older Studio versions infer background support from the presence of a
-  // journal. Run their install request synchronously on the same Pack owner.
-  const install = actionId === 'agent_package_install'
-    || (actionId === 'package_operation_start' && payload.action_id === 'agent_package_install');
-  const confirmationRequired = install || ['agent_package_uninstall', 'settings_apply_opl_packages'].includes(actionId);
+  const background = actionId === 'package_operation_start';
+  const operationAction = actionId === 'package_operation_start' ? pickString(payload, 'action_id') : actionId;
+  const install = operationAction === 'agent_package_install';
+  const update = operationAction === 'agent_package_update';
+  const repair = operationAction === 'agent_package_repair';
+  const confirmationRequired = install || update || repair || ['agent_package_uninstall', 'settings_apply_opl_packages'].includes(actionId);
   function requireMutation() {
     if (!conn.clientContext?.trusted_host) {
       throw new DaemonRpcError(-32003, 'TRUSTED_HOST_REQUIRED', 'App changes require a trusted host.');
@@ -41,13 +42,19 @@ export async function executeAppPackageAction(
   if (actionId === 'package_operation_status') {
     return receipt(readAppPackageOperations(runtime.packService));
   }
+  if (actionId === 'package_operation_cancel') {
+    if (!dryRun) requireMutation();
+    const operationId = pickString(payload, 'operation_id', 'op_id');
+    if (!operationId) throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'operation_id is required.');
+    return receipt(dryRun ? { operation_id: operationId } : await callOwner('pack.operation.cancel', { op_id: operationId }));
+  }
   if (actionId === 'settings_apply_opl_packages') {
     if (!dryRun) requireMutation();
     const result = await callOwner(dryRun ? 'pack.updatePlan' : 'pack.updateAll', {});
     const failed = isRecord(result) && Array.isArray(result.failures) && result.failures.length > 0;
     return receipt(result, failed ? 'failed' : undefined);
   }
-  if (!install && !['agent_package_uninstall', 'agent_package_preferences_set', 'package_app_set_enabled'].includes(actionId)) {
+  if (!install && !update && !repair && (background || !['agent_package_uninstall', 'agent_package_preferences_set', 'package_app_set_enabled'].includes(actionId))) {
     throw new DaemonRpcError(-32004, 'ACTION_NOT_FOUND', `No App action is registered for '${actionId}'.`);
   }
   const packageId = pickString(payload, 'package_id');
@@ -56,8 +63,13 @@ export async function executeAppPackageAction(
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A matching payload.package_id is required.');
   }
   if (!dryRun) requireMutation();
-  if (install) {
-    return receipt(await callOwner('pack.ensure', { package_id: packageId, dry_run: dryRun }));
+  if (install || repair) {
+    return receipt(await callOwner('pack.ensure', { package_id: packageId, dry_run: dryRun, background, repair }));
+  }
+  if (update) {
+    const result = await callOwner(dryRun ? 'pack.updatePlan' : 'pack.update', { package_id: packageId, background });
+    const failed = isRecord(result) && Array.isArray(result.failures) && result.failures.length > 0;
+    return receipt(result, failed ? 'failed' : undefined);
   }
   const installed = runtime.packService.inspect(packageId);
   if (!installed) {

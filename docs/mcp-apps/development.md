@@ -62,7 +62,7 @@
 
 ## 复用现有接线
 
-共享视图从 installed descriptor 发现。`app-contribution-adapter.json` 将现有 `data_ref`/`action_ref` 映射到 owner 的 JSON 读取、固定命令或已有 `runtime_context`；其路径、输入和输出以 [SPEC](./SPEC.md#adapters) 为准。工作区默认值可由绑定提供，不能靠让用户每次寻找 manifest 文件填空。
+共享视图从 installed descriptor 发现。`app-contribution-adapter.json` 将现有 `data_ref`/`action_ref` 映射到 owner 的 JSON 读取、固定命令或已有 `runtime_context`；其路径、输入和输出以 [SPEC](./SPEC.md#adapters) 为准。对于仍声明 `["opl", "app", "contribution", "adapter", "--stdin"]` 的已迁移 v1 遗留包，`ContributionDispatcher` 在进程内通过限定 `install_path` 边界的过渡解释器（`TRANSITIONAL_V1_ADAPTER`）执行该清单（不恢复已退役的 `opl app` CLI，将在所有活跃 Package 迁移至 v2 后于 Wave 3C 一并移除）。工作区默认值可由绑定提供，不能靠让用户每次寻找 manifest 文件填空。
 
 Agent 使用 `open_opl_apps` 指定所需 Package/view 与上下文；`opl_app_contribution_read` 读同一 owner；写入使用 `opl_app_contribution_execute` 及 owner 的确认/revision 要求。这些名字是现有接口，不是要求每个 Package 再实现一份同名服务。专用 App 使用标准工具与资源，复用领域服务；不复制共享 dispatcher。
 

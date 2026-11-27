@@ -16,7 +16,7 @@ test('the workbench joins owner inventory and Runway work without turning execut
     const created = runwayStore.createTask({
       workspace_id: workspace.workspace_id, agent_id: 'an-agent', title: 'Collect sources', goal_prompt: 'Test',
     });
-    runwayStore.createTask({ workspace_id: workspace.workspace_id, title: 'Unassigned task', goal_prompt: 'Test' });
+    const unassigned = runwayStore.createTask({ workspace_id: workspace.workspace_id, title: 'Unassigned task', goal_prompt: 'Test' });
     const packages = [{ package_id: 'an-agent', intent: 'agent' as const, name: 'Research agent', enabled: true }];
     const inventory: DomainTaskInventory = {
       items: [{
@@ -35,8 +35,11 @@ test('the workbench joins owner inventory and Runway work without turning execut
     assert.equal(row.execution.state, 'queued');
     assert.equal(row.telemetry.cumulative.state, 'missing');
     assert.equal(read().task_drilldowns.length, 2);
-    assert.equal(read().work_item_projection_v2.items.length, 2);
+    assert.equal(read().work_item_projection_v2.items.length, 3);
     assert.equal(read().work_item_projection_v2.summary.agent_count, 1);
+    const generic = read().work_item_projection_v2.items.find(item => item.identity.work_item_id === unassigned.task_id);
+    assert.equal(generic?.identity.agent_id, null);
+    assert.equal(generic?.identity.agent_display_name, 'Runway');
     const domain = read().work_item_projection_v2.items.find((item) => item.identity.work_item_id === 'paper-1')!;
     assert.equal(domain.domain_detail_views?.[0].item_id, domain.item_id);
     assert.equal(domain.identity.identity_state, 'resolved');

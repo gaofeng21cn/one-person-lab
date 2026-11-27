@@ -10,12 +10,15 @@ import {
   officialPackageInstallSource,
   officialPackagePrivateSourceId,
   readOfficialPackageCatalog,
+  readCachedOfficialPackageCatalog,
   readOfficialV2Source,
   type OfficialPackageCatalogEntry,
 } from '../src/distribution/official-package-catalog.ts';
+import { buildPackage, createPackageSourceArchive } from '../src/index.ts';
 import { resolveOciArtifact } from '../src/distribution/registry-client.ts';
 import { createOfficialPackageResolver } from '../src/distribution/official-package-source.ts';
 import { configurePrivatePackageSource } from '../src/distribution/private-package-sources.ts';
+import type { PackageOperationProgress } from '../src/types.ts';
 
 const packageId = 'sample-agent';
 const repository = 'https://github.com/gaofeng21cn/example-repo.git';
@@ -83,7 +86,7 @@ test('Full selects a commit-bound module offline and supports old capability see
   write(`${module}/opl-runtime-module.json`, { packaged_runtime: true, repo_name: 'example-repo', source_git: { head_sha: commit } });
   const catalog = await readOfficialPackageCatalog({
     env: { OPL_FULL_RUNTIME_HOME: root },
-    fetchImpl: async () => assert.fail('Full must stay offline'),
+    fetchImpl: async () => { throw new Error('Catalog is offline'); },
   });
   const resolve = () => officialPackageInstallSource(catalog.get(packageId)!, root);
   const expected = { kind: 'local_dir', package_id: packageId, path: path.join(root, module) };
@@ -223,7 +226,7 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   assert.equal(officialPackagePrivateSourceId(privateEntry), 'github-packages:gaofeng21cn');
   assert.equal(officialPackagePrivateSourceId(entry), null);
   assert.throws(() => officialPackageInstallSource(privateEntry, null), /public Package source unavailable/);
-  assert.throws(() => officialPackageInstallSource(privateEntry, '/tmp/full-seed', { allowAuthorizedOnly: true }), /Offline Full seed/);
+  assert.equal(officialPackageInstallSource(privateEntry, '/tmp/full-seed', { allowAuthorizedOnly: true }).ref, privatePub);
   assert.deepEqual(officialPackageInstallSource(privateEntry, null, { allowAuthorizedOnly: true }), {
     kind: 'oci', package_id: privatePkgId, ref: privatePub, version: v2Version,
   });
@@ -272,7 +275,7 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   const tokenHeaders: string[] = [];
   const manifestTags: string[] = [];
   const authorizedResolve = createOfficialPackageResolver({
-    runtimeRoot: null,
+    runtimeRoot: authState,
     db,
     fetchImpl: async (url, init) => {
       const address = new URL(String(url));
@@ -297,4 +300,112 @@ test('authorized private v2 packages resolve with Basic auth header, reject unau
   });
   assert.deepEqual(tokenHeaders, [expectedBasic]);
   assert.deepEqual(manifestTags, [v2Version]);
+});
+
+test('Full merges the online selection, consumes matching locked bytes and survives an offline restart', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-catalog-cache-'));
+  const module = path.join(root, 'modules', packageId);
+  const seedPath = path.join(root, 'opl', 'catalog-seed');
+  const dbFile = path.join(root, 'opl.db');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(module, { recursive: true });
+  fs.mkdirSync(seedPath, { recursive: true });
+  const text = { 'en-US': 'Sample', 'zh-CN': '样例' };
+  fs.writeFileSync(path.join(module, 'opl-package.json'), JSON.stringify({
+    schema_version: 'opl.package.v2',
+    identity: { id: packageId, version: '1.2.3', intent: 'extension', publisher: 'OPL', name: text, summary: text },
+  }));
+  fs.writeFileSync(path.join(module, 'opl-runtime-module.json'), JSON.stringify({
+    packaged_runtime: true, repo_name: 'example-repo', source_git: { head_sha: commit },
+  }));
+  const { digest } = buildPackage(module, { gitCommit: commit });
+  const seed = { ...entry, payload: { ...entry.payload, content_lock: { digest } } };
+  fs.writeFileSync(path.join(seedPath, 'catalog-index.json'), JSON.stringify({ ...index, packages: [seed] }));
+  const onlineOnly = { ...entry, package_id: 'online-only' };
+  const online = { ...index, packages: [entry, onlineOnly] };
+  let requests = 0;
+  const lookup = async (url: RequestInfo | URL) => {
+    assert.match(String(url), /catalog-index\.json$/);
+    requests += 1;
+    return Response.json(online);
+  };
+  const db = openSqliteStore(dbFile);
+  try {
+    const opts = { db, runtimeRoot: root, fetchImpl: lookup, nowIso: () => '2026-11-27T01:00:00Z' };
+    assert.ok((await readOfficialPackageCatalog(opts)).has('online-only'));
+    const staged = await createOfficialPackageResolver(opts)(packageId);
+    try { assert.equal(staged.manifest.identity.version, '1.2.3'); }
+    finally { staged.dispose(); }
+    assert.equal(requests, 2);
+
+    const newer = { ...entry, version: '1.2.4' };
+    fs.writeFileSync(path.join(module, 'opl-package.json'), JSON.stringify({
+      schema_version: 'opl.package.v2',
+      identity: { id: packageId, version: '1.2.4', intent: 'extension', publisher: 'OPL', name: text, summary: text },
+    }));
+    buildPackage(module, { gitCommit: commit });
+    const blobFile = path.join(root, 'newer.tar.gz');
+    const blobDigest = createPackageSourceArchive(module, blobFile,
+      ['opl-package.json', 'opl-release.lock.json', 'opl-runtime-module.json']);
+    const bytes = fs.readFileSync(blobFile);
+    const manifestRequests: string[] = [];
+    const options = {
+      runtimeRoot: root,
+      cacheRoot: path.join(root, 'download-cache'),
+      fetchImpl: async (url: RequestInfo | URL) => {
+        const address = new URL(String(url));
+        if (address.pathname.endsWith('catalog-index.json')) return Response.json({ ...index, packages: [newer] });
+        if (address.pathname === '/token') return Response.json({ token: 'fixture' });
+        manifestRequests.push(address.pathname);
+        return Response.json({ layers: [{ digest: blobDigest, size: bytes.length,
+          mediaType: 'application/vnd.onepersonlab.package.source.v2+gzip' }] });
+      },
+    };
+    let downloads = 0;
+    const progress: PackageOperationProgress[] = [];
+    const transport = {
+      fetchRange: async () => assert.fail('Small source archive should use the sequential download path.'),
+      fetchFull: async () => {
+        downloads += 1;
+        return { status: 200, bytes };
+      },
+    };
+    try {
+      for (const opId of ['install', 'repair']) {
+        const result = await createOfficialPackageResolver(options)(packageId, {
+          opId, transport, onProgress: row => progress.push(row),
+        });
+        try { assert.equal(result.manifest.identity.version, '1.2.4'); }
+        finally { result.dispose(); }
+      }
+      assert.equal(downloads, 1);
+      assert.equal(manifestRequests.length, 2);
+      assert.ok(manifestRequests.every(request => request.endsWith('/manifests/1.2.4')));
+      assert.ok(progress.some(row => row.stage === 'downloading' && row.bytes_done === bytes.length
+        && row.bytes_total === bytes.length && row.eta_sec === 0));
+      assert.ok(progress.some(row => row.cached_bytes === bytes.length));
+    } finally {
+      fs.writeFileSync(path.join(module, 'opl-package.json'), JSON.stringify({
+        schema_version: 'opl.package.v2',
+        identity: { id: packageId, version: '1.2.3', intent: 'extension', publisher: 'OPL', name: text, summary: text },
+      }));
+      buildPackage(module, { gitCommit: commit });
+    }
+  } finally {
+    db.close();
+  }
+
+  const reopened = openSqliteStore(dbFile);
+  try {
+    const cached = readCachedOfficialPackageCatalog(reopened)!;
+    assert.equal(cached.fetchedAt, '2026-11-27T01:00:00Z');
+    assert.ok(cached.entries.has('online-only'));
+    const offline = async () => { throw new Error('offline'); };
+    const staged = await createOfficialPackageResolver({ db: reopened, runtimeRoot: root, fetchImpl: offline })(packageId);
+    staged.dispose();
+    fs.appendFileSync(path.join(module, 'opl-package.json'), '\n');
+    await assert.rejects(createOfficialPackageResolver({ db: reopened, runtimeRoot: root, fetchImpl: offline })(packageId), /digest|lock/i);
+  } finally {
+    reopened.close();
+  }
 });

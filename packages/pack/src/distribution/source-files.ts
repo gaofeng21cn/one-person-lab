@@ -50,11 +50,13 @@ export function copyDirectoryPhysical(srcDir: string, destDir: string): void {
 export async function downloadOciSource(
   source: InstallSourceSpec,
   options: Pick<PackageDownloadRequest, 'cacheRoot' | 'transport' | 'signal' | 'onProgress'> & {
+    opId?: string;
     fetchImpl?: RegistryFetch;
     authHeader?: string;
   },
 ): Promise<string> {
   if (!source.ref) throw new PackError('INVALID_INPUT', 'OCI source requires ref.');
+  const { opId, ...downloadOptions } = options;
   const resolved = await resolveOciArtifact({
     ociRef: source.ref,
     version: source.version,
@@ -76,6 +78,7 @@ export async function downloadOciSource(
     packageId: source.package_id ?? resolved.repository,
     allowInsecureHttp: resolved.blob_url.startsWith('http://127.0.0.1')
       || resolved.blob_url.startsWith('http://localhost'),
-    ...options,
+    ...downloadOptions,
+    ...(opId && { operationId: opId }),
   });
 }

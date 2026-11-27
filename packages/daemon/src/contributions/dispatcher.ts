@@ -3,13 +3,41 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord, type ClientContext } from '@opl/core';
 import type { ConnectService } from '@opl/connect';
-import { isWithinDirectory, type PackService } from '@opl/pack';
+import { isWithinDirectory, type ModuleOrCommandEntrypoint, type PackService } from '@opl/pack';
 import type { WorkspaceService } from '@opl/workspace';
 import { DaemonRpcError } from '../errors.ts';
 import { runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
 import type { AppStateCache } from '../state/app-state-cache.ts';
+import { executeTransitionalAdapter, TRANSITIONAL_V1_ADAPTER } from './transitional-adapter.ts';
 
 const MAX_WORKSPACE_READ_BYTES = 1024 * 1024;
+
+function invokeHandler(root: string, handler: ModuleOrCommandEntrypoint, request: unknown, inherited?: NodeJS.ProcessEnv) {
+  const command = handler.kind === 'cli' ? handler.argv[0] ?? '' : '';
+  let env = inherited;
+  if (/^python(?:[23](?:\.\d+)?)?$/.test(path.basename(command)) || command.endsWith('.py')) {
+    const sdkRoot = path.resolve(import.meta.dirname, '../../../../sdks/python-client');
+    const sdkSource = path.join(sdkRoot, 'src');
+    env = { ...(inherited ?? process.env), OPL_PYTHON_SDK_ROOT: sdkRoot };
+    env.PYTHONPATH = env.PYTHONPATH ? sdkSource + path.delimiter + env.PYTHONPATH : sdkSource;
+  }
+  return runModuleOrCommandEntrypoint(root, handler, request, { env });
+}
+
+function invokeContribution(
+  root: string,
+  handler: ModuleOrCommandEntrypoint,
+  request: Parameters<typeof executeTransitionalAdapter>[1],
+  nativeRequest: unknown,
+  env?: NodeJS.ProcessEnv,
+) {
+  if (handler.kind === 'cli' && handler.argv.length === TRANSITIONAL_V1_ADAPTER.length
+    && TRANSITIONAL_V1_ADAPTER.every((argument, index) => handler.argv[index] === argument)) {
+    return executeTransitionalAdapter(root, request, (argv, input) =>
+      invokeHandler(root, { kind: 'cli', argv, transport: 'stdin_json_stdout_json' }, input, env));
+  }
+  return invokeHandler(root, handler, nativeRequest, env);
+}
 
 export interface ContributionReadRequest {
   readonly callerSessionId: string;
@@ -164,13 +192,14 @@ export class ContributionDispatcher {
     }
 
     const context = this.invocationContext(pkg.package_id, req.input);
-    const out = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
+    const request = {
       schema_version: 'opl-package-app-contribution-request.v1',
-      operation: 'read',
+      operation: 'read' as const,
       package_id: pkg.package_id,
       ref: req.ref,
       input: context.input,
-    }, { env: context.env });
+    };
+    const out = await invokeContribution(pkg.install_path, handler, request, request, context.env);
 
     if (out && typeof out === 'object' && !Array.isArray(out)) {
       return out as Record<string, unknown>;
@@ -352,12 +381,22 @@ export class ContributionDispatcher {
       throw new DaemonRpcError(-32003, 'CONFIRMATION_REQUIRED', `Package action '${ref}' requires confirmation.`);
     }
 
-    const response = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
+    const request = {
       schema_version: 'opl-package-app-contribution-request.v1',
-      operation: 'execute',
+      operation: 'execute' as const,
       package_id: packageId,
-      ...(appAction ? { ref, input: context.input } : { action_id: ref, payload: context.input, dry_run: false }),
-    }, { env: context.env });
+      ref,
+      input: context.input,
+    };
+    const nativeRequest = appAction ? request : {
+      schema_version: request.schema_version,
+      operation: request.operation,
+      package_id: packageId,
+      action_id: ref,
+      payload: context.input,
+      dry_run: false,
+    };
+    const response = await invokeContribution(pkg.install_path, handler, request, nativeRequest, context.env);
     // Direct SDK callers receive the Package's native result. The Studio action
     // additionally binds its declared receipt to the requested Package and ref.
     if (appAction || (isRecord(response) && response.schema_version !== undefined)) {

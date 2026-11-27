@@ -3,7 +3,9 @@ import {
   officialPackageInstallSource,
   officialPackagePrivateSourceId,
   officialPackageRuntimeRoot,
-  readOfficialPackageCatalog,
+  officialPackageSelectedVersion,
+  readOfficialCatalogSelection,
+  readCachedOfficialPackageCatalog,
   type InstalledPackageRecord,
   type OfficialPackageCatalogEntry,
   type OfficialPackageCatalogOptions,
@@ -18,7 +20,7 @@ function localized(value: unknown): Record<string, string> {
   }));
 }
 
-function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | null) {
+function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | null, online: boolean) {
   const manifest = entry.manifest;
   if (manifest?.package_id !== entry.package_id) return;
   const restricted = entry.visibility === 'authorized_only';
@@ -33,12 +35,18 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
   const displayNames = localized(isRecord(presentation) && presentation.display_name_i18n);
   const descriptions = localized(isRecord(presentation) && presentation.description_i18n);
   let installable = false;
-  let selectedVersion = entry.version;
+  let selectedVersion: string | null = null;
   if (!restricted) {
     try {
-      const source = officialPackageInstallSource(entry, runtimeRoot);
-      selectedVersion = source.version ?? selectedVersion;
-      installable = true;
+      selectedVersion = officialPackageSelectedVersion(entry);
+      if (online || runtimeRoot) {
+        try { officialPackageInstallSource(entry, online ? null : runtimeRoot); }
+        catch (error) {
+          if (!online || !runtimeRoot) throw error;
+          officialPackageInstallSource(entry, runtimeRoot);
+        }
+        installable = true;
+      }
     } catch { /* Keep the listing visible when this installation lacks a source. */ }
   }
   const installAction = {
@@ -56,7 +64,11 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
     description: descriptions['en-US'] ?? descriptions['zh-CN'] ?? '',
     description_i18n: descriptions,
     software_type: entry.software_type,
-    catalog_scope: entry.software_type === 'dependency' ? 'host_component' : 'software',
+    catalog_scope: entry.software_type === 'dependency' || ['mac-media-assets', 'mas-scholar-skills'].includes(entry.package_id) ? 'dependency' : 'software',
+    management_scope: 'opl_packages',
+    deployment_target: 'local',
+    dependency_readiness: { status: 'unknown' },
+    ...(typeof manifest.icon_ref === 'string' && !restricted ? { icon_ref: manifest.icon_ref } : {}),
     catalog_origin: 'opl',
     origin_basis: 'owner_projection',
     catalog_source: { manager: 'opl_packages', delivery: 'marketplace', marketplace_id: 'public-registry:opl' },
@@ -70,7 +82,7 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
     install_state: 'not_installed',
     package_access: {
       visibility: entry.visibility, status: restricted ? 'unknown' : 'public',
-      discover_allowed: true, download_allowed: !restricted,
+      discover_allowed: true, download_allowed: installable,
     },
     installability: installable
       ? { installable: true }
@@ -104,6 +116,9 @@ export function applyAuthorizedPrivatePackageOverlay<
   authorizedSourceIds: ReadonlySet<string>,
   installedPackages: ReadonlyArray<Pick<InstalledPackageRecord, 'package_id' | 'origin' | 'install_mode'>>,
   store: Pick<PackStore, 'getInstallSource'>,
+  projectCurrentness?: (packageId: string, installed: string, selected: string) => {
+    package_currentness: string; update?: { action_id: string };
+  },
 ): T {
   if (!authorizedSourceIds.size || !catalog.privateAccess?.size) return agentPackages;
   const installedById = new Map(installedPackages.map(pkg => [pkg.package_id, pkg]));
@@ -117,11 +132,18 @@ export function applyAuthorizedPrivatePackageOverlay<
       const updateSource = pkg && entry.catalog_origin === 'opl' && pkg.origin === 'opl' && pkg.install_mode === 'release'
         ? store.getInstallSource(packageId)
         : null;
-      if (updateSource?.kind === 'official' && updateSource.package_id === packageId && entry.selected_version !== priv.selectedVersion) {
-        changed = true;
-        return { ...entry, selected_version: priv.selectedVersion };
-      }
-      return entry;
+      const selectedVersion = updateSource?.kind === 'official' && updateSource.package_id === packageId ? priv.selectedVersion : undefined;
+      const currentness = selectedVersion && typeof entry.installed_version === 'string'
+        ? projectCurrentness?.(packageId, entry.installed_version, selectedVersion) : undefined;
+      changed = true;
+      return {
+        ...entry,
+        ...(selectedVersion && { selected_version: selectedVersion }),
+        ...currentness,
+        ...(currentness?.update && Array.isArray(entry.available_actions)
+          && { available_actions: [...entry.available_actions, currentness.update] }),
+        package_access: { visibility: 'authorized_only', status: 'authorized', discover_allowed: true, download_allowed: true },
+      };
     }
     changed = true;
     const installAction = {
@@ -167,46 +189,60 @@ export function isOfficialCatalogPackage(snapshot: SoftwareCatalogSnapshot, pack
 export class OfficialSoftwareCatalog {
   #snapshot: SoftwareCatalogSnapshot = { status: 'loading', entries: new Map(), repositories: new Map(), privateAccess: new Map() };
   #refreshAfter = 0;
+  #pending?: Promise<void>;
   readonly #onChange: () => void;
   readonly #options: OfficialPackageCatalogOptions;
 
   constructor(onChange: () => void, options: OfficialPackageCatalogOptions = {}) {
     this.#onChange = onChange;
     this.#options = options;
+    const cached = options.db && readCachedOfficialPackageCatalog(options.db);
+    if (cached) this.#snapshot = this.#project(cached.entries, null, false);
   }
 
   read(): SoftwareCatalogSnapshot {
     if (Date.now() >= this.#refreshAfter) {
       this.#refreshAfter = Infinity;
-      queueMicrotask(() => { void this.#refresh(); });
+      queueMicrotask(() => { void this.refresh(); });
     }
     return this.#snapshot;
+  }
+
+  async refresh(): Promise<SoftwareCatalogSnapshot> {
+    this.#refreshAfter = Infinity;
+    this.#pending ??= this.#refresh().finally(() => { this.#pending = undefined; });
+    await this.#pending;
+    return this.#snapshot;
+  }
+
+  #project(catalog: ReadonlyMap<string, OfficialPackageCatalogEntry>, runtimeRoot: string | null, online: boolean): SoftwareCatalogSnapshot {
+    const entries = new Map<string, CatalogRow>();
+    const repositories = new Map<string, string>();
+    const privateAccess = new Map<string, PrivatePackageAccessInfo>();
+    for (const entry of catalog.values()) {
+      const row = projectEntry(entry, runtimeRoot, online);
+      if (row) entries.set(row.package_id, row);
+      const owner = entry.manifest?.source_repo;
+      if (typeof owner === 'string' && owner) repositories.set(entry.package_id, normalizedRepository(owner));
+      if (entry.visibility === 'authorized_only') {
+        const sourceId = officialPackagePrivateSourceId(entry);
+        if (sourceId) {
+          try {
+            const source = officialPackageInstallSource(entry, runtimeRoot, { allowAuthorizedOnly: true });
+            if (source.version) privateAccess.set(entry.package_id, { sourceId, selectedVersion: source.version });
+          } catch { /* Unavailable private or offline source stays non-installable. */ }
+        }
+      }
+    }
+    return { status: online ? 'ready' : 'stale', entries, repositories, privateAccess };
   }
 
   async #refresh(): Promise<void> {
     try {
       const runtimeRoot = officialPackageRuntimeRoot(this.#options);
-      const catalog = await readOfficialPackageCatalog({ ...this.#options, runtimeRoot });
-      const entries = new Map<string, CatalogRow>();
-      const repositories = new Map<string, string>();
-      const privateAccess = new Map<string, PrivatePackageAccessInfo>();
-      for (const entry of catalog.values()) {
-        const row = projectEntry(entry, runtimeRoot);
-        if (row) entries.set(row.package_id, row);
-        const owner = entry.manifest?.source_repo;
-        if (typeof owner === 'string' && owner) repositories.set(entry.package_id, normalizedRepository(owner));
-        if (entry.visibility === 'authorized_only') {
-          const sourceId = officialPackagePrivateSourceId(entry);
-          if (sourceId) {
-            try {
-              const source = officialPackageInstallSource(entry, runtimeRoot, { allowAuthorizedOnly: true });
-              if (source.version) privateAccess.set(entry.package_id, { sourceId, selectedVersion: source.version });
-            } catch { /* Unavailable private or offline source stays non-installable. */ }
-          }
-        }
-      }
-      this.#snapshot = { status: 'ready', entries, repositories, privateAccess };
-      this.#refreshAfter = Date.now() + 5 * 60_000;
+      const { entries, online } = await readOfficialCatalogSelection({ ...this.#options, runtimeRoot });
+      this.#snapshot = this.#project(entries, runtimeRoot, online);
+      this.#refreshAfter = Date.now() + (online ? 5 * 60_000 : 30_000);
     } catch {
       const previous = this.#snapshot;
       const status = ['ready', 'stale'].includes(previous.status) ? 'stale' : 'unavailable';

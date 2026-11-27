@@ -164,3 +164,34 @@ test('disabling a package while its update is installing wins after both operati
   assert.equal(pkg?.carrier_synced, false);
   assert.equal(fs.existsSync(path.join(marketplaceRoot, 'plugins', id)), false);
 });
+
+test('official update plans use version metadata alone and stage only newer applied packages', async t => {
+  const { root } = setup(t);
+  const db = openSqliteStore(':memory:');
+  t.after(() => db.close());
+  const resolutions: string[] = [];
+  const packageId = 'managed-official';
+  const update = writeRelease(root, packageId, '1.0.0');
+  const pack = createPackService({
+    db, stateDir: path.join(root, 'official'),
+    resolveOfficialUpdateVersion: async () => '1.1.0',
+    resolveOfficialUpdate: async (id, operation) => {
+      assert.equal(pack.store.getOperation(operation.opId)?.package_id, id);
+      operation.onProgress({ stage: 'downloading', bytes_done: 1, bytes_total: 2, eta_sec: 1 });
+      resolutions.push(id);
+      return { source: update, dispose: () => {} };
+    },
+  });
+  await pack.install({ source: update, updateSource: { kind: 'official', package_id: packageId }, syncCodex: false });
+  writeRelease(root, packageId, '1.1.0');
+  const ops = pack.operationStatus();
+  assert.equal((await pack.updatePlan()).packages[0]?.available_version, '1.1.0');
+  assert.deepEqual(pack.operationStatus(), ops);
+  assert.deepEqual(resolutions, []);
+  assert.equal((await pack.updateAll({ syncCodex: false })).results[0]?.package.version, '1.1.0');
+  assert.deepEqual(resolutions, [packageId]);
+  assert.deepEqual((await pack.updateAll({ syncCodex: false })).results, []);
+  assert.deepEqual(resolutions, [packageId]);
+  assert.equal(db.prepare('SELECT source_json FROM pack_install_sources WHERE package_id = ?').get(packageId)?.source_json,
+    JSON.stringify({ kind: 'official', package_id: packageId }));
+});

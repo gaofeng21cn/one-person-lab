@@ -13,6 +13,7 @@ import {
   type InstallSourceSpec,
   type PackageIntent,
   type PackageOrigin,
+  type PackService,
 } from '@opl/pack';
 import { DaemonRpcError } from '../../errors.ts';
 import type { RpcHandler, SocketConnectionState } from '../../server/socket-server.ts';
@@ -20,7 +21,7 @@ import { toProjectedPackageSummary } from '../../state/app-state-cache.ts';
 import type { DaemonRuntime } from '../../state/runtime.ts';
 import { coerceInstallSourceSpec, pickBoolean, pickString } from '../../utils/normalize.ts';
 import { requireTrustedHost } from '../context.ts';
-import { executeSoftwareSourceAction, softwareSourceActions } from '../software-source-actions.ts';
+import { executeSoftwareSourceAction, projectSoftwareSources, softwareSourceActions } from '../software-source-actions.ts';
 
 export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: DaemonRuntime): void {
   const handlePackList: RpcHandler = async (params) => {
@@ -47,6 +48,11 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     requireTrustedHost(conn, 'pack.sources.list');
     return { software_sources: { entries: listPrivatePackageSources(runtime.db) } };
   });
+  handlers.set('pack.sources.refresh', async (_params, conn) => {
+    requireTrustedHost(conn, 'pack.sources.refresh');
+    const catalog = await runtime.appStateCache.refreshCatalog();
+    return { refreshed: catalog.status === 'ready', software_sources: projectSoftwareSources(runtime.db, catalog.status) };
+  });
   for (const command of ['configure', 'check', 'disconnect'] as const) {
     const method = 'pack.sources.' + command;
     const action = softwareSourceActions.find(item => item.action_id === 'source_' + command)!;
@@ -57,7 +63,7 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
           action, { ...params, confirmed: true }, false, runtime.db, () => runtime.appStateCache.invalidate(),
         );
         return {
-          ...execution.app_action_execution.result,
+          ...(isRecord(execution.app_action_execution.result) ? execution.app_action_execution.result : {}),
           ...(command === 'configure' ? { next_action: 'source_list' } : {}),
           ...(command === 'disconnect' ? { local_installations_preserved: true } : {}),
         };
@@ -114,28 +120,42 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'exact_release requires a valid version, git_commit and digest.');
     }
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
-    try {
-      return await ensurePackage(runtime.packService, {
-        packageId,
-        dryRun,
-        exactRelease: exact?.data,
-        clientContext: ctx,
-        resolveSource: createOfficialPackageResolver({
-          runtimeRoot,
-          db: runtime.db,
-        }),
-        installSource: (input) => runtime.installPackage(input),
-      });
-    } finally {
-      // A dependency may have been enabled even if a later Package failed.
-      if (!dryRun) {
-        runtime.syncDeclaredProviders();
-        await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
-        runtime.appStateCache.invalidate();
+    const repair = pickBoolean(params, 'repair') === true;
+    const background = pickBoolean(params, 'background') === true;
+    const resolver = createOfficialPackageResolver({ runtimeRoot, db: runtime.db, cacheRoot: runtime.packService.cacheRoot });
+    const execute = async (operation?: Parameters<PackService['install']>[0]['operation']) => {
+      try {
+        return await ensurePackage(runtime.packService, {
+          packageId, dryRun, repair, operation,
+          exactRelease: exact?.data,
+          clientContext: ctx,
+          resolveSource: (id) => {
+            const source = repair && id === packageId ? runtime.packService.store.getInstallSource(id) : null;
+            if (source?.kind === 'local_dir' && source.path) {
+              return Promise.resolve({ source, manifest: readPackageManifestFromDir(source.path).manifest });
+            }
+            return resolver(id, operation);
+          },
+          installSource: (input) => runtime.installPackage(input),
+        });
+      } finally {
+        if (!dryRun) {
+          runtime.syncDeclaredProviders();
+          await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
+          runtime.appStateCache.invalidate();
+        }
       }
+    };
+    if (dryRun || requireExact) return execute();
+    if (repair && !runtime.packService.inspect(packageId)) {
+      throw new DaemonRpcError(-32013, 'PACK_NOT_FOUND', `Package '${packageId}' is not installed.`);
     }
+    const run = runtime.packService.runPackageOperation({ packageId, action: repair ? 'repair' : 'install' }, execute);
+    if (!background) return run.completion;
+    void run.completion.catch(() => {});
+    return { operation_id: run.operation.op_id, status: 'running' };
   }
-  handlers.set('pack.ensure', handlePackEnsure);
+  handlers.set('pack.ensure', (params, conn) => handlePackEnsure(params, conn));
   handlers.set('pack.ensureExact', (params, conn) => handlePackEnsure(params, conn, true));
 
   handlers.set('pack.build', (params) => {
@@ -223,6 +243,22 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.update requires package_id.');
     }
     const syncCodex = pickBoolean(params, 'sync_codex', 'syncCodex') ?? true;
+    if (params.source === undefined) {
+      if (!runtime.packService.inspect(packageId)) {
+        throw new DaemonRpcError(-32013, 'PACK_NOT_FOUND', `Package '${packageId}' is not installed.`);
+      }
+      let reportStarted!: (operation: { operation_id: string; status: 'running' }) => void;
+      const started = new Promise(resolve => { reportStarted = resolve; });
+      const completion = runtime.packService.updateAll({
+        packageId, syncCodex, clientContext: ctx,
+        onStarted: operation => reportStarted({ operation_id: operation.op_id, status: 'running' }),
+      }).finally(async () => {
+        runtime.syncDeclaredProviders();
+        await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
+        runtime.appStateCache.invalidate();
+      });
+      return pickBoolean(params, 'background') ? Promise.race([started, completion]) : completion;
+    }
     const spec = coerceInstallSourceSpec(params.source, packageId);
     const res = await runtime.packService.update({
       packageId,
@@ -239,9 +275,9 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     };
   });
 
-  handlers.set('pack.updatePlan', (_params, conn) => {
+  handlers.set('pack.updatePlan', (params, conn) => {
     requireTrustedHost(conn, 'pack.updatePlan');
-    return runtime.packService.updatePlan();
+    return runtime.packService.updatePlan(pickString(params, 'package_id'));
   });
 
   handlers.set('pack.updateAll', async (params, conn) => {

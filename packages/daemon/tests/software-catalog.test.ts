@@ -102,7 +102,7 @@ test('installed official releases keep their selected catalog version after the 
   ];
   const rowFor = (
     records: InstalledPackageRecord[], id: string,
-    getInstallSource: PackStore['getInstallSource'] = package_id => ({ kind: 'official', package_id }),
+    getInstallSource: PackStore['getInstallSource'] = package_id => package_id === 'published' ? null : ({ kind: 'official', package_id }),
   ) => {
     const { directory } = projectPackageDirectory(records, { enabled: new Map(), shortcuts: new Map() }, catalog.read(), { getInstallSource });
     return directory.entries.find(entry => entry.package_id === id);
@@ -110,6 +110,10 @@ test('installed official releases keep their selected catalog version after the 
   const official = rowFor(records, 'v2-published');
   assert.equal(official && 'installed_version' in official && official.installed_version, '1.0.0');
   assert.equal(official?.selected_version, '1.2.4');
+  assert.equal(official?.package_currentness, 'update_available');
+  assert.ok(official?.available_actions.some(action => action.action_id === 'agent_package_update'));
+  assert.ok(official?.available_actions.some(action => action.action_id === 'agent_package_repair'));
+  assert.deepEqual(official?.presence, { present: true, callable: false });
   assert.equal(rowFor(records, 'v2-published', () => ({ kind: 'local_dir', path: '/local' }))?.selected_version, undefined);
   assert.equal(rowFor(records, 'guarded')?.selected_version, undefined);
   assert.equal(rowFor(records, 'published')?.selected_version, undefined);
@@ -129,7 +133,7 @@ test('Full keeps unbundled catalog products discoverable without projecting inst
   const row = catalog.read().entries.get('published');
   assert.equal(row?.installability.installable, false);
   assert.equal(row?.installability.reason, 'package_install_source_unavailable');
-  assert.equal(catalog.read().entries.get('v2-published')?.selected_version, '1.2.3');
+  assert.equal(catalog.read().entries.get('v2-published')?.selected_version, '1.2.4');
 });
 
 test('provider failure still permits a fast read and schedules no immediate retry', async () => {

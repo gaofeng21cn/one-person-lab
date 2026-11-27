@@ -1,6 +1,6 @@
 import { KebabIdSchema, type PackService, type PackageOperationRecord } from '@opl/pack';
 
-function appOperation(operation: PackageOperationRecord) {
+function appOperation(operation: PackageOperationRecord, canCancel: boolean) {
   const { action, status, progress } = operation;
   // Older local installs journaled their source path before reading the manifest.
   if (!KebabIdSchema.safeParse(operation.package_id).success) return [];
@@ -13,7 +13,7 @@ function appOperation(operation: PackageOperationRecord) {
     action_id: `agent_package_${action}`,
     status: status === 'succeeded' ? 'completed' : terminal ? status : 'running',
     stage,
-    can_cancel: false,
+    can_cancel: canCancel,
     // Only a download has a byte count. Local commits use progress units.
     ...(status === 'downloading' && {
       downloaded_bytes: progress.bytes_done,
@@ -29,7 +29,7 @@ function appOperation(operation: PackageOperationRecord) {
 /** Source every row from the Pack operation journal, including recovery after restart. */
 export function readAppPackageOperations(pack: PackService) {
   return {
-    supports_background: false,
-    operations: pack.store.listOperations().flatMap(appOperation),
+    supports_background: true,
+    operations: pack.store.listOperations().flatMap(operation => appOperation(operation, pack.canCancelOperation(operation))),
   };
 }

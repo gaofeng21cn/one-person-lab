@@ -34,6 +34,8 @@ import { LedgerStore, verifyTaskLineage } from '@opl/ledger';
 import {
   createPackService,
   createOfficialPackageResolver,
+  readOfficialPackageCatalog,
+  officialPackageSelectedVersion,
   createProcessCodexRunner,
   initializePrivatePackageSourceStore,
   PackError,
@@ -179,10 +181,15 @@ export class DaemonRuntime {
     // Omit codexRunner on PackService so link/install/update/uninstall/toggle perform
     // deterministic filesystem projection without invoking external `codex plugin add`.
     const officialUpdateSource = {
-      resolveOfficialUpdate: (id: string) => createOfficialPackageResolver({
-        runtimeRoot: null,
+      resolveOfficialUpdate: (id: string, operation: Parameters<ReturnType<typeof createOfficialPackageResolver>>[1]) => createOfficialPackageResolver({
         db: this.db,
-      })(id),
+        cacheRoot: path.join(this.paths.state_dir, 'cache', 'downloads'),
+      })(id, operation),
+      resolveOfficialUpdateVersion: async (id: string) => {
+        const catalog = await readOfficialPackageCatalog({ db: this.db });
+        const entry = catalog.get(id);
+        return entry ? officialPackageSelectedVersion(entry) : null;
+      },
     };
     this.packService = createPackService({
       ...officialUpdateSource,
@@ -471,6 +478,9 @@ export class DaemonRuntime {
       db: this.db,
       packService: this.packService,
       connectService: this.connectService,
+      workspaceService: this.workspaceService,
+      channelHost: this.channelHost,
+      scheduleRunner: this.scheduleRunner,
       version: this.version,
       onCatalogChanged: () => emitPush('event.pack.catalog.changed', {}),
     });

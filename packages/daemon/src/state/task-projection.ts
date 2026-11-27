@@ -8,7 +8,7 @@ import { defaultTaskVisibility, listTaskVisibility, taskVisibilityKey } from './
 type Task = Pick<TaskRow, 'task_id' | 'workspace_id' | 'agent_id' | 'title' | 'status' | 'updated_at'> & {
   root_path: string;
 };
-type Stage = Pick<StageRunRow, 'stage_run_id' | 'stage_id' | 'task_id' | 'status' | 'started_at' | 'updated_at'>;
+type Stage = Pick<StageRunRow, 'stage_run_id' | 'stage_id' | 'task_id' | 'status' | 'revision' | 'started_at' | 'updated_at'>;
 type Attempt = { stage_run_id: string; attempt_id: string; status: string; usage_json: string; started_at: string; finished_at: string | null };
 type BusinessState = DomainInventoryTask['business_state'];
 
@@ -61,7 +61,7 @@ export function buildRunwayWorkbench(
     FROM tasks t JOIN workspaces w ON w.workspace_id = t.workspace_id
     ORDER BY t.created_at DESC, t.rowid DESC`).all() as unknown as Task[];
   const stages = db.prepare(`
-    SELECT task_id, stage_run_id, stage_id, status, started_at, updated_at
+    SELECT task_id, stage_run_id, stage_id, status, revision, started_at, updated_at
     FROM stage_runs ORDER BY task_id, seq_no`).all() as unknown as Stage[];
   const attempts = db.prepare(`
     SELECT stage_run_id, attempt_id, status, usage_json, started_at, finished_at
@@ -72,8 +72,8 @@ export function buildRunwayWorkbench(
 
   const agents = new Map(packages.filter((pkg) => pkg.intent === 'agent' && pkg.enabled)
     .map((pkg) => [pkg.package_id, pkg.name]));
-  const projects = new Map<string, { project_id: string; agent_id: string; workspace_path: string; display_name: string }>();
-  function projectItem(agentId: string, root: string, workId: string, title: string, task?: Task, domain?: DomainInventoryTask) {
+  const projects = new Map<string, { project_id: string; agent_id: string | null; workspace_path: string; display_name: string }>();
+  function projectItem(agentId: string | null, root: string, workId: string, title: string, task?: Task, domain?: DomainInventoryTask) {
     const projectId = stableId('project', [agentId, root]);
     const projectName = path.basename(root) || root;
     const itemId = projectId + ':' + encodeURIComponent(workId);
@@ -81,10 +81,10 @@ export function buildRunwayWorkbench(
       namespace: 'opl_work_item_scope', project_scope_id: projectId, domain_id: domain.domain_id,
       domain_work_item_id: domain.work_item_id,
     })).slice('sha256:'.length);
-    const agentName = agents.get(agentId) ?? agentId;
-    agents.set(agentId, agentName);
+    const agentName = agentId ? agents.get(agentId) ?? agentId : 'Runway';
+    if (agentId) agents.set(agentId, agentName);
     projects.set(projectId, { project_id: projectId, agent_id: agentId, workspace_path: root, display_name: projectName });
-    const visibility = controls.get(taskVisibilityKey(agentId, projectId, workId)) ?? defaultTaskVisibility();
+    const visibility = controls.get(taskVisibilityKey(agentId ?? '', projectId, workId)) ?? defaultTaskVisibility();
     const rows = task ? taskStages.get(task.task_id) ?? [] : [];
     const currentIndex = rows.findIndex((row) => row.status !== 'completed');
     const current = rows[currentIndex];
@@ -97,6 +97,7 @@ export function buildRunwayWorkbench(
     const cumulative = tokens(rows.flatMap((row) => stageAttempts.get(row.stage_run_id) ?? []));
     const currentStage = tokens(currentAttempts);
     const decision = task?.status === 'awaiting_human';
+    const gate = rows.find(row => row.status === 'human_gate' || row.status === 'awaiting_review');
     const stopped = task?.status === 'cancelled';
     const paused = task?.status === 'paused_by_human';
     const businessState: BusinessState = domain?.business_state ?? (paused ? 'paused' : stopped ? 'stopped' : 'unknown');
@@ -130,8 +131,10 @@ export function buildRunwayWorkbench(
       action: { kind: decision ? 'user_action' : 'blocked_no_action', title: null, summary: null,
         title_key: decision ? null : 'lifecycle.' + lifecycleKey + '.title',
         summary_key: decision ? null : 'lifecycle.' + lifecycleKey + '.summary',
-        message_args: {}, owner: decision ? 'user' : agentId, owner_kind: decision ? 'user' : 'agent',
-        action_ref: null, dry_run_required: false },
+        message_args: {}, owner: decision ? 'user' : agentId, owner_kind: decision ? 'user' : agentId ? 'agent' : null,
+        action_ref: decision && gate ? 'app_state.actions#runway_human_gate_resolve' : null,
+        ...(decision && gate ? { action_payload: { stage_run_id: gate.stage_run_id, expected_revision: gate.revision } } : {}),
+        dry_run_required: false },
       telemetry: { state: cumulative.state, current_stage: currentStage, cumulative },
       conditions: [], freshness: { state: 'fresh', observed_at: generatedAt, last_progress_at: updatedAt, reason: domain ? 'registered_inventory' : 'runway_store' },
       visibility, stage_map: stageMap,
@@ -142,9 +145,9 @@ export function buildRunwayWorkbench(
   }
   const items = inventory.items.map((row) => projectItem(row.package_id, row.workspace_path, row.work_item_id, row.title, undefined, row));
   const domainIds = new Set(items.map((item) =>
-    taskVisibilityKey(item.identity.agent_id, item.identity.workspace_path, item.identity.work_item_id)));
+    taskVisibilityKey(item.identity.agent_id ?? '', item.identity.workspace_path, item.identity.work_item_id)));
   for (const task of tasks) {
-    if (task.agent_id && !domainIds.has(taskVisibilityKey(task.agent_id, task.root_path, task.task_id))) {
+    if (!domainIds.has(taskVisibilityKey(task.agent_id ?? '', task.root_path, task.task_id))) {
       items.push(projectItem(task.agent_id, task.root_path, task.task_id, task.title, task));
     }
   }

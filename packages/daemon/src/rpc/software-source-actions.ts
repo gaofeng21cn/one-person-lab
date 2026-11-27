@@ -2,6 +2,7 @@ import type { SqliteDb } from '@opl/core';
 import {
   checkPrivatePackageSource, configurePrivatePackageSource, disconnectPrivatePackageSource, listPrivatePackageSources,
 } from '@opl/pack';
+import type { SoftwareCatalogSnapshot } from '../state/package-catalog.ts';
 import { DaemonRpcError } from '../errors.ts';
 
 const configure = {
@@ -12,6 +13,7 @@ const configure = {
 };
 
 export const softwareSourceActions = [
+  { action_id: 'source_refresh', label: 'Refresh software catalog', payload_fields: ['source_id'], confirmation_required: false, delegated_surface: 'pack.sources.refresh' },
   { action_id: 'source_list', label: 'List software sources', payload_fields: [], confirmation_required: false },
   configure,
   { action_id: 'source_check', label: 'Check access', payload_fields: ['source_id'], confirmation_required: false },
@@ -20,7 +22,7 @@ export const softwareSourceActions = [
 
 type SourceAction = typeof softwareSourceActions[number];
 
-export function projectSoftwareSources(db: SqliteDb) {
+export function projectSoftwareSources(db: SqliteDb, catalogStatus: SoftwareCatalogSnapshot['status'] = 'loading') {
   const entries = listPrivatePackageSources(db).map(source => ({
     ...source,
     origin_basis: 'owner_projection',
@@ -31,13 +33,25 @@ export function projectSoftwareSources(db: SqliteDb) {
     surface_kind: 'opl_software_sources_projection.v1',
     status: entries.some(source => source.enabled && source.credential_handle_present && source.status !== 'authorized')
       ? 'attention_required' : 'available',
-    entries,
+    entries: [...entries, {
+      source_id: 'public-registry:opl',
+      provider_id: 'opl_catalog',
+      display_name: 'OPL Software Catalog',
+      enabled: true,
+      credential_handle_present: false,
+      catalog_origin: 'opl',
+      origin_basis: 'owner_projection',
+      status: catalogStatus,
+      catalog_source: { manager: 'opl_packages', marketplace_id: 'public-registry:opl', delivery: 'marketplace' },
+      available_actions: softwareSourceActions.filter(action => action.action_id === 'source_refresh'),
+    }],
     authority_boundary: { owner: 'opl_framework', credential_values_exposed: false },
   };
 }
 
 export async function executeSoftwareSourceAction(
   action: SourceAction, payload: Record<string, unknown>, dryRun: boolean, db: SqliteDb, onConfigured: () => void,
+  refreshCatalog?: () => Promise<unknown>,
 ) {
   if (dryRun || Object.keys(payload).some(key => key !== 'confirmed' && !action.payload_fields.includes(key))) {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Unexpected software source action parameters.');
@@ -47,7 +61,12 @@ export async function executeSoftwareSourceAction(
   }
   const sourceId = payload.source_id;
   let result;
-  if (action.action_id === 'source_list') {
+  if (action.action_id === 'source_refresh') {
+    if (!refreshCatalog || (sourceId !== undefined && sourceId !== 'public-registry:opl')) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Expected the public software catalog source.');
+    }
+    result = await refreshCatalog();
+  } else if (action.action_id === 'source_list') {
     result = { software_sources: projectSoftwareSources(db) };
   } else if (typeof sourceId !== 'string') {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A software source ID is required.');

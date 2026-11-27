@@ -78,7 +78,7 @@ opl connect cloud import --cloud-ref cloud:<UUID> --json
 
 桌面 Host 通过 `opl connect gateway authorize-companion --request-stdin --credential-file <new-private-file> --json` 复用 App 已登录的 OPL Gateway 账号，向固定的 `https://link.medopl.com` 注册公开电脑身份。请求只包含 `service: "opl_link"` 和上游 Host descriptor；不从界面接收服务器地址。手机端可选择通过同 Gateway 账号登录（经受信任的账号交换接口发现已授权在线电脑）或继续使用扫码/粘贴配对建立连接。
 
-Framework v2 的桌面登录通过认证后的本机 daemon socket 调用 `connect.gateway.login`，成功时返回 `gateway_account`。可信 App 和 CLI 通过 `connect.gateway.status` 读取同一份账号状态，通过 `connect.gateway.authorizeCompanion` 兑换手机连接凭据。已有 `opl connect gateway` 命令沿用相同的 daemon 接口。通用 `connect.add` 只在识别到此前 Studio 的两个登录表单时，将请求交给对应的账号或 Codex 配置功能。
+Framework v2 的桌面登录通过认证后的本机 daemon socket 调用 `connect.gateway.login`，成功时返回 `gateway_account`。可信 App 和 CLI 通过 `connect.gateway.status` 读取同一份账号状态，通过 `connect.gateway.authorizeCompanion` 兑换手机连接凭据。已有 `opl connect gateway` 命令沿用相同的 daemon 接口，无头容器与冒烟脚本可通过 `opl connect configure-codex --api-key-stdin [--json]` 从标准输入写入 Codex API Key 并调用 `connect.configureCodexApiKey` RPC（拒绝命令行参数明文传密）。连接测试、状态切换与删除（`connection_test`、`connection_update`、`connection_delete`）通过 App actions 与 `ConnectService` 共用单写者边界。通用 `connect.add` 只在识别到此前 Studio 的两个登录表单时，将请求交给对应的账号或 Codex 配置功能。
 
 可信 App 与 CLI 在 daemon 握手时提交当前 Codex 配置目录。登录后的模型配置、手工 Key 保存和设置回读按该连接解析目录，多个配置可共用一个 daemon。每个 Gateway 安装账号保存一个自动绑定的恢复快照，在另一份 Codex 配置激活账号前，先断开原绑定。
 

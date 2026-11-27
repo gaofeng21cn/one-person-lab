@@ -18,6 +18,7 @@ export class ScheduleRunner {
   readonly #onTaskLaunched?: (taskId: string, scheduleId: string) => Promise<void> | void;
   #timer: NodeJS.Timeout | null = null;
   #ticking = false;
+  #tickFailed = false;
 
   constructor(options: ScheduleRunnerOptions) {
     this.#store = options.store;
@@ -29,6 +30,13 @@ export class ScheduleRunner {
 
   get running(): boolean {
     return this.#timer !== null;
+  }
+
+  getHealth() {
+    return {
+      status: !this.running ? 'stopped' : this.#tickFailed ? 'degraded' : 'running',
+      schedule_runner: { running: this.running, tick_interval_ms: this.#tickIntervalMs },
+    };
   }
 
   async tickOnce(nowOverride?: Date): Promise<ScheduleTickOutcome[]> {
@@ -64,7 +72,8 @@ export class ScheduleRunner {
       }
     }
 
-    if (callbackErrors.length > 0 && !this.#timer) {
+    this.#tickFailed = callbackErrors.length > 0;
+    if (this.#tickFailed && !this.#timer) {
       throw callbackErrors[0];
     }
     return outcomes;
@@ -75,7 +84,7 @@ export class ScheduleRunner {
     this.#timer = setInterval(() => {
       if (this.#ticking) return;
       this.#ticking = true;
-      void this.tickOnce().catch(() => undefined).finally(() => {
+      void this.tickOnce().catch(() => { this.#tickFailed = true; }).finally(() => {
         this.#ticking = false;
       });
     }, this.#tickIntervalMs);

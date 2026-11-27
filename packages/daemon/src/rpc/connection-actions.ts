@@ -3,6 +3,12 @@ import type { ConnectService } from '@opl/connect';
 import { DaemonRpcError } from '../errors.ts';
 
 export const connectionActions = [
+  { action_id: 'connection_test', label: 'Test connection', delegated_surface: 'connect.check',
+    payload_fields: ['connection_id'], confirmation_required: false },
+  { action_id: 'connection_update', label: 'Update connection', delegated_surface: 'connect.setConnectionStatus',
+    payload_fields: ['connection_id', 'status'], confirmation_required: false },
+  { action_id: 'connection_delete', label: 'Delete connection', delegated_surface: 'connect.remove',
+    payload_fields: ['connection_id', 'purge_secret', 'reason'], confirmation_required: true },
   {
     action_id: 'connection_access_request_deny', label: 'Deny connection access request',
     delegated_surface: 'connect.denyRequest', payload_fields: ['request_id'], confirmation_required: false,
@@ -19,15 +25,41 @@ export async function executeConnectionAction(
 ) {
   const idField = action.payload_fields[0]!;
   const id = payload[idField];
-  if (dryRun || typeof id !== 'string' || !id.trim() || Object.keys(payload).some(key => key !== idField && key !== 'confirmed')) {
+  if (dryRun || typeof id !== 'string' || !id.trim() || Object.keys(payload).some(key => !action.payload_fields.includes(key) && key !== 'confirmed')) {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Expected ${idField} for ${action.action_id}.`);
   }
   if (action.confirmation_required && payload.confirmed !== true) {
-    throw new DaemonRpcError(-32602, 'CONFIRMATION_REQUIRED', 'Confirm this grant revocation before executing it.');
+    throw new DaemonRpcError(-32602, 'CONFIRMATION_REQUIRED', 'Confirm this connection action before executing it.');
   }
-  const result = action.delegated_surface === 'connect.denyRequest'
-    ? connect.denyRequest(context, { request_id: id })
-    : await connect.revoke(context, { grant_id: id });
+  let result;
+  switch (action.action_id) {
+    case 'connection_test':
+      result = await connect.checkConnection(id);
+      break;
+    case 'connection_update': {
+      const status = payload.status;
+      if (status !== 'active' && status !== 'disabled' && status !== 'expired') {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Expected active, disabled or expired connection status.');
+      }
+      result = connect.setConnectionStatus(context, { connection_id: id, status });
+      break;
+    }
+    case 'connection_delete':
+      if ((payload.purge_secret !== undefined && typeof payload.purge_secret !== 'boolean')
+        || (payload.reason !== undefined && typeof payload.reason !== 'string')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Invalid connection deletion parameters.');
+      }
+      result = await connect.revoke(context, {
+        connection_id: id, delete_permanently: true, purge_secret: payload.purge_secret === true,
+        ...(typeof payload.reason === 'string' && { reason: payload.reason }),
+      });
+      break;
+    case 'connection_access_request_deny':
+      result = connect.denyRequest(context, { request_id: id });
+      break;
+    default:
+      result = await connect.revoke(context, { grant_id: id });
+  }
   return {
     ok: true, status: 'executed', dry_run: false,
     app_action_execution: {

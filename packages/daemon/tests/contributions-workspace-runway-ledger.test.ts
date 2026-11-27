@@ -259,10 +259,13 @@ describe('contributions, workspace.read capability gate, workspace/runway/ledger
     });
 
     rpc.drainEvents();
-    await rpc.call('runway.humanGate.resolve', {
-      stage_run_id: sr.stage_run_id,
-      decision: 'approve',
-      expected_revision: gated.stage_run.revision,
+    const workbench = srv.runtime.appStateCache.getState().app_state.operator.workbench.work_item_projection_v2;
+    const action = workbench.items.find(item => item.identity.work_item_id === created.task_id)!.action;
+    assert.equal(action.action_ref, 'app_state.actions#runway_human_gate_resolve');
+    assert.deepEqual(action.action_payload, { stage_run_id: sr.stage_run_id, expected_revision: gated.stage_run.revision });
+    await rpc.call('app.action.execute', {
+      action_id: action.action_ref.split('#')[1],
+      payload: { ...action.action_payload, decision: 'approve' },
     });
     rpc.drainEvents('event.ledger.appended');
 
