@@ -23,6 +23,7 @@ test('the workbench joins owner inventory and Runway work without turning execut
         workspace_id: workspace.workspace_id, workspace_path: workspace.root_path, package_id: 'an-agent',
         domain_id: 'research', work_item_id: 'paper-1', title: 'Domain paper', business_status: 'delivered',
         business_state: 'delivered_paused', current_stage_id: 'review', work_item_root: null, observed_at: '2026-11-27T00:00:00Z',
+        domain_detail_views: [{ view_id: 'roadmap', view_kind: 'roadmap', availability: 'unread' }],
       }],
       diagnostics: [],
     };
@@ -37,6 +38,7 @@ test('the workbench joins owner inventory and Runway work without turning execut
     assert.equal(read().work_item_projection_v2.items.length, 2);
     assert.equal(read().work_item_projection_v2.summary.agent_count, 1);
     const domain = read().work_item_projection_v2.items.find((item) => item.identity.work_item_id === 'paper-1')!;
+    assert.equal(domain.domain_detail_views?.[0].item_id, domain.item_id);
     assert.equal(domain.identity.identity_state, 'resolved');
     assert.match(domain.identity.work_item_scope_id!, /^work-item:[a-f0-9]{64}$/);
     assert.equal(domain.lifecycle.primary_state, 'delivered_auto_paused');

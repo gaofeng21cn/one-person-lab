@@ -135,6 +135,9 @@ export function buildRunwayWorkbench(
       telemetry: { state: cumulative.state, current_stage: currentStage, cumulative },
       conditions: [], freshness: { state: 'fresh', observed_at: generatedAt, last_progress_at: updatedAt, reason: domain ? 'registered_inventory' : 'runway_store' },
       visibility, stage_map: stageMap,
+      ...(domain?.domain_detail_views && {
+        domain_detail_views: domain.domain_detail_views.map((view) => ({ ...view, item_id: itemId })),
+      }),
     };
   }
   const items = inventory.items.map((row) => projectItem(row.package_id, row.workspace_path, row.work_item_id, row.title, undefined, row));
