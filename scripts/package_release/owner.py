@@ -4,7 +4,6 @@ import hashlib
 import json
 import plistlib
 import re
-import sys
 import time
 import tomllib
 from pathlib import Path
@@ -163,8 +162,13 @@ def _ordered_content_digest(paths, read_bytes):
             raise ValueError(f'Duplicate path {clean!r} in content digest input')
         seen.add(clean)
         normalized.append(clean)
+    return _content_digest(sorted(normalized, key=lambda item: item.encode('utf-16-be')), read_bytes)
+
+
+def _content_digest(paths, read_bytes):
+    """Hash paths and file bytes in the supplied order."""
     h = hashlib.sha256()
-    for relative in sorted(normalized, key=lambda item: item.encode('utf-16-be')):
+    for relative in paths:
         rel_bytes = relative.encode('utf-8')
         data = read_bytes(relative)
         h.update(len(rel_bytes).to_bytes(8, 'big'))
@@ -183,7 +187,9 @@ def refresh_locks(root, projection, allowlist, framework):
             paths = lock['paths']
             if name in paths and carrier == root:
                 raise ReleaseError('A content lock cannot contain its own descriptor')
-            lock['digest'] = _ordered_content_digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
+            # Legacy Catalog descriptors bind the declared path order and spelling.
+            digest = _ordered_content_digest if d.get('schema_version') == 'opl.package.v2' else _content_digest
+            lock['digest'] = digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
             write(root / name, d)
 
 
