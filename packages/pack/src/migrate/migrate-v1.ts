@@ -861,17 +861,26 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
   }
 
   // 6. Provides: skills, entrypoints (cli, channel_provider, remote_companion_connector, entrypoint_kind), mcp.json
-  const skillIds = new Set<string>();
-  if (Array.isArray(codexSurface?.required_skill_ids)) {
-    for (const sid of codexSurface.required_skill_ids) {
-      if (typeof sid === 'string' && sid.trim()) skillIds.add(sid.trim());
-    }
-  }
   const exportsObj = isRecord(old.exports) ? old.exports : null;
-  if (Array.isArray(exportsObj?.core_skill_ids)) {
-    for (const sid of exportsObj.core_skill_ids) {
-      if (typeof sid === 'string' && sid.trim()) skillIds.add(sid.trim());
-    }
+  const skillList = (value: unknown): string[] => Array.isArray(value)
+    ? value.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).map((id) => id.trim())
+    : [];
+  const requiredSkills = skillList(codexSurface?.required_skill_ids);
+  const coreSkills = skillList(exportsObj?.core_skill_ids);
+  const skillIds = new Set([
+    ...requiredSkills,
+    ...coreSkills,
+    ...skillList(exportsObj?.specialty_skill_ids),
+    ...skillList(exportsObj?.all_skill_ids),
+  ]);
+  const materializedSkills = skillList(exportsObj?.default_materialized_skill_ids);
+  let defaultSkills = new Set([...requiredSkills, ...coreSkills]);
+  if (materializedSkills.length > 0) {
+    defaultSkills = new Set(materializedSkills);
+  } else if (exportsObj?.default_materialization_policy === 'all_exported_skills') {
+    defaultSkills = skillIds;
+  } else if (exportsObj?.default_materialization_policy !== 'core_skills_only' && codexSurface?.codex_default_exposure === false) {
+    defaultSkills.clear();
   }
 
   const skills: Array<{ id: string; path: string; exposure: 'default' | 'opt_in' }> = [];
@@ -896,7 +905,7 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
     skills.push({
       id: cleanId,
       path: chosenPath,
-      exposure: codexSurface?.codex_default_exposure === false ? 'opt_in' : 'default',
+      exposure: defaultSkills.has(sid) ? 'default' : 'opt_in',
     });
   }
 

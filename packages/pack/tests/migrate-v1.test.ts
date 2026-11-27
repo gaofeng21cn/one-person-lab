@@ -134,6 +134,45 @@ test('migrateV1Package handles all E2E-M2 cases: string[] requires, blank extra_
   }
 });
 
+test('capability migration preserves exported specialties and the provider materialization policy', () => {
+  const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-mig-skills-'));
+  try {
+    const allSkills = ['router', 'editing', 'specialty', 'extra'];
+    for (const id of allSkills) {
+      const dir = path.join(repoDir, 'skills', id);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, 'SKILL.md'), id);
+    }
+    const manifestPath = path.join(repoDir, 'opl-package.json');
+    const manifest = {
+      surface_kind: 'opl_capability_package_manifest.v2',
+      package_id: 'skill-provider',
+      version: '1.0.0',
+      exports: {
+        core_skill_ids: ['router', 'editing'],
+        specialty_skill_ids: ['specialty'],
+        all_skill_ids: allSkills,
+        default_materialization_policy: 'core_skills_only',
+        default_materialized_skill_ids: ['router'],
+      },
+      codex_surface: { codex_default_exposure: false, interaction_mode: 'headless_internal' },
+    };
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const { manifest: migrated } = migrateV1Package({ repoDir, apply: false });
+    assert.deepEqual(migrated.provides?.skills, allSkills.map((id) => ({
+      id, path: `./skills/${id}`, exposure: id === 'router' ? 'default' : 'opt_in',
+    })));
+    assert.equal(migrated.host_hints?.codex?.sync_enabled, false);
+
+    manifest.exports.default_materialized_skill_ids = [];
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+    const { manifest: fallback } = migrateV1Package({ repoDir, apply: false });
+    assert.deepEqual(fallback.provides?.skills?.filter(skill => skill.exposure === 'default').map(skill => skill.id), ['router', 'editing']);
+  } finally {
+    fs.rmSync(repoDir, { recursive: true, force: true });
+  }
+});
+
 test('read-only smoke migration of real external OPL domain repos if present on disk', (t) => {
   const candidates = [
     '/Users/gaofeng/workspace/med-autoscience',
