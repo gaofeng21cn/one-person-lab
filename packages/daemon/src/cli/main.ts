@@ -15,6 +15,7 @@ import { discoverCliExtensions, invokeCliExtension } from './extensions.ts';
 interface ParsedCliArgs {
   readonly positionals: string[];
   readonly flags: Map<string, string | boolean>;
+  readonly extensionStateDir?: string;
   readonly json: boolean;
   readonly quiet: boolean;
   readonly help: boolean;
@@ -96,6 +97,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
   let quiet = false;
   let help = false;
   let version = false;
+  let extensionStateDir: string | undefined;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]!;
@@ -118,11 +120,16 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
     if (arg.startsWith('--')) {
       const eqIdx = arg.indexOf('=');
       if (eqIdx !== -1) {
-        flags.set(arg.slice(0, eqIdx), arg.slice(eqIdx + 1));
+        const key = arg.slice(0, eqIdx);
+        const value = arg.slice(eqIdx + 1);
+        flags.set(key, value);
+        if (key === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
       if (VALUE_FLAGS.has(arg) && i + 1 < argv.length) {
-        flags.set(arg, argv[++i]!);
+        const value = argv[++i]!;
+        flags.set(arg, value);
+        if (arg === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
       flags.set(arg, true);
@@ -131,7 +138,7 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
     positionals.push(arg);
   }
 
-  return { positionals, flags, json, quiet, help, version };
+  return { positionals, flags, extensionStateDir, json, quiet, help, version };
 }
 
 function getStringFlag(parsed: ParsedCliArgs, name: string): string | undefined {
@@ -1135,7 +1142,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
 
       default: {
         // Dynamic CLI extensions lookup (only enabled installed packages)
-        const extensions = await discoverCliExtensions(stateDir);
+        // After the extension subcommand, --state-dir belongs to its own arguments
+        // (for example, the output directory for "opl foundry eval").
+        const extensions = await discoverCliExtensions(parsed.extensionStateDir);
         const match = extensions.find((e) => e.namespace === ns);
         if (!match) {
           throw new DaemonRpcError(
@@ -1162,7 +1171,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           );
         }
         const extParsed = extractExtensionArgsAndOpts(argv, ns!, sub, parsed.help);
-        const out = await invokeCliExtension(match, sub, extParsed.args, extParsed.opts);
+        const out = await invokeCliExtension(match, sub, extParsed.args, extParsed.opts, parsed.extensionStateDir);
         if (
           parsed.help
           && !parsed.json

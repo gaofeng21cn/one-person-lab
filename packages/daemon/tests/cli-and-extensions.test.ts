@@ -187,7 +187,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
         '    namespace: "dynprobe",',
         '    commands: ["ping", "init"],',
         '    handlers: {',
-        '      ping: () => ({ ok: true, pong: true }),',
+        '      ping: () => ({ ok: true, pong: true, state_dir: process.env.OPL_STATE_DIR }),',
         '      init: (args, opts) => ({ ok: true, args, opts }),',
         '    },',
         '  };',
@@ -203,6 +203,17 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     const pingRes = await sb.spawnRootCli(['dynprobe', 'ping', '--json']);
     assert.equal(pingRes.code, 0);
     assert.equal((pingRes.json as { pong: boolean }).pong, true);
+
+    const emptyProfile = trackSandbox();
+    const emptyHelp = await sb.spawnRootCli(['--state-dir', emptyProfile.stateDir, '--help']);
+    assert.equal(emptyHelp.code, 0);
+    assert.doesNotMatch(emptyHelp.stdout, /^\s*dynprobe:/m);
+    const missing = await sb.spawnRootCli(['--state-dir', emptyProfile.stateDir, 'dynprobe', 'ping', '--json']);
+    assert.equal(missing.code, 2);
+    assert.equal((missing.json as { error: { code: string } }).error.code, 'METHOD_NOT_FOUND');
+    const selected = await emptyProfile.spawnRootCli(['--state-dir', sb.stateDir, 'dynprobe', 'ping', '--json']);
+    assert.equal(selected.code, 0);
+    assert.equal((selected.json as { state_dir: string }).state_dir, sb.stateDir);
 
     // Regression (E2E-M4/M6 2f): --id is a VALUE_FLAGS entry, not a boolean flag
     const initRes = await sb.spawnCli(['dynprobe', 'init', '--id', 'my-ext-id', '--json']);
