@@ -80,6 +80,8 @@ opl connect cloud import --cloud-ref cloud:<UUID> --json
 
 Framework v2 的桌面登录通过认证后的本机 daemon socket 调用 `connect.gateway.login`，成功时返回 `gateway_account`。可信 App 和 CLI 通过 `connect.gateway.status` 读取同一份账号状态，通过 `connect.gateway.authorizeCompanion` 兑换手机连接凭据。已有 `opl connect gateway` 命令沿用相同的 daemon 接口。通用 `connect.add` 只在识别到此前 Studio 的两个登录表单时，将请求交给对应的账号或 Codex 配置功能。
 
+可信 App 与 CLI 在 daemon 握手时提交当前 Codex 配置目录。登录后的模型配置、手工 Key 保存和设置回读按该连接解析目录，多个配置可共用一个 daemon。每个 Gateway 安装账号保存一个自动绑定的恢复快照，在另一份 Codex 配置激活账号前，先断开原绑定。
+
 Framework 在现有账号锁内轮换会话并持久化 refresh token，再兑换 Relay 专用凭据。凭据只写入调用者拥有的 0700 目录中的全新 0600 文件；已有文件、符号链接和宽权限目录在联网前拒绝。Studio 导入后删除临时文件。标准输出仅含已写入状态、固定服务地址、scope 和电脑 ID；Gateway bearer、密码、模型 Key 与 Relay token 不进入 Renderer、CLI 输出或通用连接注册表。
 
 这次兑换仅授权传输。手机仍须通过电脑公钥固定的 Noise 通道完成账号认领或兑换 120 秒单次配对码；会话、审批、工作区及设备撤销继续由 Studio 和已有 Codex owner 执行。产品和互联网合同由 [App](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-remote-companion-internet.json) 持有。

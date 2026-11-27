@@ -251,7 +251,8 @@ if (cmd === 'plugin list --json') {
       FIXTURE_PID_FILE: childPidFile,
     };
 
-    const runner = createProcessCodexRunner({ binary, timeoutMs: 400 });
+    const runner = createProcessCodexRunner({ binary });
+    const timed = createProcessCodexRunner({ binary, timeoutMs: 700 });
 
     const cliFailed = await runner.runCli(['plugin', 'list', '--json'], env);
     assert.equal(cliFailed.status, 1);
@@ -260,7 +261,7 @@ if (cmd === 'plugin list --json') {
     assert.equal(fs.existsSync(path.join(tmpRoot, '.staging.lock')), true);
     assert.equal(fs.existsSync(preExistingGit), true);
 
-    const cliTimeout = await runner.runCli(['plugin', 'hang'], env);
+    const cliTimeout = await timed.runCli(['plugin', 'hang'], env);
     assert.equal(cliTimeout.status, null);
     assert.equal(fs.existsSync(path.join(tmpRoot, 'git-CLITIMEOUT')), false);
     assert.equal(fs.existsSync(path.join(tmpRoot, '.staging', 'marketplace-macos-CLITIMEOUT')), false);
@@ -275,7 +276,7 @@ if (cmd === 'plugin list --json') {
     assert.throws(() => process.kill(Number(fs.readFileSync(childPidFile, 'utf8')), 0), { code: 'ESRCH' });
 
     await assert.rejects(
-      runner.listPlugins({ marketplaceKinds: ['local'] }, { ...env, FIXTURE_MODE: 'stall' }),
+      timed.listPlugins({ marketplaceKinds: ['local'] }, { ...env, FIXTURE_MODE: 'stall' }),
       /timed out/,
     );
     assert.equal(fs.existsSync(path.join(tmpRoot, 'git-APPSERVER_STALL')), false);

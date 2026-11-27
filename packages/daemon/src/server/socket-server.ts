@@ -11,6 +11,7 @@ import {
   writeExclusiveFileSync,
   type ClientContext,
 } from '@opl/core';
+import { resolveCodexHome, withClientCodexHome } from '@opl/connect';
 import { DaemonRpcError, toJsonRpcError } from '../errors.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
 import { normalizeParams, pickString, pickStringArray } from '../utils/normalize.ts';
@@ -19,6 +20,7 @@ export interface SocketConnectionState {
   readonly connectionId: string;
   readonly socket: net.Socket;
   authed: boolean;
+  codexHome?: string;
   clientContext: ClientContext | null;
   subscribedTopics: Set<string> | null; // null => subscribed to all event.* after auth
 }
@@ -311,7 +313,9 @@ export class OpldSocketServer {
         throw new DaemonRpcError(-32601, 'METHOD_NOT_FOUND', `Method not found: ${method}`);
       }
 
-      const result = await handler(params, conn);
+      const result = await (conn.codexHome
+        ? withClientCodexHome(conn.codexHome, () => handler(params, conn))
+        : handler(params, conn));
       if (id !== null) {
         await this.writeFrame(conn.socket, { jsonrpc: '2.0', id, result });
       }
@@ -374,6 +378,14 @@ export class OpldSocketServer {
       ...(consumerPackageId ? { consumer_package_id: consumerPackageId } : {}),
     });
 
+    const requestedHome = params.codex_home;
+    if (requestedHome !== undefined) {
+      if (!ctx.trusted_host) throw new DaemonRpcError(-32003, 'TRUSTED_HOST_REQUIRED', 'Only a trusted host can select its Codex home.');
+      if (typeof requestedHome !== 'string' || !path.isAbsolute(requestedHome) || requestedHome.includes('\0')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'codex_home must be an absolute path.');
+      }
+    }
+    conn.codexHome = ctx.trusted_host ? (requestedHome ? path.resolve(requestedHome) : resolveCodexHome()) : undefined;
     conn.authed = true;
     conn.clientContext = ctx;
 
@@ -385,6 +397,7 @@ export class OpldSocketServer {
       server_version: this.#runtime.version,
       client_kind: ctx.client_kind,
       trusted_host: ctx.trusted_host,
+      ...(conn.codexHome && { codex_home: conn.codexHome }),
       reload_capabilities: {
         renderer_reload: true,
         restart_required: true,
