@@ -1,3 +1,4 @@
+import { sharedPanelEntry } from '@opl/mcp-app-shared/bridge';
 import { resolveCodexPluginName, type InstalledPackageRecord } from '@opl/pack';
 
 import { isOfficialCatalogPackage, projectCatalogEntries, type SoftwareCatalogSnapshot } from './package-catalog.ts';
@@ -71,6 +72,9 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
     const enabled = pkg.enabled && appEnabled;
     const home = projectHomeShortcuts(pkg, prefs, enabled);
     const apps = ui?.mcp_apps ?? [];
+    const miniApp = enabled && apps.length === 1
+      ? { resource_uri: apps[0]!.resource_uri, arguments: {} }
+      : sharedPanelEntry({ package_id: pkg.package_id, enabled, ui });
     const availableActions = [
       rowAction(toggle, 'app_enabled', { package_id: pkg.package_id, enabled: !appEnabled }),
     ];
@@ -109,7 +113,7 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
         const preference = prefs.shortcuts.get(pkg.package_id)?.get(shortcut.shortcut_id);
         return preference ? [{ shortcut_id: shortcut.shortcut_id, ...preference }] : [];
       }),
-      ...(enabled && apps.length === 1 ? { miniapp_entry: { resource_uri: apps[0]!.resource_uri, arguments: {} } } : {}),
+      ...(miniApp ? { miniapp_entry: miniApp } : {}),
       available_actions: availableActions,
     };
   });

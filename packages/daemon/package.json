@@ -19,6 +19,8 @@
     "dist"
   ],
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "2.0.4",
+    "@modelcontextprotocol/server": "2.4.0",
     "@opl/connect": "2.0.0",
     "@opl/core": "2.0.0",
     "@opl/ledger": "2.0.0",

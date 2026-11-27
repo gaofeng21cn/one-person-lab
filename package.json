@@ -27,7 +27,7 @@
   "scripts": {
     "build": "node ./scripts/build-framework.mjs",
     "typecheck": "tsc -b --noEmit tsconfig.packages.json",
-    "v2:build": "tsc -b tsconfig.packages.json",
+    "v2:build": "node ./scripts/build-framework.mjs",
     "v2:typecheck": "tsc -b --noEmit tsconfig.packages.json",
     "v2:guard": "node ./scripts/check-v2-import-guard.mjs --strict-m4",
     "v2:test": "node --experimental-strip-types --test packages/core/tests/*.test.ts packages/ledger/tests/*.test.ts packages/workspace/tests/*.test.ts packages/mcp-app-shared/tests/*.test.ts packages/connect/tests/*.test.ts packages/pack/tests/*.test.ts packages/runway/tests/*.test.ts packages/daemon/tests/*.test.ts",
@@ -55,7 +55,10 @@
     "framework:archive": "node scripts/framework-archive.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "2.0.4",
+    "@modelcontextprotocol/server": "2.4.0",
     "@types/semver": "7.8.0",
+    "esbuild": "0.28.2",
     "semver": "7.8.6",
     "tar": "7.5.23",
     "typescript": "7.0.2",
@@ -63,6 +66,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.4.0",
     "@types/node": "^26.6.6",
     "ajv": "8.20.0"
   },
