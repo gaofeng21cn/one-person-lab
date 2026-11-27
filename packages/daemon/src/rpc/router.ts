@@ -23,6 +23,7 @@ import { configureCodexApiKey } from './configure-codex-api-key.ts';
 import { gatewayAccountMethods, callGatewayAccount } from './gateway-account.ts';
 import type { RpcHandler, SocketConnectionState } from '../server/socket-server.ts';
 import { toProjectedPackageSummary } from '../state/app-state-cache.ts';
+import { readOperatorDrilldown } from '../state/operator-drilldown.ts';
 import type { DaemonRuntime } from '../state/runtime.ts';
 import {
   coerceInstallSourceSpec,
@@ -132,6 +133,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const profile = rawProfile === 'full' ? 'full' : 'fast';
     return runtime.appStateCache.getState(profile, conn.clientContext?.trusted_host ? runtime.paths.state_dir : undefined);
   });
+
+  handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
   handlers.set('app.initialize.get', (_params, conn) => {
     const doc = runtime.doctor(true);

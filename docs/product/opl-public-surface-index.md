@@ -24,7 +24,7 @@ Framework 的 Package 命令不能成为第二 carrier、catalog 或 version aut
 
 - `opl framework readiness`：Framework consumer readiness；
 - `opl family-runtime ...`：provider、worker、Attempt 和 recovery；
-- `opl runtime app-operator-drilldown`：operator detail；
+- Framework v2 的 `app.operatorDrilldown.get` RPC 供设置诊断与发布工具读取。同一个 SQLite 快照包含任务、阶段、尝试、Ledger 记录和包操作的总计，每类附最近 100 条记录的身份与状态。响应的 `schema` 是 `opl.operator_drilldown.v2`，`detail` 为 `full`。
 - `opl cordis inspect`：composition identity 和 services。
 
 这些 surface 不声明 domain quality、artifact acceptance、App release 或 production readiness。
