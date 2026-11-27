@@ -153,6 +153,7 @@ export function createPackageSourceArchive(
   sourceDir: string,
   archivePath: string,
   paths: readonly string[],
+  options: { readonly mtime?: Date } = {},
 ): string {
   const realSource = fs.realpathSync(sourceDir);
   fs.mkdirSync(path.dirname(archivePath), { recursive: true });
@@ -165,6 +166,7 @@ export function createPackageSourceArchive(
       sync: true,
       strict: true,
       follow: false,
+      ...(options.mtime ? { mtime: options.mtime } : {}),
     },
     [...paths],
   );

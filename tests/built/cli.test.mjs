@@ -52,7 +52,7 @@ test('built v2 daemon CLI entrypoints exist and load via OPL_USE_DIST=1', () => 
   assert.equal(versionNodeRoot.stdout.trim(), versionDirect.stdout.trim());
 });
 
-test('installer verifies the fresh v2 daemon and keeps carrier-only updates offline', async () => {
+test('installer starts the fresh v2 daemon and leaves it stopped during a carrier-only update', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-'));
   const source = path.join(root, 'source');
   const installDir = path.join(root, 'installed');
@@ -72,6 +72,7 @@ test('installer verifies the fresh v2 daemon and keeps carrier-only updates offl
     OPL_INSTALL_DIR: installDir,
     OPL_INSTALL_BRANCH: branch,
     OPL_INSTALL_SOURCE_MODE: 'auto',
+    OPL_FRAMEWORK_SOURCE_COMMIT: '',
     OPL_NPM_GLOBAL_PREFIX: prefix,
     OPL_PREFILLED_NODE_MODULES_DIR: path.join(repoRoot, 'node_modules'),
     OPL_CARRIER_ONLY: '0',
@@ -94,6 +95,7 @@ test('installer verifies the fresh v2 daemon and keeps carrier-only updates offl
     const fresh = run('/bin/bash', [installer]);
     assert.match(fresh, /OPL Framework is ready/);
     assert.equal(fs.realpathSync(cli), fs.realpathSync(path.join(installDir, 'bin', 'opl')));
+    assert.equal(JSON.parse(run(cli, ['daemon', 'status', '--json'])).running, true);
     const readiness = JSON.parse(run(cli, ['daemon', 'doctor', '--include-first-run', '--json']));
     assert.equal(readiness.ok, true);
     assert.equal(readiness.api_version, '2.0');
@@ -102,7 +104,8 @@ test('installer verifies the fresh v2 daemon and keeps carrier-only updates offl
     const codex = env.OPL_CODEX_BIN || 'codex';
     if (spawnSync(codex, ['--version'], { cwd: root, env }).status === 0) {
       const registered = JSON.parse(run(codex, ['mcp', 'get', 'opl-apps', '--json']));
-      assert.equal(fs.realpathSync(registered.transport.command), fs.realpathSync(process.execPath));
+      assert.ok(path.isAbsolute(registered.transport.command));
+      assert.match(run(registered.transport.command, ['--version']), /^v(?:24|26)\./);
       assert.deepEqual(registered.transport.args, [cli, 'connect', 'mcp-app-stdio']);
       assert.equal(registered.transport.env.OPL_STATE_DIR, stateDir);
       const client = new Client({ name: 'fresh-install-test', version: '1' });

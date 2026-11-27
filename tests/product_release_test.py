@@ -2,6 +2,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -11,7 +12,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import _carrier_source_paths, _ordered_content_digest, prepare_owner, refresh_locks, wait_for_checks
+from package_release.owner import _carrier_source_paths, _ordered_content_digest, merge_release_changes, prepare_owner, refresh_locks, wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -122,7 +123,7 @@ class ProductReleaseTests(unittest.TestCase):
         allowlist = {'source_root': 'plugins/fixture', 'plugin_id': 'fixture', 'paths': ['opl-package.json']}
         return projection, allowlist, payload
 
-    def test_v2_owner_reports_candidate_before_legacy_preparation_or_tagging(self):
+    def test_v2_owner_reports_candidate_without_tagging_in_dry_run(self):
         projection, allowlist, payload = self.package_selection()
         descriptor = self.root / 'opl-package.json'
         descriptor.write_text(json.dumps({
@@ -131,22 +132,82 @@ class ProductReleaseTests(unittest.TestCase):
         self.commit()
         source = self.git('rev-parse', 'HEAD')
         with patch('package_release.owner.execute_commands') as commands:
-            for apply in (False, True):
-                result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
-                                       apply=apply, payload_path=payload)
-                self.assertEqual(result['status'], 'blocked')
-                self.assertEqual(result['reason_code'], 'v2_package_publisher_unsupported')
-                self.assertEqual(result['owner_source_commit'], source)
-                self.assertEqual(result['version'], '1.2.4')
+            result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                                   apply=False, payload_path=payload, v2_controller=ROOT)
+            self.assertEqual(result['status'], 'needs_release')
+            self.assertEqual(result['package_format'], 'v2')
+            self.assertEqual(result['owner_source_commit'], source)
+            self.assertEqual(result['version'], '1.2.4')
             commands.assert_not_called()
         self.assertEqual(self.git('tag', '--list'), 'v1.2.3')
         self.assertEqual(self.git('status', '--porcelain'), '')
 
         self.git('tag', '-a', 'v1.2.4', self.first, '-m', 'Other release source')
         result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
-                               apply=False, payload_path=payload)
-        self.assertEqual((result['status'], result['version']), ('blocked', '1.2.5'))
+                               apply=False, payload_path=payload, v2_controller=ROOT)
+        self.assertEqual((result['status'], result['version']), ('needs_release', '1.2.5'))
         self.assertEqual(self.git('rev-parse', 'v1.2.4^{}'), self.first)
+
+    def test_v2_owner_freezes_validated_bytes_before_tag_and_aligns_declared_versions(self):
+        projection, allowlist, payload = self.package_selection()
+        # The fixture's external payload and owner release metadata are staged in this repo for the test.
+        settings = self.root / 'release-automation.json'
+        settings.write_text(json.dumps({'strategy': 'daily_patch', 'version_files': [
+            {'path': 'policy.json', 'kind': 'json', 'field': 'package.version'},
+        ]}))
+        (self.root / 'policy.json').write_text(json.dumps({'package': {'version': '1.2.3'}}))
+        (self.root / 'opl-package.json').write_text(json.dumps({
+            'schema_version': 'opl.package.v2',
+            'identity': {'id': 'fixture', 'version': '1.2.3', 'intent': 'extension',
+                         'name': {'en-US': 'Fixture', 'zh-CN': '样例'},
+                         'summary': {'en-US': 'Fixture', 'zh-CN': '样例'}, 'publisher': 'fixture'},
+        }))
+        self.commit()
+        remote = self.root.parent / ('remote-' + self.root.name + '.git')
+        self.addCleanup(lambda: shutil.rmtree(remote, ignore_errors=True))
+        subprocess.run(['git', 'clone', '--bare', str(self.root), str(remote)], check=True, capture_output=True)
+        self.git('remote', 'add', 'origin', str(remote))
+
+        def merge(root, *_args):
+            self.git('push', 'origin', 'HEAD:refs/heads/main')
+            return self.git('rev-parse', 'HEAD')
+
+        with patch('package_release.owner.wait_for_checks'), patch('package_release.owner.merge_release_changes', side_effect=merge):
+            result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                                   apply=True, payload_path=payload, v2_controller=ROOT)
+        commit = self.git('rev-parse', 'v1.2.4^{}')
+        self.assertEqual(result['owner_source_commit'], commit)
+        self.assertEqual(result['candidate']['lock']['git_commit'], commit)
+        self.assertEqual(self.git('cat-file', '-t', 'v1.2.4'), 'tag')
+        self.assertEqual(json.loads(self.git('show', f'{commit}:policy.json'))['package']['version'], '1.2.4')
+
+    def test_recovers_exact_merge_after_timeout_and_subsequent_main_advance(self):
+        remote = self.root.parent / ('remote-' + self.root.name + '.git')
+        self.addCleanup(lambda: shutil.rmtree(remote, ignore_errors=True))
+        subprocess.run(['git', 'clone', '--bare', str(self.root), str(remote)], check=True, capture_output=True)
+        self.git('remote', 'add', 'origin', str(remote))
+        (self.root / 'app/main').write_text('release bytes')
+        self.commit()
+        head = self.git('rev-parse', 'HEAD')
+
+        def api(endpoint, *, method='GET', payload=None):
+            if '/pulls?state=open' in endpoint:
+                return [{'number': 7}]
+            if endpoint.endswith('/commits/main'):
+                return {'sha': self.first}
+            if method == 'PUT' and endpoint.endswith('/pulls/7/merge'):
+                self.git('push', 'origin', 'HEAD:refs/heads/main')
+                (self.root / 'later').write_text('concurrent main update')
+                self.commit()
+                self.git('push', 'origin', 'HEAD:refs/heads/main')
+                raise subprocess.TimeoutExpired('fixture GitHub merge', 60)
+            raise AssertionError(endpoint)
+
+        with patch('package_release.owner.gh', side_effect=api), patch('package_release.owner.wait_for_checks'):
+            merged = merge_release_changes(self.root, 'fixture/example', self.first, 'fixture', '1.2.4')
+        self.assertEqual(merged, head)
+        self.assertEqual(self.git('rev-parse', 'HEAD'), head)
+        self.assertNotEqual(self.git('rev-parse', 'origin/main'), head)
 
     def test_v2_owner_identity_must_match_catalog(self):
         projection, allowlist, payload = self.package_selection()
@@ -156,7 +217,7 @@ class ProductReleaseTests(unittest.TestCase):
         self.commit()
         with self.assertRaisesRegex(ReleaseError, 'Root v2 Package identity'):
             prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
-                          apply=False, payload_path=payload)
+                          apply=False, payload_path=payload, v2_controller=ROOT)
 
     def test_legacy_owner_still_plans_from_nested_carrier(self):
         projection, allowlist, payload = self.package_selection()

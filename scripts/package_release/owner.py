@@ -4,10 +4,12 @@ import hashlib
 import json
 import plistlib
 import re
+import subprocess
 import time
 import tomllib
 from pathlib import Path
 from .common import ReleaseError, gh, git, read, run, safe_path, version_tuple, write
+from .v2_projection import build_v2_candidate
 
 
 def owner_settings(root):
@@ -79,9 +81,15 @@ def update_version_files(root, refs, version):
         p = safe_path(root, item['path'])
         if item['kind'] == 'json':
             d = read(p)
-            d['version'] = version
-            if isinstance(d.get('packages', {}).get(''), dict):
-                d['packages']['']['version'] = version
+            field = item.get('field', 'version')
+            if field == 'package.version' and isinstance(d.get('package'), dict) and 'version' in d['package']:
+                d['package']['version'] = version
+            elif field == 'version':
+                d['version'] = version
+                if isinstance(d.get('packages', {}).get(''), dict):
+                    d['packages']['']['version'] = version
+            else:
+                raise ReleaseError(f'Cannot update the declared JSON version field: {item["path"]} {field}')
             write(p, d)
         elif item['kind'] == 'toml_project':
             text = p.read_text()
@@ -365,22 +373,31 @@ def merge_release_changes(root, repo, base, package_id, version, *, delivery_kin
     try:
         result = gh(f'repos/{repo}/pulls/{pull["number"]}/merge', method='PUT',
                     payload={'sha': head, 'merge_method': 'merge'})
-    except ReleaseError as exc:
+    except (ReleaseError, subprocess.TimeoutExpired) as exc:
         result = None
         merge_error = exc
-    if not result or result.get('merged') is not True:
-        # Recover if the merge API receipt was lost after GitHub already landed the PR on main.
-        git(root, 'fetch', 'origin', 'main', '--quiet')
-        if run(['git', 'merge-base', '--is-ancestor', head, 'origin/main'], cwd=root, check=False).returncode != 0:
-            if merge_error is not None:
-                raise merge_error
-            raise ReleaseError('Release PR was not merged')
+    git(root, 'fetch', 'origin', 'main', '--quiet')
+    if run(['git', 'merge-base', '--is-ancestor', head, 'origin/main'], cwd=root, check=False).returncode:
+        if merge_error is not None:
+            raise merge_error
+        raise ReleaseError('Release PR was not merged')
+
+    # The earliest main commit containing this head is the publication source.
+    # A later, unrelated main commit must not become the tagged release.
+    if result and result.get('merged') is True and re.fullmatch(r'[a-f0-9]{40}', str(result.get('sha'))):
+        merged = result['sha']
     else:
-        git(root, 'fetch', 'origin', 'main', '--quiet')
-    git(root, 'reset', '--hard', 'origin/main')
-    if git(root, 'rev-parse', 'HEAD^{tree}') != git(root, 'rev-parse', f'{head}^{{tree}}'):
+        containing = git(root, 'rev-list', '--first-parent', '--reverse', f'{base}..origin/main')
+        merged = next((commit for commit in containing.splitlines()
+                       if not run(['git', 'merge-base', '--is-ancestor', head, commit], cwd=root, check=False).returncode),
+                      None)
+    if (not merged
+            or run(['git', 'merge-base', '--is-ancestor', merged, 'origin/main'], cwd=root, check=False).returncode
+            or git(root, 'rev-parse', f'{merged}^{{tree}}') != git(root, 'rev-parse', f'{head}^{{tree}}')):
         raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
-    return git(root, 'rev-parse', 'HEAD')
+    git(root, 'reset', '--hard', merged)
+    return merged
+
 
 def release_version(root, base, current, previous):
     current_version = version_tuple(current)
@@ -425,7 +442,54 @@ def v2_candidate_version(root, base, current, previous):
     return version
 
 
-def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None):
+def prepare_v2_owner(root, projection, repo, settings, current, controller, *, apply):
+    package_id = projection['package_id']
+    previous = (projection.get('v2_release') or projection)['version']
+    base = git(root, 'rev-parse', 'HEAD')
+    version = v2_candidate_version(root, base, current, previous)
+    result = {'version': version, 'owner_source_commit': base, 'package_format': 'v2'}
+    if not apply:
+        return {**result, 'status': 'needs_release'}
+
+    wait_for_checks(repo, base)
+    git(root, 'config', 'user.name', 'OPL Package Publisher')
+    git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
+    if version != current:
+        descriptor = root / 'opl-package.json'
+        manifest = read(descriptor)
+        manifest['identity']['version'] = version
+        write(descriptor, manifest)
+        refs = list(settings.get('version_files', []))
+        if any(item['path'] == 'opl-package.json' for item in refs):
+            raise ReleaseError('The v2 descriptor version is managed through identity.version')
+        update_version_files(root, refs, version)
+    execute_commands(root, settings, 'prepare')
+    execute_commands(root, settings, 'verify')
+    source = base
+    if git(root, 'status', '--porcelain'):
+        git(root, 'add', '--all')
+        git(root, 'commit', '-m', f'chore: prepare Package {version}')
+        candidate_head = git(root, 'rev-parse', 'HEAD')
+        build_v2_candidate(controller, root, package_id, version, candidate_head)
+        source = merge_release_changes(root, repo, base, package_id, version)
+    candidate = build_v2_candidate(controller, root, package_id, version, source)
+    publish_owner_tag(root, repo, source, version, settings)
+    return {**result, 'status': 'prepared', 'owner_source_commit': source, 'candidate': candidate}
+
+
+def publish_owner_tag(root, repo, source, version, settings):
+    tag = f'v{version}'
+    existing = run(['git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{}}'], cwd=root, check=False)
+    if existing.returncode == 0:
+        if existing.stdout.strip() != source or git(root, 'cat-file', '-t', f'refs/tags/{tag}') != 'tag':
+            raise ReleaseError('Existing immutable version tag must be annotated and select the exact source')
+    else:
+        git(root, 'tag', '-a', tag, '-m', f'Package {version}', source)
+    git(root, 'push', 'origin', f'refs/tags/{tag}')
+    wait_for_release_workflows(repo, source, tag, settings)
+
+
+def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None, v2_controller=None):
     base = git(root, 'rev-parse', 'HEAD')
     payload = read(payload_path or (framework / 'contracts/opl-framework/packages' /
                                     projection['codex_surface']['plugin_payload_manifest_url']))
@@ -436,15 +500,9 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
         return {'status': 'unchanged', 'owner_source_commit': base}
     v2_version = root_v2_version(root, base, projection['package_id'])
     if v2_version is not None:
-        version = v2_candidate_version(root, base, v2_version, projection['version'])
-        return {
-            'status': 'blocked',
-            'version': version,
-            'owner_source_commit': base,
-            'reason_code': 'v2_package_publisher_unsupported',
-            'reason': f'Candidate {version} requires v2 root descriptor support in Catalog projection and release '
-                      'verification. The current publisher requires a legacy owner descriptor and committed Codex carrier.',
-        }
+        if v2_controller is None:
+            raise ReleaseError('v2 Package publication requires the official Catalog and current Framework publisher')
+        return prepare_v2_owner(root, projection, repo, settings, v2_version, v2_controller, apply=apply)
     execute_commands(root, settings, 'prepare')
     if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}
@@ -466,12 +524,5 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
         source = merge_release_changes(root, repo, base, projection['package_id'], version)
     else:
         source = git(root, 'rev-parse', 'HEAD')
-    exact_tag = run(['git', 'rev-parse', '--verify', f'refs/tags/v{version}^{{}}'], cwd=root, check=False)
-    if exact_tag.returncode == 0 and exact_tag.stdout.strip() != source:
-        raise ReleaseError('Existing immutable version tag selects different bytes')
-    if exact_tag.returncode:
-        git(root, 'tag', '-a', f'v{version}', '-m', f'Package {version}', source)
-    # Tags bind the actual merged source; no existing tag is moved.
-    git(root, 'push', 'origin', f'refs/tags/v{version}')
-    wait_for_release_workflows(repo, source, f'v{version}', settings)
+    publish_owner_tag(root, repo, source, version, settings)
     return {'status': 'prepared', 'version': version, 'owner_source_commit': source}

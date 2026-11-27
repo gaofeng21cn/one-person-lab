@@ -2,6 +2,7 @@
 """Dispatch the selected owner exactly once for each immutable release identity."""
 from __future__ import annotations
 import argparse
+import base64
 import os
 import re
 from pathlib import Path
@@ -30,6 +31,14 @@ def dispatch(plan, source_run):
         try:
             if entry.get('expected_catalog_source_commit') != catalog_commit:
                 raise RuntimeError('Package entry belongs to a different Catalog revision')
+            package_format = entry.get('package_format', 'v1')
+            if package_format not in ('v1', 'v2'):
+                raise RuntimeError('Unsupported Package payload format')
+            framework_commit = plan.get('workflow_source_commit') if package_format == 'v2' else plan['framework_source_commit']
+            if entry.get('expected_framework_source_commit') != framework_commit:
+                raise RuntimeError('Package entry belongs to a different Framework tooling revision')
+            if package_format == 'v2' and (not catalog_commit or not re.fullmatch(r'[a-f0-9]{40}', framework_commit or '')):
+                raise RuntimeError('V2 Package entry requires exact Catalog and Framework tooling revisions')
             runs = gh(f'repos/{repo}/actions/workflows/publish-package.yml/runs?event=workflow_dispatch&per_page=100')['workflow_runs']
             if matching_publications(runs, entry):
                 outcomes.append({'package_id': entry['package_id'], 'status': 'already_dispatched'})
@@ -39,19 +48,18 @@ def dispatch(plan, source_run):
             inputs['automation_source_run_id'] = str(source_run)
             if private:
                 # Wrapper code and projection pins remain owned by the private repository.
-                import base64
                 metadata = gh(f'repos/{repo}/contents/.github/workflows/publish-package.yml?ref=main')
                 text = base64.b64decode(metadata['content']).decode()
                 pins = re.findall(r'expected_framework_source_commit: ([a-f0-9]{40})', text)
                 uses = re.findall(r'uses: gaofeng21cn/one-person-lab/\.github/workflows/publish-package.yml@([a-f0-9]{40})', text)
-                if pins != [plan['framework_source_commit']] or uses != pins:
+                if pins != [framework_commit] or uses != pins:
                     raise RuntimeError('Private publisher pin needs synchronization to the selected projection')
                 if catalog_commit and not re.search(
                     r'(?m)^      expected_catalog_source_commit: \$\{\{ inputs\.expected_catalog_source_commit \}\}$', text
                 ):
                     raise RuntimeError('Private publisher does not accept the selected Catalog revision')
             else:
-                inputs.update(package_id=entry['package_id'], expected_framework_source_commit=plan['framework_source_commit'])
+                inputs.update(package_id=entry['package_id'], expected_framework_source_commit=framework_commit)
             if catalog_commit:
                 inputs['expected_catalog_source_commit'] = catalog_commit
             gh(f'repos/{repo}/actions/workflows/publish-package.yml/dispatches', method='POST',

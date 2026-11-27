@@ -13,6 +13,7 @@ from package_release.common import ReleaseError, gh, git, read, run, slug, write
 from package_release.github_app_token import configure_token_refresh_from_env
 from package_release.owner import prepare_owner, merge_release_changes
 from package_release.projection import CATALOG_REPOSITORY, PackageProjection, catalog_root_from
+from package_release.v2_projection import prepare_v2_projection
 
 
 def package_specs(framework, packages=None):
@@ -82,6 +83,7 @@ def prepare(args):
     framework = args.framework_root.resolve()
     catalog = catalog_root_from(args)
     paths = PackageProjection(framework, catalog)
+    controller = Path(__file__).resolve().parents[1]
     projection_repo = CATALOG_REPOSITORY if catalog else 'gaofeng21cn/one-person-lab'
     framework_commit = git(framework, 'rev-parse', 'HEAD')
     projection_commit = git(catalog, 'rev-parse', 'HEAD') if catalog else framework_commit
@@ -127,7 +129,8 @@ def prepare(args):
                 if repository['private'] and projection.get('visibility', 'public') != 'authorized_only':
                     raise ReleaseError('Private source cannot enter a public source archive channel')
                 main = gh(f'repos/{repo}/commits/main')['sha']
-                payload_path = paths.payload(projection)
+                v2_release = projection.get('v2_release')
+                payload_path = (paths.v2_payload(projection) if v2_release else paths.payload(projection))
                 payload = read(payload_path)
                 if main == payload['source_commit']:
                     result.update(status='unchanged', owner_source_commit=main)
@@ -151,7 +154,9 @@ def prepare(args):
                         # fetch the exact predecessor for the owner's byte check.
                         git(root, 'fetch', 'origin', payload['source_commit'], '--quiet')
                     result.update(prepare_owner(root, projection, allowlist, framework, repo,
-                                                apply=args.apply, payload_path=payload_path))
+                                                apply=args.apply, payload_path=payload_path,
+                                                v2_controller=controller if catalog else None))
+                    candidate = result.pop('candidate', None)
                     if result['status'] == 'prepared':
                         if args.apply:
                             previously_read = ({p: p.read_bytes() for p in
@@ -161,13 +166,19 @@ def prepare(args):
                             before = {p: p.read_bytes() for p in snapshot_paths}
                             if any(before.get(p) != body for p, body in previously_read.items()):
                                 raise ReleaseError('Catalog changed the selected Package during owner preparation')
-                        script = args.flow_root / 'skills/opl-flow/scripts/package_release.py'
-                        catalog_args = ['--catalog-root', catalog] if catalog else []
-                        prepared = run(['python3', script, 'prepare', '--package-id', pid,
-                                        '--owner-root', root, '--framework-root', framework, *catalog_args])
-                        result['projection'] = json.loads(prepared.stdout)
-                        run(['node', '--experimental-strip-types', 'scripts/package-source-projection-gate.mjs',
-                             '--package-id', pid, '--owner-root', root, '--release-gate', 'tag', *catalog_args], cwd=framework)
+                        if result.get('package_format') == 'v2':
+                            result['projection'] = prepare_v2_projection(
+                                controller, paths, root, pid, result['version'], result['owner_source_commit'],
+                                candidate=candidate,
+                            )
+                        else:
+                            script = args.flow_root / 'skills/opl-flow/scripts/package_release.py'
+                            catalog_args = ['--catalog-root', catalog] if catalog else []
+                            prepared = run(['python3', script, 'prepare', '--package-id', pid,
+                                            '--owner-root', root, '--framework-root', framework, *catalog_args])
+                            result['projection'] = json.loads(prepared.stdout)
+                            run(['node', '--experimental-strip-types', 'scripts/package-source-projection-gate.mjs',
+                                 '--package-id', pid, '--owner-root', root, '--release-gate', 'tag', *catalog_args], cwd=framework)
                         if args.apply:
                             # Isolate each Package projection PR so one failure leaves healthy packages eligible.
                             stage_paths = [str(p.relative_to(paths.root)) for p in paths.changed_files(pid)]
