@@ -16,11 +16,21 @@ function catalogEntry(id: string, restricted = false) {
   };
 }
 const published = catalogEntry('published');
+const v2Published = {
+  ...catalogEntry('v2-published'),
+  manifest: {
+    ...catalogEntry('v2-published').manifest,
+    v2_release: {
+      version: '1.2.4', source_commit: 'a'.repeat(40),
+      payload_manifest_ref: 'payloads/v2-published-1.2.4.json', payload_sha256: 'sha256:' + 'b'.repeat(64),
+    },
+  },
+};
 const guarded = catalogEntry('guarded', true);
 const privateUnlisted = catalogEntry('unlisted', true);
 const index = {
   schema_version: 'opl_software_catalog_index.v1', catalog_id: 'public-registry:opl',
-  packages: [published, {
+  packages: [published, v2Published, {
     ...guarded, public_summary: { owner_source_repo: guarded.manifest.source_repo, display_name: 'Allowed summary',
       description_i18n: { 'en-US': 'Public information' } },
   }, privateUnlisted, {
@@ -44,14 +54,16 @@ test('fast reads share a single pending catalog and expose only discoverable row
   await changed.promise;
   const snapshot = catalog.read();
   assert.equal(snapshot.status, 'ready');
-  assert.deepEqual([...snapshot.entries.keys()], ['published', 'guarded']);
+  assert.deepEqual([...snapshot.entries.keys()], ['published', 'v2-published', 'guarded']);
   const open = snapshot.entries.get('published')!;
   assert.equal(open.installed, false);
+  assert.equal(open.selected_version, '1.2.3');
+  assert.equal(snapshot.entries.get('v2-published')?.selected_version, '1.2.4');
   assert.equal(open.recommended_action_ref?.action_id, 'agent_package_install');
   assert.deepEqual(open.recommended_action_ref?.payload, { package_id: 'published' });
   assert.ok(isOfficialCatalogPackage(snapshot, 'published', 'https://github.com/gaofeng21cn/published'));
   assert.ok(!isOfficialCatalogPackage(snapshot, 'published', 'https://github.com/another/published'));
-  const freshRows = projectCatalogEntries(snapshot, new Set(['published']));
+  const freshRows = projectCatalogEntries(snapshot, new Set(['published', 'v2-published']));
   assert.deepEqual(freshRows.map(row => row.display_name), ['Allowed summary']);
   assert.equal(freshRows[0]?.description, 'Public information');
   assert.deepEqual(freshRows[0]?.available_actions, []);
@@ -72,6 +84,7 @@ test('Full keeps unbundled catalog products discoverable without projecting inst
   const row = catalog.read().entries.get('published');
   assert.equal(row?.installability.installable, false);
   assert.equal(row?.installability.reason, 'package_install_source_unavailable');
+  assert.equal(catalog.read().entries.get('v2-published')?.selected_version, '1.2.3');
 });
 
 test('provider failure still permits a fast read and schedules no immediate retry', async () => {

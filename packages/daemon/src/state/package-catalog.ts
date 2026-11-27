@@ -30,9 +30,11 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
   const displayNames = localized(isRecord(presentation) && presentation.display_name_i18n);
   const descriptions = localized(isRecord(presentation) && presentation.description_i18n);
   let installable = false;
+  let selectedVersion = entry.version;
   if (!restricted) {
     try {
-      officialPackageInstallSource(entry, runtimeRoot);
+      const source = officialPackageInstallSource(entry, runtimeRoot);
+      selectedVersion = source.version ?? selectedVersion;
       installable = true;
     } catch { /* Keep the listing visible when this installation lacks a source. */ }
   }
@@ -58,7 +60,7 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
     ...(restricted ? {} : {
       publisher: manifest.publisher,
       package_role: manifest.package_role ?? (entry.software_type === 'agent' ? 'standard_agent' : undefined),
-      selected_version: entry.version,
+      selected_version: selectedVersion,
     }),
     installed: false,
     activated: false,

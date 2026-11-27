@@ -99,6 +99,10 @@ Package 只发布自己的 immutable version 与 owner channel；Framework、App
 Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运行时自由组合
 不同版本的 Package，不需要等待其他 Package 同步，也不生成组合 currentness。
 
+Framework v2 从官方 Catalog 在线安装时，下载软件中心所展示的编号版本。已有
+`v2_release` 时使用它的版本与归档摘要，其余条目使用 Catalog 的 v1 版本。
+Full 离线安装继续使用其冻结 seed 对应的版本。
+
 系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
 `codex_surface.interaction_mode = headless_internal` 的内部能力 Package，
 使用 OPL state 下的 `internal-package-carrier` 作为独立 `CODEX_HOME`，仍由

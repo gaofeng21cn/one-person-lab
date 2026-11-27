@@ -9,6 +9,7 @@ import type { InstallSourceSpec } from '../types.ts';
 
 const catalogRoot = 'https://raw.githubusercontent.com/gaofeng21cn/opl-catalog/main/';
 const sha256 = /^sha256:[0-9a-f]{64}$/;
+const catalogVersion = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:\+[A-Za-z0-9.-]+)?$/;
 
 function selectedV2Release(entry: OfficialPackageCatalogEntry) {
   const release = entry.manifest?.v2_release;
@@ -97,7 +98,11 @@ export function officialPackageInstallSource(entry: OfficialPackageCatalogEntry,
       throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' points outside its registered Package repository.`);
     }
     const release = selectedV2Release(entry);
-    return { kind: 'oci', package_id: packageId, ref, ...(release && { version: release.version }) };
+    const version = release?.version ?? entry.version;
+    if (!version || !catalogVersion.test(version)) {
+      throw new PackError('INVALID_MANIFEST', `Official publication for '${packageId}' has no selected Catalog version.`);
+    }
+    return { kind: 'oci', package_id: packageId, ref, version };
   }
 
   const payload = entry.payload;

@@ -10,6 +10,7 @@ import {
   readOfficialV2Source,
   type OfficialPackageCatalogEntry,
 } from '../src/distribution/official-package-catalog.ts';
+import { resolveOciArtifact } from '../src/distribution/registry-client.ts';
 
 const packageId = 'sample-agent';
 const repository = 'https://github.com/gaofeng21cn/example-repo.git';
@@ -18,11 +19,12 @@ const publication = 'ghcr.io/gaofeng21cn/one-person-lab-packages/sample-agent:la
 const entry: OfficialPackageCatalogEntry = {
   package_id: packageId,
   visibility: 'public',
+  version: '1.2.3',
   manifest: {
-    package_id: packageId, source_repo: repository,
+    package_id: packageId, source_repo: repository, version: '1.2.3',
     codex_surface: { configured_codex_plugin_carrier: { publication_ref: publication } },
   },
-  payload: { package_id: packageId, source_repo: repository, source_commit: commit },
+  payload: { package_id: packageId, source_repo: repository, source_commit: commit, package_version: '1.2.3' },
 };
 const index = { schema_version: 'opl_software_catalog_index.v1', catalog_id: 'public-registry:opl', packages: [entry] };
 
@@ -35,11 +37,32 @@ test('online catalog selects the registered public OCI publication and rejects a
     },
   });
   assert.deepEqual(officialPackageInstallSource(entries.get(packageId)!, null), {
-    kind: 'oci', package_id: packageId, ref: publication,
+    kind: 'oci', package_id: packageId, ref: publication, version: '1.2.3',
   });
+  assert.throws(() => officialPackageInstallSource({ ...entry, version: undefined }, null), /no selected Catalog version/);
+  assert.throws(() => officialPackageInstallSource({ ...entry, version: 'latest-stable' }, null), /no selected Catalog version/);
   assert.throws(() => officialPackageInstallSource({ ...entry, visibility: 'authorized_only' }, null), /public Package source unavailable/);
   const wrongRef = { ...entry.manifest, codex_surface: { configured_codex_plugin_carrier: { publication_ref: publication.replace(packageId, 'another') } } };
   assert.throws(() => officialPackageInstallSource({ ...entry, manifest: wrongRef }, null), /outside its registered Package repository/);
+});
+
+test('a cached v1 catalog keeps downloading its numbered artifact after latest-stable moves', async () => {
+  const source = officialPackageInstallSource(entry, null);
+  const publishedDigest = 'sha256:' + 'a'.repeat(64);
+  const newStableDigest = 'sha256:' + 'b'.repeat(64);
+  const artifact = await resolveOciArtifact({
+    ociRef: source.ref!,
+    version: source.version,
+    fetchImpl: async url => {
+      if (url.startsWith('https://ghcr.io/token?')) return Response.json({ token: 'fixture-token' });
+      const digest = url.endsWith('/manifests/1.2.3') ? publishedDigest : newStableDigest;
+      return Response.json({ layers: [{
+        mediaType: 'application/vnd.onepersonlab.package.source.v1+gzip', digest, size: 250,
+      }] });
+    },
+  });
+  assert.equal(artifact.reference, '1.2.3');
+  assert.equal(artifact.digest, publishedDigest);
 });
 
 test('Full selects a commit-bound module offline and supports old capability seeds', async t => {
