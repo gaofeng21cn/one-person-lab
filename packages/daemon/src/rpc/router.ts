@@ -22,6 +22,7 @@ import {
   type PackageOrigin,
 } from '@opl/pack';
 import { RunwayError, type AttemptRole, type ExecuteStageOptions, type SandboxMode } from '@opl/runway';
+import { activateAppCodexRuntime, codexInstallAction, executeCodexInstall, readCodexRuntime } from './codex-runtime.ts';
 import { connectionActions, executeConnectionAction } from './connection-actions.ts';
 import { DaemonRpcError } from '../errors.ts';
 import { executeGatewayAction, gatewayAccountActions } from './gateway-actions.ts';
@@ -161,6 +162,15 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
 
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
+  handlers.set('app.codexRuntime.get', (_params, conn) => {
+    requireTrustedHost(conn, 'app.codexRuntime.get');
+    return readCodexRuntime();
+  });
+  handlers.set('app.codexRuntime.activate', (_params, conn) => {
+    requireTrustedHost(conn, 'app.codexRuntime.activate');
+    return activateAppCodexRuntime();
+  });
+
   handlers.set('app.initialize.get', async (_params, conn) => {
     await runtime.waitForInitialPackageDiscovery();
     const doc = runtime.doctor(true, { repairPermissions: false });
@@ -266,6 +276,15 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
         : restoreCodexUserInstructions(runtime.packService, runtime.paths.state_dir, payload, dryRun);
       const execution = { action_id: actionId, dry_run: dryRun, status: dryRun ? 'preview' : 'executed', result };
       return { ...execution, app_action_execution: execution };
+    }
+    if (actionId === codexInstallAction.action_id) {
+      requireTrustedHost(conn, actionId);
+      const payload = pickRecord(params, 'payload', 'input') ?? {};
+      if (pickString(params, 'package_id', 'packageId') || pickString(payload, 'package_id')) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Codex installation does not accept a Package target.');
+      }
+      const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
+      return executeCodexInstall(payload, dryRun);
     }
     if (actionId === 'workspace_root_set') {
       requireTrustedHost(conn, actionId);

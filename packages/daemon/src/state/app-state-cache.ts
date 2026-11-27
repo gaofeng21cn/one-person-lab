@@ -6,6 +6,7 @@ import { projectPackageDirectory, packageActions } from './package-projection.ts
 import { readAppPackagePreferences } from './app-package-preferences.ts';
 import { projectUiContributions } from './ui-projection.ts';
 import { readWorkspaceRoot, workspaceRootAction } from './workspace-root.ts';
+import { codexInstallAction } from '../rpc/codex-runtime.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
 import { projectConnectionAuthorization } from './connection-authorization.ts';
 import type { SqliteDb } from '@opl/core';
@@ -173,7 +174,7 @@ export class AppStateCache {
       app_state: {
         ...snapshot.app_state,
         paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },
-        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
+        actions: [...(snapshot.app_state.actions ?? []), ...(account ? gatewayAccountActions : []), ...connectionActions, codexInstallAction, ...(workspaceRoot.source === 'env' ? [] : [workspaceRootAction])],
         settings_control_center: {
           ...snapshot.app_state.settings_control_center,
           app_settings_read_model: {
