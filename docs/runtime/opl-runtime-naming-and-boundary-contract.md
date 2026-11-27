@@ -47,6 +47,14 @@ opl --state-dir "$OLD_OPL_STATE_DIR" daemon doctor --legacy-runs --json
 
 `last_recorded_status` 表示旧索引最后记下的状态。输出给出每类记录总数，默认各列最近 100 条；可用 `--limit <数量>` 扩大范围。`index_absent` 表示该路径没有旧索引，Temporal 服务和已保留的领域记录仍可独立核查。v2 Runway 的自动恢复只覆盖自身持久化的执行；旧 Temporal 工作流和 Schedule 继续由原服务管理。如需转到 v2 继续，请先确认原运行已经结束或停止，保留原任务引用和人工决定，再从领域负责人确认的下一步开始。
 
+## 已观察的能力调用与独立审查
+
+要审查某次生成，先用本地 RPC `runway.stage.start` 传入 `stage_run_id`、`role: "producer"` 和 `complete_stage_status: "awaiting_review"`。生成结束后，再对同一 StageRun 发送 `role: "reviewer"` 与 `reviewed_attempt_id`。独立审查使用自己的执行会话；若采用单独的审查阶段，可显式指定同一任务内已成功的生成或修复 Attempt。设定 `await_completion: true` 可等待该次执行并取得 Attempt 标识。
+
+通过 `opl runway status <taskId> --json` 的 `attempts[].reviewed_attempt_id` 和 `capability_call_receipts` 核对生成与审查的关联。对 Codex 已完成的 MCP 工具调用，Runway 保存调用的 Attempt、工具标识、输入与输出的 SHA-256 摘要。调用身份由 `attempt_id`、`call_id_source` 和 `call_id` 共同确定。Codex exec 发出本进程的 item ID，app-server 发出线程中的 item ID。同一键重复出现且结果冲突时，记录标记为 `conflict`。
+
+校验时，对冻结的调用入参按 [Core 的规范 JSON 编码](../../packages/core/src/ids.ts)计算输入摘要。输出摘要覆盖同次成功回包的 `content`、`structuredContent` 和 `_meta`，缺失的后两项编码为 JSON null。能力提供方可在该回包的 MCP 元数据 `_meta["onepersonlab.org/bindingDigest"]` 提供其实际服务数据的绑定摘要，格式为 `sha256:<64 位小写十六进制>`。审查方将这一值与领域负责人保管的绑定材料核对。缺少该字段时 `binding_digest` 为 null。当前的自动关联覆盖 Codex exec 与 app-server 报告的成功 MCP 调用。直接调用 Connect 或使用其他执行器时，若缺少可关联到本次 Attempt 的受支持事件，回执列表为空。部署隐私准入与领域结论分别由相应负责人举证。
+
 ## 验证
 
 从源码 checkout 读取本机任务与执行器状态。

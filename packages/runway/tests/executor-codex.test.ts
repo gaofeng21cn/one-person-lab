@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { isProcessAlive } from '@opl/core';
+import { canonicalJsonText, isProcessAlive, sha256Hex } from '@opl/core';
 import {
   CodexAppServerClient,
   CodexExecutorAdapter,
@@ -15,6 +15,8 @@ import {
   type ExecutorEvent,
   type StageExecutionRequest,
 } from '../src/index.ts';
+
+import { readCompletedMcpReceipt } from '../src/executors/codex/events.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STUB_CODEX_PATH = path.join(HERE, 'helpers', 'stub-codex.mjs');
@@ -186,7 +188,7 @@ test('CodexExecutorAdapter executes exec, resume, app-server --stdio, and recove
     new AbortController().signal,
   );
   assert.equal(appOutcome.status, 'succeeded');
-  assert.ok(appOutcome.summary_text?.includes('AppServer stub response'));
+  assert.equal(appOutcome.summary_text, 'AppServer stub response');
   assert.equal(appOutcome.usage?.input_tokens, 120);
 
   // 5. Watchdogs: unsupported_function_call & provider_error
@@ -694,5 +696,80 @@ test('Regression (Iter 3): app-server thread/resume, pre-aborted signal, and RPC
       JSON.parse(fs.readFileSync(hangInitLogFile, 'utf8').trim().split('\n')[0]!) as { pid: number }
     ).pid;
     assert.equal(isProcessAlive(hangInitPid), false, 'Timed-out hang_on_initialize child must be dead');
+  }
+});
+
+test('Codex receipts identify completed MCP results on both transports and retain only digests', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-receipt-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const logFile = path.join(root, 'stub.jsonl');
+  const adapter = new CodexExecutorAdapter({
+    binaryPath: STUB_CODEX_PATH,
+    env: {
+      ...process.env, CODEX_HOME: root, OPL_STUB_CODEX_MODE: 'mcp_receipt',
+      OPL_STUB_CODEX_THREAD_ID: 'fixture-thread', OPL_STUB_CODEX_LOG: logFile,
+    },
+  });
+  const binding = 'sha256:' + 'a'.repeat(64);
+  for (const transport of ['exec', 'app-server']) {
+    const events: ExecutorEvent[] = [];
+    const outcome = await adapter.execute({
+      attempt_id: 'fixture-attempt', task_id: 'fixture-task', stage_run_id: 'fixture-stage-run',
+      stage_id: 'review', role: 'producer', workspace_root: root, sandbox_mode: 'read-only',
+      prompt: 'Run the fixture.', knowledge_snapshot_refs: [], skill_dirs: [],
+      mcp_servers: [{ id: 'fixture', transport: 'stdio', command: 'fixture-server' }],
+      metadata: { transport },
+    }, event => events.push(event), new AbortController().signal);
+    assert.equal(outcome.status, 'succeeded');
+    if (transport === 'app-server') {
+      assert.equal(outcome.summary_text, 'AppServer stub response');
+      assert.deepEqual(events.filter(event => event.kind === 'text_delta'), [{ kind: 'text_delta', delta: 'AppServer stub response' }]);
+    }
+    assert.deepEqual(events.filter(event => event.kind === 'capability_call_receipt'), [{
+      kind: 'capability_call_receipt',
+      call_id: transport === 'exec' ? 'item_1' : 'call_fixture',
+      call_id_source: transport === 'exec' ? 'exec_item' : 'app_server_item',
+      server: 'fixture', tool_name: 'lookup',
+      input_digest: sha256Hex(canonicalJsonText({ query: 'synthetic private input' })),
+      output_digest: sha256Hex(canonicalJsonText({
+        content: [{ type: 'text', text: 'synthetic private output' }],
+        structuredContent: null, _meta: { 'onepersonlab.org/bindingDigest': binding },
+      })),
+      binding_digest: binding,
+    }]);
+  }
+  const rows = fs.readFileSync(logFile, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(rows.find(row => row.kind === 'app_server_thread_start').params.config.mcp_servers.fixture.command, 'fixture-server');
+
+  const item = {
+    id: 'call_1', type: 'mcpToolCall', status: 'completed', server: 'provider', tool: 'lookup', arguments: {},
+    result: { content: [{ text: binding }], structuredContent: { 'onepersonlab.org/bindingDigest': binding } },
+  };
+  assert.equal(readCompletedMcpReceipt(item, 'app_server_item')?.binding_digest, undefined);
+  assert.equal(readCompletedMcpReceipt({ ...item, status: 'inProgress' }, 'app_server_item'), null);
+  assert.equal(readCompletedMcpReceipt({ ...item, result: null }, 'app_server_item'), null);
+  for (const errorKey of ['isError', 'is_error']) {
+    assert.equal(readCompletedMcpReceipt({ ...item, result: { ...item.result, [errorKey]: true } }, 'app_server_item'), null);
+  }
+  for (const id of ['https://example.org/private', 'user:password', 'x'.repeat(257)]) {
+    assert.equal(readCompletedMcpReceipt({ ...item, id }, 'app_server_item'), null);
+  }
+  assert.equal(readCompletedMcpReceipt({ ...item, error: { message: 'failed' } }, 'app_server_item'), null);
+});
+
+test('Codex app-server propagates failed and interrupted native turns', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-turn-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const [mode, expected] of [['provider_error', 'failed'], ['turn_interrupted', 'cancelled']]) {
+    const adapter = new CodexExecutorAdapter({
+      binaryPath: STUB_CODEX_PATH, env: { ...process.env, CODEX_HOME: root, OPL_STUB_CODEX_MODE: mode },
+    });
+    const outcome = await adapter.execute({
+      attempt_id: 'attempt', task_id: 'task', stage_run_id: 'stage-run', stage_id: 'review',
+      role: 'reviewer', workspace_root: root, sandbox_mode: 'read-only', prompt: 'Run the fixture.',
+      knowledge_snapshot_refs: [], skill_dirs: [], mcp_servers: [], metadata: { transport: 'app-server' },
+    }, () => {}, new AbortController().signal);
+    assert.equal(outcome.status, expected);
+    if (expected === 'failed') assert.equal(outcome.error?.message, 'Upstream status 400');
   }
 });

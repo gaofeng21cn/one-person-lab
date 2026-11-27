@@ -30,6 +30,7 @@ import type {
   StageMcpServerConfig,
 } from '../executors/spi.ts';
 import type { RunwayStore } from '../store/spi.ts';
+import { recordCapabilityCall, taskCapabilityCalls } from '../store/capability-call-receipts.ts';
 import type {
   AttemptRole,
   CancelTaskInput,
@@ -106,6 +107,7 @@ export interface StageHandoffPacket {
 }
 
 export interface ExecuteStageOptions {
+  readonly reviewed_attempt_id?: string;
   readonly role?: AttemptRole;
   readonly sandbox_mode?: SandboxMode;
   readonly model_id?: string;
@@ -207,8 +209,8 @@ export class RunwayRuntime {
     return this.#store.createTask(input);
   }
 
-  getTask(taskId: string): TaskBundle {
-    return this.#store.getTask(taskId);
+  getTask(taskId: string) {
+    return { ...this.#store.getTask(taskId), capability_call_receipts: taskCapabilityCalls(this.#db, taskId) };
   }
 
   listTasks(filter?: ListTasksFilter): {
@@ -473,6 +475,44 @@ export class RunwayRuntime {
     return 'active';
   }
 
+  resolveReviewTarget(bundle: TaskBundle, stage: StageRunRow | undefined, role: AttemptRole, options: ExecuteStageOptions) {
+    const requested = options.reviewed_attempt_id;
+    if (role !== 'reviewer') {
+      if (requested !== undefined) throw new RunwayError('INVALID_INPUT', 'Only Review can select a producer Attempt.');
+      return;
+    }
+    const producers = bundle.attempts.filter(row => row.status === 'succeeded'
+      && (row.role === 'producer' || row.role === 'repairer')
+      && (stage?.status !== 'awaiting_review' || row.stage_run_id === stage.stage_run_id));
+    const candidates = requested !== undefined
+      ? producers.filter(row => row.attempt_id === requested)
+      : producers.filter(row => row.stage_run_id === stage?.stage_run_id);
+    if (candidates.length > 1 || (requested !== undefined && candidates.length !== 1)) {
+      throw new RunwayError('INVALID_INPUT', 'Review must identify one successful producer or repairer Attempt in this task.');
+    }
+    const target = candidates[0];
+    if (target?.executor_session_ref && target.executor_session_ref === options.resume_session_ref) {
+      throw new RunwayError('INVALID_INPUT', 'Independent Review requires a separate executor session.');
+    }
+    return target;
+  }
+
+  #capabilityReviewContext(taskId: string, attemptId?: string): string {
+    if (!attemptId) return 'Producer capability call receipts unavailable: no producer Attempt selected.';
+    const calls = taskCapabilityCalls(this.#db, taskId, attemptId);
+    if (calls.length === 0) return `Producer capability call receipts unavailable for Attempt ${attemptId}.`;
+    const lines = [`Host-observed capability calls for producer Attempt ${attemptId}:`];
+    for (const call of calls.slice(0, 32)) {
+      // A conflict disqualifies all observations for this key, including the first.
+      lines.push(JSON.stringify(call.status === 'observed' ? call : {
+        call_id: call.call_id, call_id_source: call.call_id_source, status: 'conflict',
+      }));
+    }
+    if (calls.length > 32) lines.push(`Showing 32 of ${calls.length} calls. Read the complete list with runway status for this task.`);
+    lines.push('A null binding_digest means the capability supplied no binding digest. A conflict cannot establish a call binding.');
+    return lines.join('\n');
+  }
+
   async executeStage(
     stageRunId: string,
     options: ExecuteStageOptions = {},
@@ -489,6 +529,7 @@ export class RunwayRuntime {
 
     const adapter = this.#registry.get(initialStage.executor_id);
     const role: AttemptRole = options.role ?? 'producer';
+    const reviewTarget = this.resolveReviewTarget(taskBundle, initialStage, role, options);
     const sandboxMode: SandboxMode =
       options.sandbox_mode ?? (role === 'reviewer' ? 'read-only' : 'workspace-write');
 
@@ -512,6 +553,8 @@ export class RunwayRuntime {
     const created = this.#store.createAttempt({
       stage_run_id: initialStage.stage_run_id,
       expected_stage_revision: initialStage.revision,
+      reviewed_attempt_id: reviewTarget?.attempt_id,
+      resume_session_ref: options.resume_session_ref,
       role,
       executor_id: initialStage.executor_id,
       lease_expires_at: this.#leaseManager.nextLeaseExpiryIso(),
@@ -534,9 +577,10 @@ export class RunwayRuntime {
     if (preWorkspaceFiles) {
       this.#persistPreSnapshot(attempt.attempt_id, preWorkspaceFiles);
     }
-    const prompt =
-      options.prompt_override
-      ?? this.formatStageHandoffPrompt(taskBundle.task, runningStage, packet);
+    let prompt = options.prompt_override ?? this.formatStageHandoffPrompt(taskBundle.task, runningStage, packet);
+    if (role === 'reviewer') {
+      prompt += '\n' + this.#capabilityReviewContext(taskBundle.task_id, reviewTarget?.attempt_id);
+    }
 
     const skillDirs = [...new Set([...packet.skill_dirs, ...(options.extra_skill_dirs ?? [])])];
     const mcpServers = [...packet.mcp_servers, ...(options.extra_mcp_servers ?? [])];
@@ -571,6 +615,9 @@ export class RunwayRuntime {
         } catch {
           // Best-effort binding
         }
+      } else if (ev.kind === 'capability_call_receipt') {
+        recordCapabilityCall(this.#db, attempt.attempt_id, ev);
+        return;
       } else if (ev.kind === 'artifact_observed') {
         observedArtifacts.push({ path: ev.path, sha256: ev.sha256 });
       }
@@ -889,6 +936,10 @@ export class RunwayRuntime {
           try {
             for await (const ev of reattachFn()) {
               if (handle.detached || handle.controller.signal.aborted) break;
+              if (ev.kind === 'capability_call_receipt') {
+                recordCapabilityCall(this.#db, ctx.attempt_id, ev);
+                continue;
+              }
               if (ev.kind === 'artifact_observed') {
                 observedArtifacts.push({ path: ev.path, sha256: ev.sha256 });
               } else if (ev.kind === 'session_bound') {

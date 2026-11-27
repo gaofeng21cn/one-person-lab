@@ -12,13 +12,16 @@ import {
   type StageExecutionRequest,
 } from '../spi.ts';
 import { CodexAppServerClient } from './app-server.ts';
+import { readAppServerTurnEvent, type AppServerTurnEvent } from './app-server-events.ts';
+import { createAppServerTurnUsage } from './app-server-usage.ts';
 import {
+  appServerMcpConfig,
   buildCodexExecArgs,
   buildCodexExecResumeArgs,
   effectiveSandboxMode,
 } from './args.ts';
 import { resolveCodexBinary } from './binary.ts';
-import { parseCodexTokenUsage, type CodexTokenUsage } from './events.ts';
+import type { CodexTokenUsage } from './events.ts';
 import { analyzeCodexSessionJsonl, recoverCodexExecOutputFromSession } from './recovery.ts';
 import { runCodexCommandStreaming } from './transport.ts';
 
@@ -170,6 +173,8 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         } else if (ev.type === 'agent_message') {
           messages.push(ev.text);
           emit({ kind: 'text_delta', delta: ev.text });
+        } else if (ev.type === 'capability_call_receipt') {
+          emit(ev.receipt);
         } else if (ev.type === 'command_execution') {
           emit({
             kind: 'tool_call',
@@ -291,8 +296,12 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
       };
     }
 
-    const messages: string[] = [];
+    const messages = new Map<string, string>();
     let threadId = req.resume_session_ref;
+    let activeTurnId: string | undefined;
+    let startingTurn = false;
+    const earlyEvents: AppServerTurnEvent[] = [];
+    const observeUsage = createAppServerTurnUsage();
     let settled = false;
     let turnDoneResolve!: (res: {
       readonly state: 'completed' | 'failed' | 'cancelled' | 'timed_out';
@@ -370,7 +379,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         return {
           status: 'cancelled',
           ...(threadId ? { session_ref: threadId } : {}),
-          summary_text: messages.join(''),
+          summary_text: Array.from(messages.values()).join(''),
           artifact_refs: [],
           usage: finalUsage,
           error: { code: 'CANCELLED', message: done.error ?? 'Cancelled', retryable: true },
@@ -380,7 +389,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         return {
           status: 'timed_out',
           ...(threadId ? { session_ref: threadId } : {}),
-          summary_text: messages.join(''),
+          summary_text: Array.from(messages.values()).join(''),
           artifact_refs: [],
           usage: finalUsage,
           error: { code: 'TIMED_OUT', message: done.error ?? 'Timed out', retryable: true },
@@ -390,7 +399,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         return {
           status: 'failed',
           ...(threadId ? { session_ref: threadId } : {}),
-          summary_text: messages.join(''),
+          summary_text: Array.from(messages.values()).join(''),
           artifact_refs: [],
           usage: finalUsage,
           error: {
@@ -403,10 +412,44 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
       return {
         status: 'succeeded',
         ...(threadId ? { session_ref: threadId } : {}),
-        summary_text: messages.join(''),
+        summary_text: Array.from(messages.values()).join(''),
         artifact_refs: [],
         usage: finalUsage,
       };
+    };
+
+    const applyTurnEvent = ({ turnId, event }: AppServerTurnEvent): void => {
+      if (settled || turnId !== activeTurnId) return;
+      switch (event.kind) {
+        case 'capability_call_receipt':
+          emit(event);
+          break;
+        case 'message': {
+          const previous = messages.get(event.itemId) ?? '';
+          const next = event.complete ? event.text : previous + event.text;
+          messages.set(event.itemId, next);
+          const delta = next.startsWith(previous) ? next.slice(previous.length) : '';
+          if (delta) emit({ kind: 'text_delta', delta });
+          break;
+        }
+        case 'usage': {
+          const observed = observeUsage(event.tokenUsage);
+          if (!observed) return;
+          usage = observed;
+          emit({
+            kind: 'usage', input_tokens: observed.input_tokens, output_tokens: observed.output_tokens,
+            ...(observed.cached_input_tokens !== null ? { cached_tokens: observed.cached_input_tokens } : {}),
+          });
+          break;
+        }
+        case 'terminal':
+          turnDoneResolve({
+            state: event.state,
+            ...(event.error ? { error: event.error } : {}),
+            ...(event.state === 'failed' ? { errorCode: 'APP_SERVER_FAILED' } : {}),
+          });
+          break;
+      }
     };
 
     try {
@@ -416,40 +459,12 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         env: this.#getEnv(),
         gracefulInterruptMs: this.#options.gracefulInterruptMs,
         signal: connectAbort.signal,
-        onNotification: (notif) => {
-          if (notif.method === 'item/agentMessage/delta') {
-            const delta = typeof notif.params.delta === 'string' ? notif.params.delta : '';
-            if (delta) {
-              messages.push(delta);
-              emit({ kind: 'text_delta', delta });
-            }
-          } else if (notif.method === 'item/completed') {
-            const item = isRecord(notif.params.item) ? notif.params.item : null;
-            if (item && typeof item.text === 'string' && item.text) {
-              messages.push(item.text);
-              emit({ kind: 'text_delta', delta: item.text });
-            }
-          } else if (notif.method === 'turn/completed') {
-            const parsedUsage = parseCodexTokenUsage(notif.params.usage);
-            if (parsedUsage) {
-              usage = parsedUsage;
-              emit({
-                kind: 'usage',
-                input_tokens: parsedUsage.input_tokens,
-                output_tokens: parsedUsage.output_tokens,
-                ...(parsedUsage.cached_input_tokens !== null
-                  ? { cached_tokens: parsedUsage.cached_input_tokens }
-                  : {}),
-              });
-            }
-            turnDoneResolve({ state: 'completed' });
-          } else if (notif.method === 'turn/failed') {
-            const msg =
-              typeof notif.params.message === 'string'
-                ? notif.params.message
-                : 'Codex app-server turn failed';
-            turnDoneResolve({ state: 'failed', error: msg, errorCode: 'APP_SERVER_FAILED' });
-          }
+        onNotification: (notification) => {
+          if (settled || !threadId || notification.params.threadId !== threadId) return;
+          const update = readAppServerTurnEvent(notification);
+          if (!update) return;
+          if (startingTurn) earlyEvents.push(update);
+          else applyTurnEvent(update);
         },
         onClose: (code, err) => {
           turnDoneResolve({
@@ -461,12 +476,14 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
       });
 
       const sandbox = effectiveSandboxMode(req);
+      const perRunConfig = appServerMcpConfig(req.mcp_servers);
       if (threadId) {
         if (!settled) {
           const resumed = await client.request('thread/resume', {
             threadId,
             cwd: req.workspace_root,
             sandbox,
+            ...perRunConfig,
             ...(req.model_id ? { model: req.model_id } : {}),
           });
           if (isRecord(resumed) && typeof resumed.threadId === 'string') {
@@ -479,6 +496,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
         const started = await client.request('thread/start', {
           cwd: req.workspace_root,
           sandbox,
+          ...perRunConfig,
           ...(req.model_id ? { model: req.model_id } : {}),
         });
         if (isRecord(started) && typeof started.threadId === 'string') {
@@ -497,10 +515,18 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
       }
 
       if (!settled) {
-        await client.request('turn/start', {
+        startingTurn = true;
+        const started = await client.request('turn/start', {
           threadId,
           input: [{ type: 'text', text: req.prompt }],
         });
+        startingTurn = false;
+        if (isRecord(started) && isRecord(started.turn) && typeof started.turn.id === 'string') {
+          activeTurnId = started.turn.id;
+        }
+        if (!activeTurnId) throw new Error('Codex app-server turn/start omitted the turn ID.');
+        for (const update of earlyEvents) applyTurnEvent(update);
+        earlyEvents.length = 0;
       }
 
       const done = await turnDonePromise;
@@ -513,7 +539,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
       return {
         status: 'failed',
         ...(threadId ? { session_ref: threadId } : {}),
-        summary_text: messages.join(''),
+        summary_text: Array.from(messages.values()).join(''),
         artifact_refs: [],
         usage: buildFinalUsage(),
         error: {

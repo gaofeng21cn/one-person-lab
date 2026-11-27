@@ -9,10 +9,37 @@ const mode = process.env.OPL_STUB_CODEX_MODE || 'normal';
 const codexHome = process.env.CODEX_HOME || '';
 const threadId = process.env.OPL_STUB_CODEX_THREAD_ID || `stub-thread-${process.pid}`;
 
+function mcpCompletion(exec) {
+  return {
+    id: exec ? 'item_1' : 'call_fixture', type: exec ? 'mcp_tool_call' : 'mcpToolCall',
+    server: 'fixture', tool: 'lookup', status: 'completed', arguments: { query: 'synthetic private input' },
+    result: {
+      content: [{ type: 'text', text: 'synthetic private output' }],
+      [exec ? 'structured_content' : 'structuredContent']: null,
+      _meta: { 'onepersonlab.org/bindingDigest': 'sha256:' + 'a'.repeat(64) },
+    },
+    error: null,
+  };
+}
+
 function appendLog(entry) {
   if (!logFile) return;
   fs.mkdirSync(path.dirname(logFile), { recursive: true });
-  fs.appendFileSync(logFile, `${JSON.stringify(entry)}\n`);
+  const line = `${JSON.stringify(entry)}\n`;
+  if (!fs.existsSync(logFile)) {
+    // Publish the first PID record atomically so timeout observers can always parse it.
+    const first = `${logFile}.${process.pid}.first`;
+    fs.writeFileSync(first, line);
+    try {
+      fs.linkSync(first, logFile);
+      return;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    } finally {
+      fs.unlinkSync(first);
+    }
+  }
+  fs.appendFileSync(logFile, line);
 }
 
 if (args[0] === '--version') {
@@ -66,29 +93,36 @@ if (args[0] === 'app-server' && args.includes('--stdio')) {
       }
     } else if (msg.method === 'turn/start' && msg.id !== undefined) {
       appendLog({ kind: 'app_server_turn_start', pid: process.pid, params: msg.params ?? {} });
+      const thisThread = msg.params.threadId;
+      const turnId = 'turn-1';
+      const send = (method, params) => process.stdout.write(`${JSON.stringify({ method, params: { threadId: thisThread, ...params } })}\n`);
       if (mode === 'hang_on_turn_start' || mode === 'app_server_hang_on_turn_start') {
         setInterval(() => {}, 1000);
       } else {
-        process.stdout.write(`${JSON.stringify({ id: msg.id, result: { turnId: 'turn-1' } })}\n`);
+        if (mode === 'mcp_receipt') {
+          for (const [otherThread, otherTurn] of [[thisThread, turnId], [thisThread, 'another-turn'], ['another-thread', turnId]]) {
+            send('item/completed', { item: mcpCompletion(false), threadId: otherThread, turnId: otherTurn });
+          }
+          send('item/agentMessage/delta', { turnId: 'another-turn', itemId: 'msg', delta: 'foreign' });
+          send('turn/completed', { turn: { id: 'another-turn', status: 'failed' } });
+        }
+        process.stdout.write(`${JSON.stringify({ id: msg.id, result: { turn: { id: 'turn-1' } } })}\n`);
         if (mode === 'app_server_crash_mid_turn') {
           setTimeout(() => process.exit(1), 15);
         } else if (mode === 'app_server_hang') {
           setInterval(() => {}, 1000);
         } else {
           setTimeout(() => {
-            process.stdout.write(`${JSON.stringify({ method: 'item/agentMessage/delta', params: { delta: 'AppServer stub response' } })}\n`);
-            process.stdout.write(`${JSON.stringify({
-              method: 'turn/completed',
-              params: {
-                usage: {
-                  input_tokens: 120,
-                  cached_input_tokens: 20,
-                  output_tokens: 45,
-                  reasoning_output_tokens: 10,
-                  total_tokens: 165,
-                },
-              },
-            })}\n`);
+            const text = 'AppServer stub response';
+            send('item/agentMessage/delta', { turnId, itemId: 'msg', delta: text });
+            send('item/completed', { turnId, item: { type: 'agentMessage', id: 'msg', text } });
+            const tokens = { inputTokens: 120, cachedInputTokens: 20, outputTokens: 45,
+              reasoningOutputTokens: 10, totalTokens: 165 };
+            send('thread/tokenUsage/updated', { turnId, tokenUsage: { total: tokens, last: tokens } });
+            const status = mode === 'provider_error' ? 'failed' : mode === 'turn_interrupted' ? 'interrupted' : 'completed';
+            send('turn/completed', { turn: {
+              id: turnId, status, error: status === 'failed' ? { message: 'Upstream status 400' } : null,
+            } });
           }, 15);
         }
       }
@@ -164,6 +198,7 @@ if (args[0] === 'app-server' && args.includes('--stdio')) {
     const events = [
       { type: 'thread.started', thread_id: effectiveThreadId },
       { type: 'turn.started' },
+      ...(mode === 'mcp_receipt' ? [{ type: 'item.completed', item: mcpCompletion(true) }] : []),
       {
         type: 'item.completed',
         item: {

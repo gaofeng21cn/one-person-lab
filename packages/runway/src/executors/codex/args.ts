@@ -33,6 +33,18 @@ export function appendPerRunSkillConfig(
   }
 }
 
+export function appServerMcpConfig(servers: readonly StageMcpServerConfig[]) {
+  const entries: Array<[string, Record<string, unknown>]> = [];
+  for (const server of servers) {
+    if (server.transport === 'stdio' && server.command) {
+      entries.push([server.id, { command: server.command, args: server.args ?? [], env: server.env ?? {} }]);
+    } else if (server.transport === 'streamable_http' && server.url) {
+      entries.push([server.id, { url: server.url }]);
+    }
+  }
+  return entries.length ? { config: { mcp_servers: Object.fromEntries(entries) } } : {};
+}
+
 export function appendPerRunMcpConfig(
   args: string[],
   mcpServers: readonly StageMcpServerConfig[],

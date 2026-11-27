@@ -1,4 +1,43 @@
-import { isRecord } from '@opl/core';
+import { canonicalJsonText, isRecord, sha256Hex } from '@opl/core';
+import type { CapabilityCallObservation } from '../spi.ts';
+
+function isWireIdentifier(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9._-]{1,256}$/.test(value);
+}
+
+// Hash only the successful MCP item observed on this transport. Codex exec assigns
+// process-local item IDs; the app-server preserves its original thread item ID.
+export function readCompletedMcpReceipt(
+  item: Record<string, unknown>,
+  source: CapabilityCallObservation['call_id_source'],
+): CapabilityCallObservation | null {
+  const isExec = source === 'exec_item';
+  const result = item.result;
+  if (item.type !== (isExec ? 'mcp_tool_call' : 'mcpToolCall') || item.status !== 'completed'
+      || item.error != null || !isRecord(result) || !Array.isArray(result.content)
+      || result.isError === true || result.is_error === true
+      || !Object.hasOwn(item, 'arguments') || !isWireIdentifier(item.id)
+      || !isWireIdentifier(item.server) || !isWireIdentifier(item.tool)) return null;
+  const binding = isRecord(result._meta) ? result._meta['onepersonlab.org/bindingDigest'] : undefined;
+  try {
+    return {
+      kind: 'capability_call_receipt',
+      call_id_source: source, call_id: item.id,
+      server: item.server, tool_name: item.tool,
+      input_digest: sha256Hex(canonicalJsonText(item.arguments)),
+      output_digest: sha256Hex(canonicalJsonText({
+        content: result.content,
+        structuredContent: result[isExec ? 'structured_content' : 'structuredContent'] ?? null,
+        _meta: result._meta ?? null,
+      })),
+      ...(typeof binding === 'string' && /^sha256:[a-f0-9]{64}$/.test(binding)
+        ? { binding_digest: binding } : {}),
+    };
+  } catch {
+    // A transport can decode a non-canonical JSON value. It has no verifiable digest.
+    return null;
+  }
+}
 
 export interface CodexTokenUsage {
   readonly input_tokens: number;
@@ -9,6 +48,7 @@ export interface CodexTokenUsage {
 }
 
 export type CodexExecEvent =
+  | { readonly type: 'capability_call_receipt'; readonly receipt: CapabilityCallObservation }
   | {
       readonly type: 'thread.started';
       readonly threadId: string | null;
@@ -316,6 +356,11 @@ export function parseCodexExecEventFromLine(
         ?? `codex-turn-${Math.max(state.turnIndex, 1)}-assistant`,
       text,
     };
+  }
+
+  if (itemType === 'mcp_tool_call' && eventType === 'item.completed') {
+    const receipt = readCompletedMcpReceipt(item, 'exec_item');
+    return receipt ? { type: 'capability_call_receipt', receipt } : null;
   }
 
   if (itemType === 'command_execution') {

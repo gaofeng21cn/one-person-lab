@@ -1144,6 +1144,14 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const executorId = pickString(params, 'executor_id', 'executorId');
     const modelId = pickString(params, 'model_id', 'modelId');
     const role = pickString(params, 'role') as AttemptRole | undefined;
+    const reviewedAttemptId = pickString(params, 'reviewed_attempt_id', 'reviewedAttemptId');
+    if (('reviewed_attempt_id' in params || 'reviewedAttemptId' in params) && !reviewedAttemptId) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'reviewed_attempt_id must identify a producer or repair Attempt.');
+    }
+    const completeStageStatus = params.complete_stage_status ?? params.completeStageStatus;
+    if (completeStageStatus !== undefined && completeStageStatus !== 'completed' && completeStageStatus !== 'awaiting_review') {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'complete_stage_status must be completed or awaiting_review.');
+    }
     const sandboxMode = pickString(params, 'sandbox_mode', 'sandboxMode') as SandboxMode | undefined;
     const resumeSessionRef = pickString(params, 'resume_session_ref', 'resumeSessionRef');
     const envTimeoutRaw = process.env.OPL_RUNWAY_ATTEMPT_TIMEOUT_MS?.trim();
@@ -1221,6 +1229,15 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
         }
         const matched = bundle.stage_runs.find((sr) => sr.stage_id === stageId);
         assertTaskStageStartable(bundle, matched?.stage_run_id);
+        if (!matched) {
+          if (bundle.task.status === 'cancelled') {
+            throw new RunwayError('INVALID_STAGE_STATE', 'A cancelled task cannot start a new stage.');
+          }
+          runtime.runwayRuntime.resolveReviewTarget(bundle, undefined, role ?? 'producer', {
+            reviewed_attempt_id: reviewedAttemptId,
+            resume_session_ref: resumeSessionRef,
+          });
+        }
         stageRunId = matched
           ? matched.stage_run_id
           : runtime.prepareDynamicStageForStart({
@@ -1251,8 +1268,14 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       }
     }
 
-    let stage = runtime.runwayStore.getStageRun(stageRunId);
+    const stage = runtime.runwayStore.getStageRun(stageRunId);
     const taskBundle = runtime.runwayRuntime.getTask(stage.task_id);
+    if (taskId && taskId !== stage.task_id) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'The requested StageRun belongs to a different task.');
+    }
+    if (stageId && stageId !== stage.stage_id) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'stage_id and stage_run_id identify different stages.');
+    }
     if (taskBundle.task.status === 'paused_by_human' || stage.status === 'paused_by_human') {
       throw new RunwayError(
         'TASK_PAUSED_BY_HUMAN',
@@ -1261,13 +1284,12 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       );
     }
     assertTaskStageStartable(taskBundle, stageRunId);
-    if (resumeSessionRef && stage.status !== 'queued') {
-      runtime.requeueStageForResume(stageRunId);
-      stage = runtime.runwayStore.getStageRun(stageRunId);
-    } else if (!resumeSessionRef && stage.status !== 'queued' && stage.status !== 'repair_required') {
+    const reviewing = stage.status === 'awaiting_review' && role === 'reviewer';
+    const resuming = resumeSessionRef && (stage.status === 'completed' || stage.status === 'failed');
+    if (taskBundle.task.status === 'cancelled' || (stage.status !== 'queued' && stage.status !== 'repair_required' && !reviewing && !resuming)) {
       throw new RunwayError(
         'INVALID_STAGE_STATE',
-        `StageRun '${stageRunId}' status '${stage.status}' cannot start without resume_session_ref.`,
+        `StageRun '${stageRunId}' cannot start from status '${stage.status}'.`,
         { task_id: taskBundle.task_id, stage_run_id: stageRunId, status: stage.status },
       );
     }
@@ -1276,6 +1298,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     const execOptions: ExecuteStageOptions = {
       ...(modelId ? { model_id: modelId } : {}),
       ...(role ? { role } : {}),
+      ...(reviewedAttemptId ? { reviewed_attempt_id: reviewedAttemptId } : {}),
+      ...(completeStageStatus ? { complete_stage_status: completeStageStatus } : {}),
       ...(sandboxMode ? { sandbox_mode: sandboxMode } : {}),
       ...(resumeSessionRef ? { resume_session_ref: resumeSessionRef } : {}),
       ...(timeoutMs !== undefined ? { timeout_ms: timeoutMs } : {}),
@@ -1288,6 +1312,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       );
     }
 
+    runtime.runwayRuntime.resolveReviewTarget(taskBundle, stage, role ?? 'producer', execOptions);
     void runtime.launchStageInBackground(stageRunId, execOptions, taskBundle.task_id);
     return {
       ok: true,

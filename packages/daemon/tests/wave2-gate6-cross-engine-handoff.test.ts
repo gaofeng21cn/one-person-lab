@@ -19,6 +19,87 @@ afterEach(async () => {
 });
 
 describe('Wave 2 Gate 6: Cross-engine handoff (antigravity -> codex -> antigravity reviewer) via live opld RPC', () => {
+  it('binds an independent reviewer to the successful producer on an awaiting stage', async () => {
+    const sb = trackSandbox({ OPL_STUB_CODEX_DELAY_MS: '200' });
+    await sb.spawnDaemonProcess();
+    const rpc = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
+    try {
+      const ws = await rpc.call('workspace.init', { root_path: sb.workspaceDir, name: 'Review' }) as { workspace_id: string };
+      const created = await rpc.call('runway.task.create', {
+        workspace_id: ws.workspace_id,
+        title: 'Review one stage',
+        goal_prompt: 'Produce a synthetic result and request an independent review.',
+        stages: [{ stage_id: 'draft', executor_id: 'codex' }],
+      }) as { task_id: string; stage_runs: Array<{ stage_run_id: string }> };
+      const task = { task_id: created.task_id };
+      const target = { ...task, stage_run_id: created.stage_runs[0]!.stage_run_id };
+      const start = (params: Record<string, unknown>) => rpc.call('runway.stage.start', params);
+      const getTask = async () => await rpc.call('runway.task.get', task) as {
+        status: string;
+        stage_runs: Array<{ status: string; finished_at: string | null; revision: number }>;
+        attempts: Array<{ attempt_id: string; role: string; reviewed_attempt_id: string | null; executor_session_ref: string | null }>;
+      };
+      await assert.rejects(start({ ...task, stage_id: 'typo', role: 'reviewer', reviewed_attempt_id: 'unknown' }), /INVALID_INPUT/);
+      assert.equal((await getTask()).stage_runs.length, 1);
+      await assert.rejects(start({ ...target, complete_stage_status: 'running' }), /INVALID_INPUT/);
+      const producer = await start({ ...target, complete_stage_status: 'awaiting_review', await_completion: true }) as {
+        attempt_id: string; stage_run: { status: string };
+      };
+      assert.equal(producer.stage_run.status, 'awaiting_review');
+      const waiting = await getTask();
+      const sessionRef = waiting.attempts[0]?.executor_session_ref;
+      assert.ok(sessionRef);
+      const review = { ...target, role: 'reviewer', reviewed_attempt_id: producer.attempt_id };
+      await assert.rejects(start(target), /INVALID_STAGE_STATE/);
+      await assert.rejects(start({ ...target, resume_session_ref: sessionRef }), /INVALID_STAGE_STATE/);
+      await assert.rejects(start({ ...task, role: 'reviewer' }), /INVALID_STAGE_STATE/);
+      await assert.rejects(start({ ...review, reviewed_attempt_id: '' }), /INVALID_INPUT/);
+      await assert.rejects(start({ ...target, role: 'reviewer', reviewedAttemptId: null }), /INVALID_INPUT/);
+      await assert.rejects(start({ ...review, reviewed_attempt_id: 'unknown' }), /INVALID_INPUT/);
+      await assert.rejects(start({ ...review, task_id: 'other' }), /INVALID_INPUT/);
+      await assert.rejects(start({ ...review, stage_id: 'other' }), /INVALID_INPUT/);
+      await assert.rejects(start({ ...review, resume_session_ref: sessionRef }), /INVALID_INPUT/);
+      assert.deepEqual(await getTask(), waiting);
+
+      await rpc.call('runway.task.pause', task);
+      await assert.rejects(start(review), /TASK_PAUSED_BY_HUMAN/);
+      await rpc.call('runway.task.resume', { ...task, auto_start: true });
+      assert.equal((await getTask()).stage_runs[0]!.status, 'awaiting_review');
+      rpc.drainEvents();
+      await start(review);
+      await rpc.waitForEvent(event => event.method === 'event.runway.changed' && event.params.status === 'running');
+      await rpc.call('runway.task.pause', task);
+      await rpc.call('runway.task.resume', task);
+      const interrupted = await getTask();
+      assert.equal(interrupted.stage_runs[0]!.status, 'awaiting_review');
+      assert.equal(interrupted.attempts.length, 2);
+      await assert.rejects(start(target), /INVALID_STAGE_STATE/);
+      await start({ ...task, stage_id: 'draft', role: 'reviewer', reviewed_attempt_id: producer.attempt_id, await_completion: true });
+      const complete = await getTask();
+      assert.equal(complete.status, 'completed');
+      assert.deepEqual(complete.attempts.map(a => [a.role, a.reviewed_attempt_id]), [
+        ['producer', null], ['reviewer', producer.attempt_id], ['reviewer', producer.attempt_id],
+      ]);
+      assert.notEqual(complete.attempts[2]!.executor_session_ref, sessionRef);
+      await assert.rejects(start({ ...review, resume_session_ref: sessionRef }), /INVALID_INPUT/);
+      assert.deepEqual(await getTask(), complete);
+      const cli = await sb.spawnCli(['runway', 'status', task.task_id, '--json']);
+      assert.equal(cli.code, 0);
+      assert.deepEqual(cli.json, complete);
+
+      rpc.drainEvents();
+      await start({ ...target, resume_session_ref: sessionRef });
+      await rpc.waitForEvent(event => event.method === 'event.runway.changed' && event.params.status === 'running');
+      const resumed = await getTask();
+      assert.equal(resumed.status, 'active');
+      assert.equal(resumed.stage_runs[0]!.finished_at, null);
+      await rpc.waitForEvent(event => event.method === 'event.runway.changed' && event.params.status === 'completed');
+      assert.equal((await getTask()).status, 'completed');
+    } finally {
+      await rpc.close();
+    }
+  });
+
   it('executes 3-stage cross-engine handoff via Workspace + Ledger + Pack with --mode plan --sandbox and passes ledger.verify', async () => {
     const sb = trackSandbox();
     const rulesFile = path.join(sb.root, 'stub-rules.json');

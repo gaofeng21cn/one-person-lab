@@ -62,7 +62,7 @@ const TASK_COLUMNS =
 const STAGE_RUN_COLUMNS =
   'stage_run_id, task_id, stage_id, seq_no, status, executor_id, model_id, human_gate_json, revision, started_at, finished_at, updated_at';
 const ATTEMPT_COLUMNS =
-  'attempt_id, stage_run_id, attempt_no, role, executor_id, executor_session_ref, local_pid, status, lease_expires_at, usage_json, error_json, started_at, finished_at';
+  'attempt_id, stage_run_id, attempt_no, role, reviewed_attempt_id, executor_id, executor_session_ref, local_pid, status, lease_expires_at, usage_json, error_json, started_at, finished_at';
 const SCHEDULE_COLUMNS =
   'schedule_id, workspace_id, agent_id, cron_expr, timezone, overlap_policy, payload_json, enabled, next_run_at, last_run_at, last_task_id, buffered_pending, last_status, updated_at';
 
@@ -401,7 +401,9 @@ export class SqliteRunwayStore implements RunwayStore {
           { task_id: task.task_id, stage_run_id: sr.stage_run_id },
         );
       }
-      if (sr.status !== 'queued' && sr.status !== 'repair_required') {
+      const reviewing = sr.status === 'awaiting_review' && input.role === 'reviewer';
+      const resuming = input.resume_session_ref && (sr.status === 'completed' || sr.status === 'failed');
+      if (task.status === 'cancelled' || (sr.status !== 'queued' && sr.status !== 'repair_required' && !reviewing && !resuming)) {
         throw new RunwayError(
           'INVALID_STAGE_STATE',
           `StageRun '${sr.stage_run_id}' status '${sr.status}' cannot start a new attempt.`,
@@ -411,7 +413,7 @@ export class SqliteRunwayStore implements RunwayStore {
 
       const upd = this.#db
         .prepare(
-          'UPDATE stage_runs SET status = \'running\', started_at = COALESCE(started_at, ?), revision = revision + 1, updated_at = ? WHERE stage_run_id = ? AND revision = ?',
+          'UPDATE stage_runs SET status = \'running\', started_at = COALESCE(started_at, ?), finished_at = NULL, revision = revision + 1, updated_at = ? WHERE stage_run_id = ? AND revision = ?',
         )
         .run(ts, ts, sr.stage_run_id, input.expected_stage_revision);
       if (Number(upd.changes) !== 1) {
@@ -430,16 +432,21 @@ export class SqliteRunwayStore implements RunwayStore {
         .prepare('SELECT COALESCE(MAX(attempt_no), 0) AS max_no FROM attempts WHERE stage_run_id = ?')
         .get(sr.stage_run_id) as { max_no: number };
       const attemptNo = Number(countRow.max_no) + 1;
+      if (task.status === 'completed' || task.status === 'failed') {
+        this.#db.prepare("UPDATE tasks SET status = 'active', revision = revision + 1, updated_at = ? WHERE task_id = ?")
+          .run(ts, task.task_id);
+      }
 
       this.#db
         .prepare(
-          'INSERT INTO attempts (attempt_id, stage_run_id, attempt_no, role, executor_id, executor_session_ref, local_pid, status, lease_expires_at, usage_json, error_json, started_at, finished_at) VALUES (?, ?, ?, ?, ?, NULL, NULL, \'running\', ?, \'{}\', NULL, ?, NULL)',
+          'INSERT INTO attempts (attempt_id, stage_run_id, attempt_no, role, reviewed_attempt_id, executor_id, executor_session_ref, local_pid, status, lease_expires_at, usage_json, error_json, started_at, finished_at) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, \'running\', ?, \'{}\', NULL, ?, NULL)',
         )
         .run(
           attemptId,
           sr.stage_run_id,
           attemptNo,
           input.role,
+          input.reviewed_attempt_id ?? null,
           input.executor_id,
           input.lease_expires_at,
           ts,
@@ -741,7 +748,13 @@ export class SqliteRunwayStore implements RunwayStore {
         .run(ts, input.task_id);
       this.#db
         .prepare(
-          'UPDATE stage_runs SET status = \'paused_by_human\', revision = revision + 1, updated_at = ? WHERE task_id = ? AND status IN (\'queued\', \'running\', \'awaiting_review\', \'repair_required\', \'human_gate\')',
+          `UPDATE stage_runs SET status = CASE WHEN EXISTS (
+             SELECT 1 FROM attempts reviewer JOIN attempts producer ON producer.attempt_id = reviewer.reviewed_attempt_id
+             WHERE reviewer.stage_run_id = stage_runs.stage_run_id AND reviewer.status = 'running'
+               AND reviewer.role = 'reviewer' AND producer.stage_run_id = stage_runs.stage_run_id
+           ) THEN 'awaiting_review' ELSE 'paused_by_human' END,
+             revision = revision + 1, updated_at = ?
+           WHERE task_id = ? AND status IN ('queued', 'running', 'repair_required', 'human_gate')`,
         )
         .run(ts, input.task_id);
 

@@ -76,6 +76,7 @@ export interface StageRunRow {
 }
 
 export interface AttemptRow {
+  readonly reviewed_attempt_id: string | null;
   readonly attempt_id: string;
   readonly stage_run_id: string;
   readonly attempt_no: number;
@@ -144,6 +145,8 @@ export interface UpdateTaskStatusInput {
 }
 
 export interface CreateAttemptInput {
+  readonly resume_session_ref?: string;
+  readonly reviewed_attempt_id?: string;
   readonly attempt_id?: string;
   readonly stage_run_id: string;
   readonly expected_stage_revision: number;

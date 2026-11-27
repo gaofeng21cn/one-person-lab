@@ -47,7 +47,19 @@ export interface StageExecutionRequest {
   readonly metadata?: Readonly<Record<string, unknown>>;
 }
 
+export interface CapabilityCallObservation {
+  readonly kind: 'capability_call_receipt';
+  readonly call_id: string;
+  readonly call_id_source: 'exec_item' | 'app_server_item';
+  readonly server: string;
+  readonly tool_name: string;
+  readonly input_digest: string;
+  readonly output_digest: string;
+  readonly binding_digest?: string;
+}
+
 export type ExecutorEvent =
+  | CapabilityCallObservation
   | { readonly kind: 'session_bound'; readonly session_ref: string; readonly local_pid?: number }
   | { readonly kind: 'progress'; readonly message: string; readonly phase?: string }
   | { readonly kind: 'text_delta'; readonly delta: string }
