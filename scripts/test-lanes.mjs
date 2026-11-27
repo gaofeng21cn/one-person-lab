@@ -55,6 +55,7 @@ const nodeTest = (files, o = {}) => ({
 const v2PackageTests = expandTestFiles(['packages/*/tests/*.test.ts']);
 const extensionTests = expandTestFiles(['extensions/*/tests/*.test.mjs']);
 const rootScriptTests = expandTestFiles(['tests/macos-sparkle-release.test.mjs', 'tests/release-note-writer.test.mjs']);
+const dependencyResolutionTests = expandTestFiles(['tests/dependency-release-resolution.test.ts']);
 const builtTests = expandTestFiles(['tests/built/*.test.mjs']);
 const e2eSelfTests = expandTestFiles(['tests/e2e/*.self.test.mjs', 'tests/e2e/stubs/*.self.test.mjs']);
 
@@ -72,6 +73,7 @@ const lanes = {
     { kind: 'command', phase: 'quality', command: 'scripts/repo-hygiene.sh', args: [] },
     nodeTest(v2PackageTests, { phase: 'unit' }),
     nodeTest([...extensionTests, ...rootScriptTests, ...e2eSelfTests], { phase: 'extensions', stripTypes: false }),
+    nodeTest(dependencyResolutionTests, { phase: 'extensions' }),
   ],
   artifact: [
     { kind: 'npm', phase: 'build', args: ['run', 'build'] },

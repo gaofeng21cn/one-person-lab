@@ -35,6 +35,7 @@ case "$lane" in
     PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp PYTHONPATH=sdks/python-client/src python3 -B -m unittest discover -s sdks/python-client/tests -v
     PYTHONDONTWRITEBYTECODE=1 TMPDIR=/tmp node sdks/python-client/tests/test_opld_e2e.mjs
     node --test tests/macos-sparkle-release.test.mjs tests/release-note-writer.test.mjs
+    node --experimental-strip-types --test tests/dependency-release-resolution.test.ts
     PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest tests/product_release_test.py -v
     ;;
   e2e)

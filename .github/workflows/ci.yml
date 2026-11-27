@@ -47,6 +47,9 @@ jobs:
       - name: Verify shared macOS Sparkle release workflow and scripts
         run: node --test tests/macos-sparkle-release.test.mjs
 
+      - name: Verify Framework dependency release resolver
+        run: node --experimental-strip-types --test tests/dependency-release-resolution.test.ts
+
       - name: Validate v2 source, guards, and contracts
         run: |
           npm run v2:build
