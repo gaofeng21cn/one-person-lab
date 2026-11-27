@@ -228,3 +228,10 @@ export {
   type InstallPackageResult,
   type UninstallPackageResult,
 } from './lifecycle/service.ts';
+
+export {
+  readOfficialPackageCatalog,
+  type OfficialPackageCatalogEntry,
+  type OfficialPackageCatalogOptions,
+} from './distribution/official-package-catalog.ts';
+export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
