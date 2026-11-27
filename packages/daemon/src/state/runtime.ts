@@ -34,16 +34,10 @@ import { LedgerStore, verifyTaskLineage } from '@opl/ledger';
 import {
   createPackService,
   createOfficialPackageResolver,
-  createProcessCodexRunner,
-  discoverExternalCodexPlugins,
-  OPL_LOCAL_MARKETPLACE_NAME,
   PackError,
-  projectPackageToCodexMarketplace,
   prunePackStateArtifacts,
   readPackageManifestFromDir,
-  removeCodexMarketplaceProjection,
   resolveCodexPluginName,
-  shouldSyncToCodex,
   type CodexSyncProjectionResult,
   type InstalledPackageRecord,
   type ModuleOrCommandEntrypoint,
@@ -1017,153 +1011,16 @@ export class DaemonRuntime {
     readonly synced: readonly CodexSyncProjectionResult[];
     readonly imported_external: readonly InstalledPackageRecord[];
   }> {
-    const targets = input.packageId
-      ? [this.packService.inspect(input.packageId)].filter(
-          (p): p is InstalledPackageRecord => p !== null,
-        )
-      : this.packService.list().filter((p) => p.origin !== 'external');
-
-    if (input.packageId && targets.length === 0) {
-      throw new PackError('PACK_NOT_FOUND', `Package '${input.packageId}' is not installed.`);
-    }
-
-    const managedPluginIds = new Set<string>();
-    const projectedMap = new Map<string, { pkg: InstalledPackageRecord; pluginName: string; synced: boolean; pluginDir: string | null }>();
-
-    for (const pkg of targets) {
-      const pluginName = resolveCodexPluginName(pkg.manifest);
-      managedPluginIds.add(pluginName);
-      managedPluginIds.add(`${pluginName}@${OPL_LOCAL_MARKETPLACE_NAME}`);
-
-      if (!pkg.enabled || !shouldSyncToCodex(pkg.manifest)) {
-        removeCodexMarketplaceProjection({
-          packageId: pkg.package_id,
-          pluginName,
-          marketplaceRoot: this.marketplaceRoot,
-        });
-        projectedMap.set(pkg.package_id, { pkg, pluginName, synced: false, pluginDir: null });
-      } else {
-        const proj = projectPackageToCodexMarketplace({
-          manifest: pkg.manifest,
-          installPath: pkg.install_path,
-          marketplaceRoot: this.marketplaceRoot,
-        });
-        projectedMap.set(pkg.package_id, {
-          pkg,
-          pluginName,
-          synced: true,
-          pluginDir: proj.plugin_dir,
-        });
-      }
-    }
-
-    const runner = createProcessCodexRunner({ timeoutMs: 3000 });
-    const listResp = await runner.listPlugins({ forceRefetch: false }, process.env);
-    if (listResp.marketplaceLoadErrors.length > 0) {
-      throw new PackError(
-        'PACK_CODEX_SYNC_FAILED',
-        'OPL_CODEX_PLUGIN_READBACK: Codex plugin/list reported marketplaceLoadErrors.',
-        { errors: listResp.marketplaceLoadErrors },
-      );
-    }
-
-    const realMarketplaceRoot = fs.existsSync(this.marketplaceRoot)
-      ? fs.realpathSync(this.marketplaceRoot)
-      : path.resolve(this.marketplaceRoot);
-
-    const scopedPlugins = listResp.marketplaces
-      .filter((mp) => {
-        if (mp.name === OPL_LOCAL_MARKETPLACE_NAME) return true;
-        if (!mp.path) return false;
-        const mpReal = fs.existsSync(mp.path) ? fs.realpathSync(mp.path) : path.resolve(mp.path);
-        return mpReal === realMarketplaceRoot;
-      })
-      .flatMap((mp) => mp.plugins);
-
-    const synced: CodexSyncProjectionResult[] = [];
-    for (const entry of projectedMap.values()) {
-      const pluginId = `${entry.pluginName}@${OPL_LOCAL_MARKETPLACE_NAME}`;
-      if (entry.synced && entry.pluginDir) {
-        const matched =
-          scopedPlugins.find((p) => p.id === pluginId)
-          ?? scopedPlugins.find((p) => p.name === entry.pluginName);
-        if (!matched || !matched.installed || !matched.enabled) {
-          throw new PackError(
-            'PACK_CODEX_SYNC_FAILED',
-            `OPL_CODEX_PLUGIN_READBACK: Codex plugin/list parity failed for '${pluginId}'.`,
-            { matched: matched ?? null },
-          );
-        }
-        const reportedVersion = matched.version ?? matched.localVersion;
-        if (reportedVersion && reportedVersion !== entry.pkg.version) {
-          throw new PackError(
-            'PACK_CODEX_SYNC_FAILED',
-            `OPL_CODEX_PLUGIN_READBACK: version mismatch for '${pluginId}': expected ${entry.pkg.version}, got ${reportedVersion}.`,
-          );
-        }
-        if (matched.source.type === 'local') {
-          const realProjected = fs.realpathSync(entry.pluginDir);
-          const realReported = fs.existsSync(matched.source.path)
-            ? fs.realpathSync(matched.source.path)
-            : path.resolve(matched.source.path);
-          if (realReported !== realProjected) {
-            throw new PackError(
-              'PACK_CODEX_SYNC_FAILED',
-              `OPL_CODEX_PLUGIN_READBACK: path mismatch for '${pluginId}': expected ${realProjected}, got ${realReported}.`,
-            );
-          }
-        }
-      }
-
-      this.packService.store.setPackageCarrierSynced(entry.pkg.package_id, entry.synced);
-      synced.push({
-        package_id: entry.pkg.package_id,
-        plugin_name: entry.pluginName,
-        synced: entry.synced,
-        marketplace_root: this.marketplaceRoot,
-        marketplace_manifest_path: path.join(this.marketplaceRoot, '.agents', 'plugins', 'marketplace.json'),
-        plugin_dir: entry.pluginDir,
-        verified_by_readback: entry.synced,
+    try {
+      const result = await this.packService.codexSync({
+        ...input,
+        importExternal: input.importExternal ?? true,
+        requireReadback: true,
       });
+      return { ok: true, ...result };
+    } finally {
+      this.appStateCache.invalidate();
     }
-
-    const importedExternal: InstalledPackageRecord[] = [];
-    if (input.importExternal !== false) {
-      const discovered = await discoverExternalCodexPlugins({
-        runner,
-        managedPluginIds,
-        marketplaceRoot: this.marketplaceRoot,
-        stateDir: this.paths.state_dir,
-      });
-      const seenExternalIds = new Set<string>();
-      for (const ext of discovered) {
-        seenExternalIds.add(ext.summary.package_id);
-        const rec = this.packService.store.upsertInstalledPackage({
-          manifest: ext.manifest,
-          origin: 'external',
-          install_mode: 'release',
-          install_path: ext.summary.install_path,
-          content_digest: ext.content_digest,
-          enabled: ext.summary.enabled,
-          carrier_synced: true,
-        });
-        importedExternal.push(rec);
-      }
-
-      const existingExternals = this.packService.store.listInstalledPackages({ origin: 'external' });
-      for (const existing of existingExternals) {
-        if (!seenExternalIds.has(existing.package_id)) {
-          this.packService.store.deleteInstalledPackageAndRevokeGrants(existing.package_id);
-        }
-      }
-    }
-
-    this.appStateCache.invalidate();
-    return {
-      ok: true,
-      synced,
-      imported_external: importedExternal,
-    };
   }
 
   verifyLedgerTask(taskId: string, checkFileHashes = true): ReturnType<typeof verifyTaskLineage> {

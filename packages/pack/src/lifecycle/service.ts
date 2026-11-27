@@ -1021,6 +1021,10 @@ export class PackService {
       throw new PackError('PACK_NOT_FOUND', `Package '${input.packageId}' is not installed.`);
     }
 
+    if (input.packageId && targets[0]?.origin === 'external') {
+      throw new PackError('INVALID_INPUT', 'External plugins are managed by their configured Codex marketplace.');
+    }
+    const runner = this.#codexRunner ?? (input.requireReadback ? createProcessCodexRunner() : undefined);
     const synced: CodexSyncProjectionResult[] = [];
     const managedPluginIds = new Set<string>();
     for (const pkg of targets) {
@@ -1035,16 +1039,16 @@ export class PackService {
         action: 'sync',
         marketplaceRoot: this.marketplaceRoot,
         stateDir: this.stateDir,
-        runner: this.#codexRunner ?? (input.requireReadback ? createProcessCodexRunner() : undefined),
+        runner,
       });
       this.store.setPackageCarrierSynced(pkg.package_id, res.synced);
       synced.push(res);
     }
 
     const importedExternal: InstalledPackageRecord[] = [];
-    if (input.importExternal && this.#codexRunner) {
+    if (input.importExternal && runner) {
       const discovered = await discoverExternalCodexPlugins({
-        runner: this.#codexRunner,
+        runner,
         managedPluginIds,
         marketplaceRoot: this.marketplaceRoot,
         stateDir: this.stateDir,
