@@ -101,7 +101,9 @@ Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运�
 
 Framework v2 从官方 Catalog 在线安装时，下载软件中心所展示的编号版本。已有
 `v2_release` 时使用它的版本与归档摘要，其余条目使用 Catalog 的 v1 版本。
-Full 离线安装继续使用其冻结 seed 对应的版本。
+若公开 registry 明确返回该 v2 编号版本的 manifest 不存在，普通安装与更新仍可使用
+同一 Catalog 条目中已发布的精确 v1 版本。权限、网络及完整性失败保持原错误。
+精确发布安装继续核对指定版本与摘要。Full 离线安装继续使用其冻结 seed 对应的版本。
 
 系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
 `codex_surface.interaction_mode = headless_internal` 的内部能力 Package，

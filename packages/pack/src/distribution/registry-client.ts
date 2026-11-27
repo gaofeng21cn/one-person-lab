@@ -201,10 +201,16 @@ export async function resolveOciArtifact(input: {
     signal: input.signal,
   });
   if (!manifestRes.ok) {
+    let manifestUnknown = false;
+    if (manifestRes.status === 404) {
+      const error = await manifestRes.json().catch(() => null) as { errors?: Array<{ code?: unknown }> } | null;
+      manifestUnknown = Array.isArray(error?.errors) && error.errors.length === 1
+        && error.errors[0]?.code === 'MANIFEST_UNKNOWN';
+    }
     throw new PackError(
       'PACK_DOWNLOAD_FAILED',
       `OCI manifest fetch failed with HTTP ${manifestRes.status}.`,
-      { status: manifestRes.status, url: manifestUrl },
+      { status: manifestRes.status, url: manifestUrl, ...(manifestUnknown && { manifest_unknown: reference }) },
     );
   }
   const manifestBody = (await manifestRes.json()) as {

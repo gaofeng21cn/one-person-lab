@@ -556,7 +556,7 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
         dryRun,
         exactRelease: exact?.data,
         clientContext: ctx,
-        resolveSource: createOfficialPackageResolver({ runtimeRoot }),
+        resolveSource: createOfficialPackageResolver({ runtimeRoot, exactPackageId: exact?.data ? packageId : undefined }),
         installSource: (input) => runtime.installPackage(input),
       });
     } finally {
