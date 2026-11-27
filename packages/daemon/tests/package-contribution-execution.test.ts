@@ -21,6 +21,10 @@ test('App contribution invokes the declared ref with the owner input only after 
         id: 'review.notes', view_type: 'list_detail', slot: 'workbench.panel',
         title: label, data_ref: 'review.notes.list',
         actions: [{ id: 'review.note', action_ref: ref, label, confirm: true }],
+      }], settings_forms: [{
+        id: 'review.settings', destination: 'preferences', title: label,
+        data_ref: 'review.settings', submit_action_ref: 'review.save',
+        actions: [{ id: 'review.publish', label, action_ref: 'review.publish', confirm: true }],
       }] } },
     },
   });
@@ -47,7 +51,11 @@ test('App contribution invokes the declared ref with the owner input only after 
   await assert.rejects(call(payload), /CONFIRMATION_REQUIRED/);
   await assert.rejects(call({ ...payload, confirmed: true, ref: 'another.ref' }), /CONTRIBUTION_ACTION_NOT_FOUND/);
   await assert.rejects(call({ ref, input: {} }), /INVALID_INPUT/);
+  const formCommand = { ...payload, ref: 'review.publish' };
+  await assert.rejects(call(formCommand), /CONFIRMATION_REQUIRED/);
+  assert.equal((await call(formCommand, true) as { confirmation_required: boolean }).confirmation_required, true);
   assert.ok(!fs.existsSync(marker));
+  assert.equal((await call({ ...formCommand, confirmed: true }) as { status: string }).status, 'executed');
 
   const executed = await call({ ...payload, confirmed: true }) as {
     opl_app_contribution: { package_id: string; ref: string; response: { result: { note_id: string } } };

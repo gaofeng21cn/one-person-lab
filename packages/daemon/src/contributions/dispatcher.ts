@@ -289,7 +289,8 @@ export class ContributionDispatcher {
       throw new DaemonRpcError(-32004, 'CONTRIBUTION_HANDLER_UNAVAILABLE', `Package '${packageId}' has no contribution handler.`);
     }
     const declarative = pkg.manifest.ui?.declarative;
-    const commands = (declarative?.views ?? []).flatMap(view => view.actions ?? []).filter(command => command.action_ref === ref);
+    const surfaces = [...(declarative?.views ?? []), ...(declarative?.settings_forms ?? [])];
+    const commands = surfaces.flatMap(surface => surface.actions ?? []).filter(command => command.action_ref === ref);
     const canSubmit = declarative?.settings_forms?.some(form => form.submit_action_ref === ref);
     if (!commands.length && !canSubmit) {
       throw new DaemonRpcError(-32004, 'CONTRIBUTION_ACTION_NOT_FOUND', `Package '${packageId}' does not declare action '${ref}'.`);
