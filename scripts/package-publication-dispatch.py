@@ -34,6 +34,8 @@ def dispatch(plan, source_run):
             package_format = entry.get('package_format', 'v1')
             if package_format not in ('v1', 'v2'):
                 raise RuntimeError('Unsupported Package payload format')
+            if private and package_format == 'v2':
+                raise RuntimeError('The v2 official Package installer does not yet support authorized-only sources')
             framework_commit = plan.get('workflow_source_commit') if package_format == 'v2' else plan['framework_source_commit']
             if entry.get('expected_framework_source_commit') != framework_commit:
                 raise RuntimeError('Package entry belongs to a different Framework tooling revision')

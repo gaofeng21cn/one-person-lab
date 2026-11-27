@@ -14,7 +14,8 @@ function selectedRelease(manifest, inputs) {
     const release = manifest.v2_release;
     if (release.version === inputs.expected_package_version
       && release.source_commit === inputs.expected_owner_source_commit) {
-      if (!/^sha256:[a-f0-9]{64}$/.test(release.payload_sha256 ?? '')) return null;
+      if (manifest.visibility === 'authorized_only'
+        || !/^sha256:[a-f0-9]{64}$/.test(release.payload_sha256 ?? '')) return null;
       return { format: 'v2', version: release.version, sourceCommit: release.source_commit,
         payloadRef: release.payload_manifest_ref, payloadSha256: release.payload_sha256 };
     }

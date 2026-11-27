@@ -59,8 +59,11 @@ def read_selected_release(paths, package_id, legacy_fingerprint=None):
 
 def planned_entry(package_id, selected_release, predecessor, legacy_commit, controller_commit):
     manifest, fingerprint, package_format = selected_release
-    if package_format == 'v2' and not controller_commit:
-        raise ReleaseError('V2 Package publication requires an exact controller commit')
+    if package_format == 'v2':
+        if manifest.get('visibility') == 'authorized_only':
+            raise ReleaseError('The v2 official Package installer does not yet support authorized-only sources')
+        if not controller_commit:
+            raise ReleaseError('V2 Package publication requires an exact controller commit')
     entry = publication_entry(package_id, manifest, fingerprint, predecessor,
                               controller_commit if package_format == 'v2' else legacy_commit)
     if package_format == 'v2':

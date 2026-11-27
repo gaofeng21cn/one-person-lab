@@ -448,6 +448,9 @@ def prepare_v2_owner(root, projection, repo, settings, current, controller, *, a
     base = git(root, 'rev-parse', 'HEAD')
     version = v2_candidate_version(root, base, current, previous)
     result = {'version': version, 'owner_source_commit': base, 'package_format': 'v2'}
+    if projection.get('visibility') == 'authorized_only':
+        return {**result, 'status': 'blocked', 'reason_code': 'v2_private_installation_unavailable',
+                'reason': 'The v2 official Package installer does not yet support authorized-only sources.'}
     if not apply:
         return {**result, 'status': 'needs_release'}
 

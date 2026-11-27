@@ -165,7 +165,9 @@ Package 由该工作流指定的固定 Framework 提交提供生成、校验和�
 owner 提交生成安装归档和 v2 锁，Catalog 的 `v2_release` 记录候选版本、owner 提交与
 载荷摘要，原有 Catalog 版本继续指向已发布的 v1 安装制品。日更使用同一 OCI 仓库和
 `latest-stable`，发布前核对 v2 归档摘要、内容锁、来源标签和渠道前序。v2 安装端按
-Catalog 选定的版本与归档摘要取得安装制品。私有发布入口同步失败时只阻止对应 Package。
+Catalog 选定的版本与归档摘要取得安装制品。官方 v2 安装器支持公开载荷。私有
+Package 继续使用已发布的编号版本，日跑会在改动 owner 版本或创建标签前报告
+缺少授权安装支持。私有发布入口同步失败时只阻止对应 Package。
 
 `source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器

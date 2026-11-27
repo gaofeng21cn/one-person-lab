@@ -148,6 +148,22 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual((result['status'], result['version']), ('needs_release', '1.2.5'))
         self.assertEqual(self.git('rev-parse', 'v1.2.4^{}'), self.first)
 
+    def test_private_v2_owner_stops_before_source_changes(self):
+        projection, allowlist, payload = self.package_selection()
+        projection['visibility'] = 'authorized_only'
+        (self.root / 'opl-package.json').write_text(json.dumps({
+            'schema_version': 'opl.package.v2', 'identity': {'id': 'fixture', 'version': '1.2.3'},
+        }))
+        self.commit()
+        with patch('package_release.owner.wait_for_checks') as checks:
+            result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                                   apply=True, payload_path=payload, v2_controller=ROOT)
+        self.assertEqual(result['reason_code'], 'v2_private_installation_unavailable')
+        self.assertEqual((result['status'], result['version']), ('blocked', '1.2.4'))
+        checks.assert_not_called()
+        self.assertEqual(self.git('tag', '--list'), 'v1.2.3')
+        self.assertEqual(self.git('status', '--porcelain'), '')
+
     def test_v2_owner_freezes_validated_bytes_before_tag_and_aligns_declared_versions(self):
         projection, allowlist, payload = self.package_selection()
         # The fixture's external payload and owner release metadata are staged in this repo for the test.
