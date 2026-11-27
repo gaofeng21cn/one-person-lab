@@ -333,6 +333,8 @@ test('codex-sync imports external Codex plugins and handles marketplace transien
     // 3. Test external Codex plugin discovery & PackService codexSync import
     const db = openSqliteStore(path.join(stateDir, 'opl.db'));
     let remoteStillInstalled = true;
+    let remoteEnabled = true;
+    let remoteVersion = '1.0.1';
     const extRunner: CodexCarrierRunner = {
       async runCli() {
         return { status: 0, stdout: '{}', stderr: '', error: null };
@@ -348,9 +350,9 @@ test('codex-sync imports external Codex plugins and handles marketplace transien
                   id: 'build-mcp-apps@openai-curated-remote',
                   name: 'build-mcp-apps',
                   version: '1.0.1',
-                  localVersion: '1.0.1',
+                  localVersion: remoteVersion,
                   installed: remoteStillInstalled,
-                  enabled: true,
+                  enabled: remoteEnabled,
                   source: { type: 'remote' },
                   interface: {
                     displayName: 'Build MCP Apps',
@@ -391,8 +393,19 @@ test('codex-sync imports external Codex plugins and handles marketplace transien
     assert.equal(firstSync.imported_external[0].origin, 'external');
     assert.equal(svc.list({ origin: 'external' }).length, 2);
 
+    const remoteId = firstSync.imported_external.find(pkg => pkg.install_path.startsWith('codex-remote://'))!.package_id;
+    const presence = () => svc.readInstalledPackagePresence(remoteId);
+    assert.deepEqual(await presence(), { files_present: true, carrier_ready: true });
+    remoteEnabled = false;
+    assert.deepEqual(await presence(), { files_present: true, carrier_ready: false });
+    remoteEnabled = true;
+    remoteVersion = '1.1.0';
+    assert.deepEqual(await presence(), { files_present: false, carrier_ready: false });
+    remoteVersion = '1.0.1';
+
     // Simulate uninstalling one external plugin in Codex App -> reconciliation removes it
     remoteStillInstalled = false;
+    assert.deepEqual(await presence(), { files_present: false, carrier_ready: false });
     await svc.codexSync({ importExternal: true });
     assert.equal(svc.list({ origin: 'external' }).length, 1);
 

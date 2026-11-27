@@ -990,6 +990,19 @@ export class PackService {
     const pkg = this.inspect(packageId);
     const missing = { files_present: false, carrier_ready: false };
     if (!pkg) return missing;
+    if (pkg.origin === 'external') {
+      const inventory = await discoverConfiguredCodexPackages({
+        runner: this.#codexRunner ?? createProcessCodexRunner(),
+        marketplaceRoot: this.marketplaceRoot,
+        stateDir: this.stateDir,
+      });
+      // External packages can have opaque Codex source URLs and no v2 manifest on disk.
+      // Verify the original installation with its carrier, including changes made outside OPL.
+      const current = inventory.find(({ summary, content_digest }) =>
+        summary.package_id === pkg.package_id && summary.version === pkg.version
+        && summary.install_path === pkg.install_path && content_digest === pkg.content_digest);
+      return current ? { files_present: true, carrier_ready: current.summary.enabled } : missing;
+    }
 
     try {
       const { manifest } = readPackageManifestFromDir(pkg.install_path);
