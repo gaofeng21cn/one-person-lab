@@ -934,7 +934,7 @@ export class DaemonRuntime {
   }
 
   async probeCliExtensions(packageRoot: string, manifest: OplPackageManifestV2): Promise<void> {
-    const reservedNamespaces = new Set(['daemon', 'workspace', 'pack', 'connect', 'runway', 'ledger']);
+    const reservedNamespaces = new Set(['daemon', 'workspace', 'sources', 'pack', 'connect', 'runway', 'ledger']);
     const extensions = manifest.provides?.cli_extensions ?? [];
     if (extensions.length === 0) return;
 

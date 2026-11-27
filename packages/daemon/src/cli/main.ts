@@ -5,6 +5,7 @@ import { buildPackage, ExactPackageReleaseSchema, migrateV1Package, readPackageM
 import { runDaemonForeground } from '../daemon.ts';
 import { coerceInstallSourceSpec } from '../utils/normalize.ts';
 import { readLegacyRuns } from './legacy-runs.ts';
+import { runPackageSourcesCommand } from './package-sources.ts';
 import { prepareGatewayCommand } from './gateway-account.ts';
 import { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError } from '../errors.ts';
 import {
@@ -134,7 +135,9 @@ function parseArgs(argv: readonly string[]): ParsedCliArgs {
         if (key === '--state-dir' && positionals.length < 2) extensionStateDir = value;
         continue;
       }
-      if (VALUE_FLAGS.has(arg) && i + 1 < argv.length && !(RELEASE_FLAGS.has(arg) && argv[i + 1]!.startsWith('--'))) {
+      const sourcesCommand = positionals[0] === 'sources';
+      const valueFlag = VALUE_FLAGS.has(arg) || (sourcesCommand && (arg === '--source-id' || arg === '--provider-id'));
+      if (valueFlag && i + 1 < argv.length && !((RELEASE_FLAGS.has(arg) || sourcesCommand) && argv[i + 1]!.startsWith('--'))) {
         const value = argv[++i]!;
         flags.set(arg, value);
         if (arg === '--state-dir' && positionals.length < 2) extensionStateDir = value;
@@ -290,6 +293,12 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'sources', usage: 'sources <add|list|remove> ...' },
     { name: 'snapshot', usage: 'snapshot --workspace <wsId> --stage-run <srId> [--source <srcId>]' },
     { name: 'writeback', usage: 'writeback <propose|commit> ...' },
+  ],
+  sources: [
+    { name: 'list', usage: 'list' },
+    { name: 'configure', usage: 'configure --source-id github-packages:<owner> [--provider-id github_packages] [--credential-handle <provider-reference>] [--enabled true|false]' },
+    { name: 'check', usage: 'check --source-id github-packages:<owner>' },
+    { name: 'disconnect', usage: 'disconnect --source-id github-packages:<owner>' },
   ],
   pack: [
     { name: 'search', usage: 'search [<query>] [--intent <intent>] [--origin <origin>]' },
@@ -693,6 +702,11 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown writeback action '${action ?? ''}'.`);
         }
         break;
+      }
+
+      case 'sources': {
+        emitOutput(await runPackageSourcesCommand(parsed.positionals.slice(1), parsed.flags), parsed);
+        return 0;
       }
 
       case 'pack': {

@@ -29,6 +29,57 @@ afterEach(async () => {
 });
 
 describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cli_extensions', () => {
+  it('manages a first private Package source through bin/opl using only its credential reference', async () => {
+    const sb = trackSandbox();
+    const selected = path.join(sb.root, 'selected-state');
+    const sourceId = 'github-packages:example';
+    const prefix = ['--state-dir', selected, 'sources'];
+    const sourceArg = ['--source-id', sourceId];
+    const handle = 'env:OPL_GITHUB_PACKAGES_TOKEN';
+    const env = { OPL_GITHUB_PACKAGES_TOKEN: '' };
+    const run = (args: string[]) => sb.spawnRootCli([...prefix, ...args, '--json'], env);
+    const configFile = path.join(selected, 'software-sources.json');
+
+    const invalidFlag = await run(['configure', ...sourceArg, '--enabled', 'no']);
+    assert.equal(invalidFlag.code, 2);
+    const absentValue = await run(['configure', ...sourceArg, '--credential-handle']);
+    assert.equal(absentValue.code, 2);
+    const secret = await run(['configure', ...sourceArg, '--secret', 'unused-fixture-value']);
+    assert.equal(secret.code, 2);
+    assert.doesNotMatch(secret.stdout + secret.stderr, /unused-fixture-value/);
+    assert.equal(fs.existsSync(configFile), false);
+
+    type Entry = { source_id: string; enabled: boolean; status: string; credential_handle_present: boolean };
+    const initial = await run(['list']);
+    assert.equal(initial.code, 0, initial.stdout + initial.stderr);
+    const args = ['configure', ...sourceArg, '--provider-id', 'github_packages', '--credential-handle', handle];
+    const configured = await run(args);
+    assert.equal(configured.code, 0, configured.stdout + configured.stderr);
+    const source = (configured.json as { software_source: Entry }).software_source;
+    assert.equal(source.source_id, sourceId);
+    assert.equal(source.enabled, true);
+    assert.equal(source.credential_handle_present, true);
+    assert.doesNotMatch(configured.stdout, /env:OPL_GITHUB_PACKAGES_TOKEN/);
+    const entries = (JSON.parse(fs.readFileSync(configFile, 'utf8')) as { sources: { source_id: string; credential_handle: string }[] }).sources;
+    assert.equal(entries.find(entry => entry.source_id === sourceId)?.credential_handle, handle);
+    assert.equal(fs.existsSync(path.join(sb.stateDir, 'software-sources.json')), false);
+
+    const checked = await run(['check', ...sourceArg]);
+    assert.equal(checked.code, 0, checked.stdout + checked.stderr);
+    assert.equal((checked.json as { software_source: Entry }).software_source.status, 'signed_out');
+    const disabled = await run([...args, '--enabled=false']);
+    assert.equal(disabled.code, 0, disabled.stdout + disabled.stderr);
+    assert.equal((disabled.json as { software_source: Entry }).software_source.enabled, false);
+    const disconnected = await run(['disconnect', ...sourceArg]);
+    assert.equal(disconnected.code, 0, disconnected.stdout + disconnected.stderr);
+    const list = await run(['list']);
+    const sourceAfterDisconnect = (list.json as { software_sources: { entries: Entry[] } }).software_sources.entries.find(
+      entry => entry.source_id === sourceId,
+    );
+    assert.equal(sourceAfterDisconnect?.credential_handle_present, false);
+    assert.equal(sourceAfterDisconnect.status, 'signed_out');
+  });
+
   it('ensures the exact approved release through CLI and RPC and rejects partial selections', async () => {
     const sb = trackSandbox();
     const id = 'approved-extension';
@@ -111,7 +162,7 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
 
     const help = await sb.spawnCli(['--help']);
     assert.equal(help.code, 0);
-    for (const ns of ['daemon', 'workspace', 'pack', 'connect', 'runway', 'ledger']) {
+    for (const ns of ['daemon', 'workspace', 'sources', 'pack', 'connect', 'runway', 'ledger']) {
       assert.match(help.stdout, new RegExp(`\\b${ns}:`));
     }
     assert.doesNotMatch(help.stdout, /^\s*foundry:/m);
