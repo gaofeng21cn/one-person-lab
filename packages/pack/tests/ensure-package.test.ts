@@ -89,3 +89,23 @@ test('rejects a cyclic dependency and an incorrect source identity before instal
   assert.deepEqual(pack.list(), []);
   assert.equal(disposed.length, resolved.length);
 });
+
+test('a stalled official source does not block an unrelated restore', { timeout: 5000 }, async t => {
+  const { pack, publish, resolveSource } = fixture(t);
+  publish('slow');
+  publish('independent');
+  const started = Promise.withResolvers<void>();
+  const proceed = Promise.withResolvers<void>();
+  const slow = ensurePackage(pack, { packageId: 'slow', resolveSource: async id => {
+    started.resolve();
+    await proceed.promise;
+    return resolveSource(id);
+  } });
+  await started.promise;
+  try {
+    assert.equal((await ensurePackage(pack, { packageId: 'independent', resolveSource })).status, 'installed');
+  } finally {
+    proceed.resolve();
+    await slow;
+  }
+});

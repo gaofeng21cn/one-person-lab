@@ -1,4 +1,6 @@
+import { isDeepStrictEqual } from 'node:util';
 import { assertTrustedHost, type ClientContext } from '@opl/core';
+import { shouldSyncToCodex } from '../carriers/codex-sync/project.ts';
 import { PackError } from '../errors.ts';
 import { KebabIdSchema, type OplPackageManifestV2 } from '../manifest/schema.ts';
 import type { InstallSourceSpec, InstalledPackageRecord } from '../types.ts';
@@ -41,16 +43,6 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
   if (!KebabIdSchema.safeParse(packageId).success) throw new PackError('INVALID_INPUT', 'Invalid Package identity.');
   if (clientContext) assertTrustedHost(clientContext, 'pack.ensure');
 
-  // Several simultaneous profile/Software Center requests can share dependencies.
-  // Serialize writes per PackService. Reads and previews do not acquire the lane.
-  const previous = activeWrites.get(pack);
-  let release: (() => void) | undefined;
-  let activeTurn: Promise<void> | undefined;
-  if (!dryRun) {
-    activeTurn = new Promise<void>(resolve => { release = resolve; });
-    activeWrites.set(pack, activeTurn);
-    if (previous) await previous;
-  }
   const resolvedSources = new Map<string, ResolvedPackageForInstall>();
   const plan = new Map<string, PlannedPackage>();
   const visiting = new Set<string>();
@@ -136,53 +128,76 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
     }
     sort(packageId);
 
-    const changes = ordered.some(step => step.action !== 'none');
-    if (!dryRun && changes) {
-      for (const step of ordered) {
-        const id = step.manifest.identity.id;
-        assertSameInstalled(pack.inspect(id), step);
-        for (const dep of step.manifest.dependencies?.packages ?? []) {
-          const provider = pack.inspect(dep.id);
-          assertRequiredPackageDependency(id, dep, provider?.enabled ? provider.manifest : null);
-        }
-        if (step.action === 'install') {
-          const input = { source: step.source!, clientContext, updateSource: { kind: 'official' as const, package_id: id } };
-          if (options.installSource) await options.installSource(input);
-          else await pack.install(input);
-        } else if (step.action === 'enable') {
-          await pack.toggle({ packageId: id, enabled: true, clientContext });
-        }
-        if (step.action !== 'none') {
-          let state = await pack.readInstalledPackagePresence(id);
-          if (state.files_present && !state.carrier_ready && pack.inspect(id)?.enabled) {
-            await pack.codexSync({ packageId: id, requireReadback: true });
-            state = await pack.readInstalledPackagePresence(id);
+    const actions = new Map(ordered.map(step => [step.manifest.identity.id, step.action]));
+    let release: (() => void) | undefined;
+    try {
+      if (!dryRun && ordered.some(step => step.action !== 'none')) {
+        const resourceIds = [...seen];
+        // Codex plugin add/enable shares one configured carrier across packages.
+        if (ordered.some(step => step.action !== 'none' && shouldSyncToCodex(step.manifest))) resourceIds.push('@codex');
+        release = await acquireWrites(pack, resourceIds);
+        for (const step of ordered) {
+          const id = step.manifest.identity.id;
+          const current = pack.inspect(id);
+          if (current?.enabled && step.action !== 'none' && isDeepStrictEqual(current.manifest, step.manifest)) {
+            const presence = await pack.readInstalledPackagePresence(id);
+            if (presence.files_present && presence.carrier_ready) {
+              actions.set(id, 'none');
+              continue;
+            }
           }
-          if (!state.files_present || !state.carrier_ready) {
-            throw new PackError('PACK_DEPENDENCY_MISSING', `Package '${id}' is unavailable after ${step.action}.`);
+          assertSameInstalled(current, step);
+          for (const dep of step.manifest.dependencies?.packages ?? []) {
+            const provider = pack.inspect(dep.id);
+            assertRequiredPackageDependency(id, dep, provider?.enabled ? provider.manifest : null);
+          }
+          if (step.action === 'install') {
+            const input = { source: step.source!, clientContext, updateSource: { kind: 'official' as const, package_id: id } };
+            if (options.installSource) await options.installSource(input);
+            else await pack.install(input);
+          } else if (step.action === 'enable') {
+            await pack.toggle({ packageId: id, enabled: true, clientContext });
+          }
+          if (step.action !== 'none') {
+            let state = await pack.readInstalledPackagePresence(id);
+            if (state.files_present && !state.carrier_ready && pack.inspect(id)?.enabled) {
+              await pack.codexSync({ packageId: id, requireReadback: true });
+              state = await pack.readInstalledPackagePresence(id);
+            }
+            if (!state.files_present || !state.carrier_ready) {
+              throw new PackError('PACK_DEPENDENCY_MISSING', `Package '${id}' is unavailable after ${step.action}.`);
+            }
           }
         }
       }
+    } finally {
+      release?.();
     }
+    const changes = [...actions.values()].some(action => action !== 'none');
     return {
       package_id: packageId,
       status: !changes ? 'already_present' as const : dryRun ? 'validated' as const
         : plan.get(packageId)?.installed ? 'reconciled' as const : 'installed' as const,
       changed: !dryRun && changes,
-      packages: ordered.map(step => ({ package_id: step.manifest.identity.id, action: step.action })),
+      packages: ordered.map(step => ({ package_id: step.manifest.identity.id, action: actions.get(step.manifest.identity.id)! })),
     };
   } finally {
-    try {
-      for (const source of resolvedSources.values()) source.dispose?.();
-    } finally {
-      if (release) {
-        const turn = activeWrites.get(pack);
-        release();
-        // Other calls may already have registered a successor.
-        if (turn === activeTurn) activeWrites.delete(pack);
-      }
-    }
+    for (const source of resolvedSources.values()) source.dispose?.();
   }
 }
 
-const activeWrites = new WeakMap<PackService, Promise<void>>();
+const writes = new WeakMap<PackService, Map<string, Promise<void>>>();
+
+async function acquireWrites(pack: PackService, ids: string[]): Promise<() => void> {
+  const slots = writes.get(pack) ?? new Map<string, Promise<void>>();
+  writes.set(pack, slots);
+  const predecessors = ids.map(id => slots.get(id));
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => { resolve = done; });
+  for (const id of ids) slots.set(id, promise);
+  await Promise.all(predecessors);
+  return () => {
+    for (const id of ids) if (slots.get(id) === promise) slots.delete(id);
+    resolve();
+  };
+}
