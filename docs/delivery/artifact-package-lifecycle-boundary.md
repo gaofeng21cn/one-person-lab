@@ -155,6 +155,12 @@ Package 由该工作流指定的固定 Framework 提交提供生成、校验和�
 记录工作流提交、工具提交和 Catalog 提交。发布前核对三者与选中的 Package、owner
 源码标签及渠道前序一致。私有 owner 的发布入口使用同一工具提交。
 
+当选中的 owner 提交已经采用根目录 `opl.package.v2` 描述符，每日准备报告从
+`identity.id` 和 `identity.version` 计算候选版本，并返回
+`v2_package_publisher_unsupported`。当前发布器的 Catalog 投影生成和发布校验仍要求旧版
+描述符与已提交的 Codex 载体。此状态在准备 owner PR 和源码标签之前返回。正式迁移还需
+验证正在消费该 Catalog 与 OCI 渠道的安装入口能读取 v2 载荷。
+
 `source_check_workflows` 可按 owner 声明源码验证 workflow 文件名。产品准备仅等待这些
 workflow 对准确源码提交的当前结果及 commit statuses；Package 派发器和产品发布器
 不充当源码门槛。已运行的源码检查失败仍阻止准备，合并前仍保留完整检查保护。

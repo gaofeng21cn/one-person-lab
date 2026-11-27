@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import _carrier_source_paths, _ordered_content_digest, refresh_locks, wait_for_checks
+from package_release.owner import _carrier_source_paths, _ordered_content_digest, prepare_owner, refresh_locks, wait_for_checks
 from package_release.common import ReleaseError
 spec = importlib.util.spec_from_file_location('product_release', ROOT / 'scripts/product-daily-release.py')
 product = importlib.util.module_from_spec(spec)
@@ -85,6 +85,66 @@ class ProductReleaseTests(unittest.TestCase):
     def commit(self):
         self.git('add', '.')
         self.git('commit', '--allow-empty', '-m', 'fixture')
+
+    def package_selection(self):
+        (self.root / 'release-automation.json').write_text(json.dumps({'strategy': 'daily_patch'}))
+        payload = self.root / 'published-payload.json'
+        payload.write_text(json.dumps({'source_commit': self.first}))
+        projection = {
+            'package_id': 'fixture', 'version': '1.2.3',
+            'publication_source': {'owner_package_manifest_ref': 'plugins/fixture/opl-package.json'},
+        }
+        allowlist = {'source_root': 'plugins/fixture', 'plugin_id': 'fixture', 'paths': ['opl-package.json']}
+        return projection, allowlist, payload
+
+    def test_v2_owner_reports_candidate_before_legacy_preparation_or_tagging(self):
+        projection, allowlist, payload = self.package_selection()
+        descriptor = self.root / 'opl-package.json'
+        descriptor.write_text(json.dumps({
+            'schema_version': 'opl.package.v2', 'identity': {'id': 'fixture', 'version': '1.2.3'},
+        }))
+        self.commit()
+        source = self.git('rev-parse', 'HEAD')
+        with patch('package_release.owner.execute_commands') as commands:
+            for apply in (False, True):
+                result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                                       apply=apply, payload_path=payload)
+                self.assertEqual(result['status'], 'blocked')
+                self.assertEqual(result['reason_code'], 'v2_package_publisher_unsupported')
+                self.assertEqual(result['owner_source_commit'], source)
+                self.assertEqual(result['version'], '1.2.4')
+            commands.assert_not_called()
+        self.assertEqual(self.git('tag', '--list'), 'v1.2.3')
+        self.assertEqual(self.git('status', '--porcelain'), '')
+
+        self.git('tag', '-a', 'v1.2.4', self.first, '-m', 'Other release source')
+        result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                               apply=False, payload_path=payload)
+        self.assertEqual((result['status'], result['version']), ('blocked', '1.2.5'))
+        self.assertEqual(self.git('rev-parse', 'v1.2.4^{}'), self.first)
+
+    def test_v2_owner_identity_must_match_catalog(self):
+        projection, allowlist, payload = self.package_selection()
+        (self.root / 'opl-package.json').write_text(json.dumps({
+            'schema_version': 'opl.package.v2', 'identity': {'id': 'another-package', 'version': '1.2.3'},
+        }))
+        self.commit()
+        with self.assertRaisesRegex(ReleaseError, 'Root v2 Package identity'):
+            prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                          apply=False, payload_path=payload)
+
+    def test_legacy_owner_still_plans_from_nested_carrier(self):
+        projection, allowlist, payload = self.package_selection()
+        carrier = self.root / allowlist['source_root']
+        carrier.mkdir(parents=True)
+        descriptor = {'package_id': 'fixture', 'version': '1.2.3'}
+        (carrier / 'opl-package.json').write_text(json.dumps(descriptor))
+        (self.root / 'opl-package.json').write_text(json.dumps(descriptor))
+        self.commit()
+        result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                               apply=False, payload_path=payload)
+        self.assertEqual(result['status'], 'needs_release')
+        self.assertEqual(result['version'], '1.2.4')
 
     def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
         source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}

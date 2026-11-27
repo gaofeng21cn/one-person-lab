@@ -382,6 +382,49 @@ def merge_release_changes(root, repo, base, package_id, version, *, delivery_kin
         raise ReleaseError('Merged release source differs from the verified PR tree; retry from fresh main')
     return git(root, 'rev-parse', 'HEAD')
 
+def release_version(root, base, current, previous):
+    current_version = version_tuple(current)
+    published_version = version_tuple(previous)
+    if current_version < published_version:
+        raise ReleaseError('Owner version regresses the Framework selection')
+    tag = run(['git', 'rev-parse', '--verify', f'refs/tags/v{current}^{{}}'], cwd=root, check=False)
+    tag_matches = tag.returncode == 0 and tag.stdout.strip() == base
+    if current_version == published_version or (tag.returncode == 0 and (not tag_matches or git(root, 'status', '--porcelain'))):
+        a, b, c = current_version
+        return f'{a}.{b}.{c + 1}'
+    return current
+
+
+def root_v2_version(root, commit, package_id):
+    # Read the selected Git commit, before any legacy preparation hook can change source files.
+    selected = git(root, 'ls-tree', commit, '--', 'opl-package.json')
+    if not selected:
+        return None
+    if not selected.startswith(('100644 blob ', '100755 blob ')):
+        raise ReleaseError('Root Package descriptor must be a regular file in the owner commit')
+    manifest = json.loads(git(root, 'show', f'{commit}:opl-package.json'))
+    if not isinstance(manifest, dict) or manifest.get('schema_version') != 'opl.package.v2':
+        return None
+    identity = manifest.get('identity')
+    if not isinstance(identity, dict) or identity.get('id') != package_id or not isinstance(identity.get('version'), str):
+        raise ReleaseError('Root v2 Package identity does not match its Catalog selection')
+    return identity['version']
+
+
+def v2_candidate_version(root, base, current, previous):
+    version = release_version(root, base, current, previous)
+    # A matching current tag can be resumed. A new version needs an unused tag.
+    while version != current:
+        tag = run(['git', 'show-ref', '--verify', '--quiet', f'refs/tags/v{version}'], cwd=root, check=False)
+        if tag.returncode == 1:
+            break
+        if tag.returncode != 0:
+            raise ReleaseError(f'Cannot inspect candidate Package tag v{version}')
+        major, minor, patch = version_tuple(version)
+        version = f'{major}.{minor}.{patch + 1}'
+    return version
+
+
 def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None):
     base = git(root, 'rev-parse', 'HEAD')
     payload = read(payload_path or (framework / 'contracts/opl-framework/packages' /
@@ -391,20 +434,23 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
         return {'status': 'owner_manual', 'owner_source_commit': base}
     if base == payload['source_commit']:
         return {'status': 'unchanged', 'owner_source_commit': base}
+    v2_version = root_v2_version(root, base, projection['package_id'])
+    if v2_version is not None:
+        version = v2_candidate_version(root, base, v2_version, projection['version'])
+        return {
+            'status': 'blocked',
+            'version': version,
+            'owner_source_commit': base,
+            'reason_code': 'v2_package_publisher_unsupported',
+            'reason': f'Candidate {version} requires v2 root descriptor support in Catalog projection and release '
+                      'verification. The current publisher requires a legacy owner descriptor and committed Codex carrier.',
+        }
     execute_commands(root, settings, 'prepare')
     if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
         return {'status': 'unchanged_payload', 'owner_source_commit': base}
     carrier = safe_path(root, allowlist['source_root'])
     current = read(carrier / 'opl-package.json')['version']
-    previous = projection['version']
-    if version_tuple(current) < version_tuple(previous):
-        raise ReleaseError('Owner version regresses the Framework selection')
-    tag = run(['git', 'rev-parse', '--verify', f'refs/tags/v{current}^{{}}'], cwd=root, check=False)
-    tag_matches = tag.returncode == 0 and tag.stdout.strip() == base
-    version = current
-    if version_tuple(current) == version_tuple(previous) or (tag.returncode == 0 and (not tag_matches or git(root, 'status', '--porcelain'))):
-        a, b, c = version_tuple(current)
-        version = f'{a}.{b}.{c + 1}'
+    version = release_version(root, base, current, projection['version'])
     if not apply:
         return {'status': 'needs_release', 'version': version, 'owner_source_commit': base}
     git(root, 'config', 'user.name', 'OPL Package Publisher')
