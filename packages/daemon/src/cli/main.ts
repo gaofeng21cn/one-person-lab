@@ -290,6 +290,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'list', usage: 'list [--intent <intent>] [--origin <origin>] [--query <q>]' },
     { name: 'inspect', usage: 'inspect <packageIdOrDir>' },
     { name: 'install', usage: 'install <source> [--no-codex-sync]' },
+    { name: 'ensure', usage: 'ensure <packageId> [--dry-run]' },
     { name: 'update', usage: 'update [<packageId>] [--source <spec>] [--all]' },
     { name: 'uninstall', usage: 'uninstall <packageId>' },
     { name: 'enable', usage: 'enable <packageId>' },
@@ -442,7 +443,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
   if (parsed.version && parsed.positionals.length === 0) {
     const ver = readCliVersion();
     if (parsed.json) {
-      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0' })}\n`);
+      process.stdout.write(`${JSON.stringify({ version: ver, api_version: '2.0', features: ['pack.ensure'] })}\n`);
     } else {
       process.stdout.write(`${ver}\n`);
     }
@@ -731,6 +732,19 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack unlink requires <packageId>.');
           }
           emitOutput(await rpc('pack.unlink', { package_id: packageId }), parsed);
+          return 0;
+        }
+        if (sub === 'ensure') {
+          const packageId = rest[0];
+          if (!packageId || rest.length !== 1) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack ensure requires one Package ID.');
+          }
+          // Downloading a closure can take longer than an ordinary status RPC.
+          const result = await callDaemonRpc('pack.ensure', {
+            package_id: packageId,
+            dry_run: getBoolFlag(parsed, '--dry-run'),
+          }, { stateDir, timeoutMs: 840_000 });
+          emitOutput(result, parsed);
           return 0;
         }
         if (sub === 'install') {

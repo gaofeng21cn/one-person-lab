@@ -9,6 +9,8 @@ import {
 } from '@opl/ledger';
 import {
   buildPackage,
+  createOfficialPackageResolver,
+  ensurePackage,
   migrateV1Package,
   readPackageManifestFromDir,
   verifyReleaseLock,
@@ -411,6 +413,31 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
       manifest: installed.manifest,
       installed: toProjectedPackageSummary(installed),
     };
+  });
+
+  handlers.set('pack.ensure', async (params, conn) => {
+    const ctx = requireTrustedHost(conn, 'pack.ensure');
+    const packageId = pickString(params, 'package_id', 'packageId');
+    if (!packageId || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(packageId) || packageId.length > 128) {
+      throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.ensure requires a valid Package ID.');
+    }
+    const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
+    try {
+      return await ensurePackage(runtime.packService, {
+        packageId,
+        dryRun,
+        clientContext: ctx,
+        resolveSource: createOfficialPackageResolver(),
+        installSource: (input) => runtime.installPackage(input),
+      });
+    } finally {
+      // A dependency may have been enabled even if a later Package failed.
+      if (!dryRun) {
+        runtime.syncDeclaredProviders();
+        await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
+        runtime.appStateCache.invalidate();
+      }
+    }
   });
 
   handlers.set('pack.build', (params) => {
