@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -78,19 +79,95 @@ test('first install activates a v1 pending Codex even when it was staged by the 
   assert.equal(fs.existsSync(f.pending), false);
 });
 
-test('upgrade recovers a crash after the old bin directory was moved, then activates the pending generation', async (t) => {
-  const f = installFixture(t);
-  const transaction = path.join(f.generation, '.opl-v2-activation');
-  fs.mkdirSync(transaction);
-  fs.cpSync(f.current, path.join(transaction, 'next'), { recursive: true });
-  fs.writeFileSync(path.join(transaction, 'prepared.json'), JSON.stringify({ hadLive: true }));
-  fs.renameSync(f.current, path.join(transaction, 'old'));
+// Interrupt a separate process so every on-disk state comes from the real
+// installer and a process exit cannot run its ordinary error recovery.
+const interruptedActivation = `
+  import fs from 'node:fs';
+  import path from 'node:path';
+  const { runtime, current, previous, pending, generation, stop } = JSON.parse(process.argv[2]);
+  const transaction = path.join(generation, '.opl-v2-activation');
+  const old = path.join(transaction, 'old');
+  const next = path.join(transaction, 'next');
+  const retired = path.join(transaction, 'retired');
+  const firstSource = fs.existsSync(current) ? current : next;
+  const rename = fs.renameSync;
+  const remove = fs.rmSync;
+  const interrupt = point => { if (stop === point) process.exit(86); };
+  fs.renameSync = (from, to) => {
+    if (to === path.join(transaction, 'prepared.json')) interrupt('preparing');
+    if (from === firstSource) interrupt('prepared');
+    if (to === pending) interrupt('committing');
+    rename(from, to);
+    if (from === current && to === old) interrupt('live-saved');
+    if (from === next && to === current) interrupt('new-live');
+    if (from === previous && to === retired) interrupt('rollback-retired');
+    if (from === old && to === previous) interrupt('rollback-installed');
+    if (to === pending) interrupt('committed');
+  };
+  fs.rmSync = (target, options) => {
+    if (target === generation && stop === 'partly-cleaned') {
+      remove(path.join(generation, 'bin'), { recursive: true, force: true });
+      interrupt('partly-cleaned');
+    }
+    remove(target, options);
+    if (target === generation) interrupt('stage-removed');
+  };
+  const { activateLegacyCodexGeneration } = await import(process.argv[1]);
+  await activateLegacyCodexGeneration(runtime, process.env);
+`;
 
-  assert.equal(await activateLegacyCodexGeneration(f.runtime, env), 'activated');
-  assert.equal(fs.readFileSync(path.join(f.current, 'codex'), 'utf8'), candidate);
-  assert.equal(fs.readFileSync(path.join(f.previous, 'codex'), 'utf8'), 'active version');
-  assert.equal(fs.existsSync(transaction), false);
-});
+const activationModule = new URL('../src/executors/codex/runtime-pending.ts', import.meta.url).href;
+const cleanupPoints = ['committed', 'partly-cleaned', 'stage-removed'];
+const layouts = [
+  {
+    name: 'upgrade with rollback', live: true, previous: true,
+    points: ['preparing', 'prepared', 'live-saved', 'new-live', 'rollback-retired', 'rollback-installed', 'committing', ...cleanupPoints],
+  },
+  {
+    name: 'upgrade without rollback', live: true, previous: false,
+    points: ['new-live', 'rollback-installed'],
+  },
+  {
+    name: 'first install', live: false, previous: false,
+    points: ['preparing', 'prepared', 'new-live', 'committing', ...cleanupPoints],
+  },
+];
+
+for (const layout of layouts) {
+  for (const stop of layout.points) {
+    test(`${layout.name} recovers a process exit at ${stop}`, async (t) => {
+      const f = installFixture(t);
+      if (!layout.live) fs.rmSync(f.current, { recursive: true });
+      if (!layout.previous) fs.rmSync(f.previous, { recursive: true });
+      const { runtime, current, previous, pending, generation } = f;
+      const crash = spawnSync(process.execPath, [
+        '--conditions=opl-source', '--experimental-strip-types', '--input-type=module',
+        '-e', interruptedActivation, activationModule,
+        JSON.stringify({ runtime, current, previous, pending, generation, stop }),
+      ], { env, encoding: 'utf8', timeout: 20_000 });
+      assert.equal(crash.status, 86, crash.error?.message ?? crash.stderr);
+      if (cleanupPoints.includes(stop)) {
+        assert.deepEqual(JSON.parse(fs.readFileSync(pending, 'utf8')), {
+          surface_kind: 'opl_runtime_applied_codex_generation.v2', generation: path.basename(generation),
+        });
+      }
+
+      await activateLegacyCodexGeneration(runtime, env);
+      assert.equal(fs.readFileSync(path.join(current, 'codex'), 'utf8'), candidate);
+      assert.equal(fs.readFileSync(path.join(current, 'rg'), 'utf8'), 'staged search tool');
+      if (layout.live) {
+        assert.equal(fs.readFileSync(path.join(current, 'opl'), 'utf8'), 'existing tool');
+        assert.equal(fs.readFileSync(path.join(previous, 'codex'), 'utf8'), 'active version');
+        assert.equal(fs.readFileSync(path.join(previous, 'opl'), 'utf8'), 'existing tool');
+      } else {
+        assert.equal(fs.existsSync(previous), false);
+      }
+      assert.equal(fs.existsSync(generation), false);
+      assert.equal(fs.existsSync(pending), false);
+      assert.equal(await activateLegacyCodexGeneration(runtime, env), 'none');
+    });
+  }
+}
 
 for (const invalid of ['digest', 'version', 'protocol', 'escaped generation'] as const) {
   test(`upgrade preserves the active and rollback binaries when a pending generation has an invalid ${invalid}`, async (t) => {
