@@ -545,6 +545,46 @@ class ProductReleaseTests(unittest.TestCase):
             # Fixture digest from the legacy Framework Python encoder.
             self.assertEqual(actual, 'sha256:d43a765c28ccbcd60bee4f0602ca11e5945162edd79de8e8ac07a0e7fc267e06')
 
+    def test_framework_release_paths_exclude_cross_repo_orchestration_and_dead_v1(self):
+        config = product.settings(ROOT)
+        release_paths = config['release_paths']
+        for disallowed in ('src', 'python', 'scripts', 'contracts'):
+            self.assertNotIn(disallowed, release_paths)
+        for rel in release_paths:
+            self.assertTrue((ROOT / rel).exists(), f'Missing Framework release path: {rel}')
+        package_files = json.loads((ROOT / 'package.json').read_text())['files']
+        for entry in package_files:
+            entry_root = entry.split('*')[0].rstrip('/')
+            covered = any(
+                entry_root == rel or entry_root.startswith(rel.rstrip('/') + '/')
+                for rel in release_paths
+            )
+            self.assertTrue(covered, f'Shipped Framework file pattern not covered by release_paths: {entry}')
+
+        with tempfile.TemporaryDirectory() as repo_tmp:
+            repo = Path(repo_tmp)
+            subprocess.run(['git', 'init', '--quiet'], cwd=repo, check=True)
+            subprocess.run(['git', 'config', 'user.name', 'Test'], cwd=repo, check=True)
+            subprocess.run(['git', 'config', 'user.email', 'test@example.invalid'], cwd=repo, check=True)
+            for rel in ('scripts/package_release/product_status.py', 'contracts/opl-framework/product-release-owners.json', 'extensions/foundry/mod.js', 'sdks/python-client/src/cli.py'):
+                target = repo / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('v1\n')
+            subprocess.run(['git', 'add', '--all'], cwd=repo, check=True)
+            subprocess.run(['git', 'commit', '--quiet', '-m', 'base'], cwd=repo, check=True)
+            base = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
+
+            (repo / 'scripts/package_release/product_status.py').write_text('v2\n')
+            (repo / 'contracts/opl-framework/product-release-owners.json').write_text('{"products":[]}\n')
+            subprocess.run(['git', 'add', '--all'], cwd=repo, check=True)
+            subprocess.run(['git', 'commit', '--quiet', '-m', 'orchestration only'], cwd=repo, check=True)
+            self.assertFalse(product.delivery_changed(repo, base, config))
+
+            (repo / 'extensions/foundry/mod.js').write_text('v2\n')
+            subprocess.run(['git', 'add', '--all'], cwd=repo, check=True)
+            subprocess.run(['git', 'commit', '--quiet', '-m', 'runtime extension change'], cwd=repo, check=True)
+            self.assertTrue(product.delivery_changed(repo, base, config))
+
 
 if __name__ == '__main__':
     unittest.main()
