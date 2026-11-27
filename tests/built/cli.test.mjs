@@ -50,6 +50,69 @@ test('built v2 daemon CLI entrypoints exist and load via OPL_USE_DIST=1', () => 
   assert.equal(versionNodeRoot.stdout.trim(), versionDirect.stdout.trim());
 });
 
+test('installer verifies the fresh v2 daemon and keeps carrier-only updates offline', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-install-'));
+  const source = path.join(root, 'source');
+  const installDir = path.join(root, 'installed');
+  const prefix = path.join(root, 'prefix');
+  const cli = path.join(prefix, 'bin', 'opl');
+  const stateDir = path.join(root, 'state');
+  const branch = 'bootstrap-fixture';
+  const installer = path.join(repoRoot, 'install.sh');
+  const env = {
+    ...process.env,
+    HOME: root,
+    PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ''}`,
+    CODEX_HOME: path.join(root, 'codex'),
+    OPL_STATE_DIR: stateDir,
+    OPL_CODEX_MARKETPLACE_DIR: path.join(root, 'marketplace'),
+    OPL_REPO_URL: source,
+    OPL_INSTALL_DIR: installDir,
+    OPL_INSTALL_BRANCH: branch,
+    OPL_INSTALL_SOURCE_MODE: 'auto',
+    OPL_NPM_GLOBAL_PREFIX: prefix,
+    OPL_PREFILLED_NODE_MODULES_DIR: path.join(repoRoot, 'node_modules'),
+    OPL_CARRIER_ONLY: '0',
+    OPL_USE_DIST: '0',
+    NODE_NO_WARNINGS: '1',
+    npm_config_offline: 'true',
+    npm_config_cache: path.join(root, 'npm-cache'),
+  };
+  function run(command, args) {
+    const result = spawnSync(command, args, { cwd: root, env, encoding: 'utf8', timeout: 45_000 });
+    assert.ifError(result.error);
+    assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stdout}${result.stderr}`);
+    return result.stdout;
+  }
+
+  try {
+    run('git', ['clone', '--quiet', '--shared', repoRoot, source]);
+    run('git', ['-C', source, 'switch', '-c', branch]);
+
+    const fresh = run('/bin/bash', [installer]);
+    assert.match(fresh, /OPL Framework is ready/);
+    assert.equal(fs.realpathSync(cli), fs.realpathSync(path.join(installDir, 'bin', 'opl')));
+    const readiness = JSON.parse(run(cli, ['daemon', 'doctor', '--include-first-run', '--json']));
+    assert.equal(readiness.ok, true);
+    assert.equal(readiness.api_version, '2.0');
+    assert.equal(readiness.paths.state_dir, stateDir);
+    assert.equal(readiness.first_run.installed_package_count, 0);
+    run(cli, ['daemon', 'stop']);
+
+    run('git', ['-C', source, '-c', 'user.name=Bootstrap fixture', '-c', 'user.email=bootstrap@example.invalid',
+      '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '--allow-empty', '-m', 'Advance the install source']);
+    const updateCommit = run('git', ['-C', source, 'rev-parse', 'HEAD']).trim();
+    const updated = run('/bin/bash', [installer, '--headless', '--skip-packages', '--carrier-only']);
+    assert.match(updated, /OPL base carrier is ready/);
+    const identity = JSON.parse(fs.readFileSync(path.join(installDir, '.opl-framework-installed-source-identity.json')));
+    assert.equal(identity.framework_sha, updateCommit);
+    assert.equal(JSON.parse(run(cli, ['daemon', 'status', '--json'])).running, false);
+  } finally {
+    if (fs.existsSync(cli)) spawnSync(cli, ['daemon', 'stop'], { cwd: root, env, timeout: 10_000 });
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('built v2 CLI --help exposes only the 6 core namespaces and rejects retired v1 commands with exit 2', () => {
   const helpRes = runBuiltCli(rootBin, ['--help']);
   assert.equal(helpRes.status, 0, helpRes.stderr);
