@@ -9,6 +9,10 @@ on:
         required: false
         default: ''
         type: string
+      observe_only:
+        description: Read current channels and owner runs without preparing versions or retrying publishers
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -61,6 +65,7 @@ jobs:
           path: controller
           persist-credentials: false
       - name: Create owner release identity
+        if: ${{ !matrix.product.observe_only && !inputs.observe_only }}
         id: publisher
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc
         with:
@@ -81,20 +86,25 @@ jobs:
           ref: main
           path: owner
           fetch-depth: 0
-          token: ${{ steps.publisher.outputs.token }}
+          token: ${{ steps.publisher.outputs.token || github.token }}
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      - if: steps.publisher.outputs.token != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: '26'
       - name: Prepare or resume the owner release
         env:
-          GH_TOKEN: ${{ steps.publisher.outputs.token }}
+          GH_TOKEN: ${{ steps.publisher.outputs.token || github.token }}
+          APPLY_RELEASE: ${{ steps.publisher.outputs.token != '' }}
           EXPECTED_PRODUCT: ${{ matrix.product.product_id }}
           EXPECTED_REPOSITORY: ${{ matrix.product.repository }}
           RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
+        shell: bash
         run: |
+          args=()
+          if [ "$APPLY_RELEASE" = true ]; then args+=(--apply); fi
           python3 controller/scripts/product-daily-release.py \
-            --owner-root "$GITHUB_WORKSPACE/owner" --apply \
+            --owner-root "$GITHUB_WORKSPACE/owner" "${args[@]}" \
             --cohort-id "$RELEASE_COHORT_ID" \
             --output "$RUNNER_TEMP/product-release-result.json"
       - name: Retain the independent product result
@@ -106,7 +116,7 @@ jobs:
           if-no-files-found: warn
   cohort:
     name: Reconcile release cohort
-    if: always()
+    if: always() && needs.inventory.result == 'success'
     needs: [inventory, release]
     runs-on: ubuntu-latest
     permissions:
@@ -122,13 +132,13 @@ jobs:
         with:
           pattern: opl-product-release-*-${{ github.run_id }}
           path: results
-          merge-multiple: true
-          github-token: ${{ github.token }}
       - name: Write cohort matrix
         env:
           RELEASE_COHORT_ID: ${{ needs.inventory.outputs.cohort_id }}
+          EXPECTED_PRODUCTS: ${{ needs.inventory.outputs.products }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python3 controller/scripts/product-release-cohort.py \
+          python3 scripts/product-release-cohort.py \
             --cohort-id "$RELEASE_COHORT_ID" \
             --results-root results \
             --output "$RUNNER_TEMP/product-release-cohort.json"

@@ -69,7 +69,7 @@ class ProductReleaseTests(unittest.TestCase):
             cohort = 'opl-daily-123'
             for directory, product, status in [('netfleet', 'opl-netfleet', 'publisher_success'),
                                                 ('cloud', 'opl-cloud', 'qualification_pending')]:
-                (root / directory / 'result.json').write_text(json.dumps({
+                (root / directory / 'product-release-result.json').write_text(json.dumps({
                     'schema_version': 'opl.product-release-result.v1',
                     'cohort_id': cohort, 'product_id': product, 'repository': f'gaofeng21cn/{product}',
                     'status': status,
@@ -83,7 +83,7 @@ class ProductReleaseTests(unittest.TestCase):
                                     '--results-root', str(root), '--output', str(output)]):
                 self.assertEqual(cohort_module.main(), 0)
             report = json.loads(output.read_text())
-            self.assertEqual(report['terminal_status'], 'in_progress')
+            self.assertEqual(report['terminal_status'], 'pending')
             self.assertEqual([row['product_id'] for row in report['products']], ['opl-cloud', 'opl-netfleet'])
 
     def setUp(self):
@@ -170,6 +170,15 @@ class ProductReleaseTests(unittest.TestCase):
                                apply=False, payload_path=payload)
         self.assertEqual(result['status'], 'needs_release')
         self.assertEqual(result['version'], '1.2.4')
+
+    def test_publisher_success_requires_exact_public_readback(self):
+        config = {**self.config, 'strategy': 'daily_patch', 'publisher_workflow': 'publish.yml',
+                  'channel': {'kind': 'github_release'}}
+        prepared = {'status': 'publisher_success', 'source_commit': self.first, 'tag': 'v1.2.4',
+                    'published_channel': {'source_commit': self.first, 'tag': 'v1.2.3'}}
+        self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_pending')
+        prepared['published_channel']['tag'] = prepared['tag']
+        self.assertEqual(product.observe_lanes(config, prepared)[0]['status'], 'publication_verified')
 
     def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
         source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}
