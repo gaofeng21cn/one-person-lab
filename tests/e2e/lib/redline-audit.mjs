@@ -671,63 +671,30 @@ function collectCircularOplFlowRefs(pkgJson) {
   return hits;
 }
 
-function runGit(repoDir, args) {
-  return spawnSync("git", ["-C", repoDir, ...args], { encoding: "utf8" });
-}
-
-function collectGitChangedPaths(repoDir, { baseRef = null } = {}) {
-  const changed = new Set();
-  const isGit = runGit(repoDir, ["rev-parse", "--is-inside-work-tree"]);
-  if (isGit.status !== 0) {
-    return { isGitRepo: false, paths: [] };
-  }
-
-  const statusRes = runGit(repoDir, ["status", "--porcelain", "-uall"]);
-  if (statusRes.status === 0) {
-    for (const line of statusRes.stdout.split("\n")) {
-      if (line.length < 4) continue;
-      let rawPath = line.slice(3).trim();
-      if (rawPath.includes(" -> ")) {
-        rawPath = rawPath.split(" -> ").pop().trim();
-      }
-      if (rawPath.startsWith('"') && rawPath.endsWith('"')) {
-        rawPath = rawPath.slice(1, -1);
-      }
-      if (rawPath) changed.add(rawPath);
-    }
-  }
-
-  let resolvedBase = baseRef;
-  if (!resolvedBase) {
-    for (const candidate of ["origin/main", "main"]) {
-      const check = runGit(repoDir, ["rev-parse", "--verify", candidate]);
-      if (check.status === 0) {
-        resolvedBase = candidate;
-        break;
-      }
-    }
-  }
-
-  if (resolvedBase) {
-    const verifyBase = runGit(repoDir, ["rev-parse", "--verify", resolvedBase]);
-    if (verifyBase.status === 0) {
-      const diffRes = runGit(repoDir, ["diff", "--name-only", `${resolvedBase}...HEAD`]);
-      if (diffRes.status === 0) {
-        for (const p of diffRes.stdout.split("\n")) {
-          const trimmed = p.trim();
-          if (trimmed) changed.add(trimmed);
-        }
-      }
-    }
-  }
-
-  return { isGitRepo: true, paths: [...changed].sort() };
+// A bridge-only change review has a base in each participating repository.
+// Independently pinned product checkouts do not form a Git change set.
+function collectGitChangedPaths(repoDir, baseRef) {
+  if (!baseRef) return [];
+  if (!repoDir) throw new Error("An explicit change base requires its repository path");
+  const gitPaths = (...args) => execFileSync("git", ["-C", repoDir, ...args], { encoding: "utf8" })
+    .split("\0").filter(Boolean);
+  return [...new Set([
+    ...gitPaths("diff", "--no-renames", "--name-only", "-z", `${baseRef}...HEAD`, "--"),
+    ...gitPaths("diff", "--no-renames", "--name-only", "-z", "HEAD", "--"),
+    ...gitPaths("ls-files", "-z", "--others", "--exclude-standard"),
+  ])].sort();
 }
 
 const FORBIDDEN_STUDIO_PATH_RE = /(?:^|\/)(?:desktop\/preload\.cjs|plugins\/opl-host-core(?:\/|$)|plugins\/opl-web-routes(?:\/|$)|.*cua-macos|.*dsh-cua|.*computer_use)/i;
 const FORBIDDEN_APP_PATH_RE = /(?:^|\/)(?:managed_companions|computer_use|cua-macos|dsh-cua|contracts\/app-)/i;
 
-function auditAionCoreOverrides(targetRoot, filePrefix, violations) {
+function protectedUpstreamRule(name) {
+  if (/aioncore/i.test(name)) return "aioncore-fork-override";
+  if (/(?:^|\/)@deepseek-ai\/dsh-cua(?:-[a-z]+)?$/.test(name)) return "dsh-cua-fork-override";
+  return null;
+}
+
+function auditUpstreamOverrides(targetRoot, filePrefix, violations) {
   if (!targetRoot || !fs.existsSync(targetRoot)) return;
   const root = path.resolve(targetRoot);
   const pkgLabel = filePrefix ? `${filePrefix}/package.json` : "package.json";
@@ -738,11 +705,12 @@ function auditAionCoreOverrides(targetRoot, filePrefix, violations) {
     const map = rootPkg?.[field];
     if (!map || typeof map !== "object") continue;
     for (const [name, spec] of Object.entries(map)) {
-      if (/aioncore/i.test(name) && /^(?:file:|link:|git\+|https?:\/\/.*\.git)/i.test(String(spec))) {
+      const rule = protectedUpstreamRule(name);
+      if (rule && /^(?:file:|link:|git\+|https?:\/\/.*\.git)/i.test(String(spec))) {
         violations.push({
-          rule: "aioncore-fork-override",
+          rule,
           file: pkgLabel,
-          message: `Forbidden AionCore fork/local override in ${pkgLabel} (${field}.${name}=${spec})`,
+          message: `Forbidden upstream fork/local override in ${pkgLabel} (${field}.${name}=${spec})`,
         });
       }
     }
@@ -751,25 +719,26 @@ function auditAionCoreOverrides(targetRoot, filePrefix, violations) {
   const lockJson = readJsonSafe(path.join(root, "package-lock.json"));
   if (lockJson?.packages && typeof lockJson.packages === "object") {
     for (const [pkgPath, meta] of Object.entries(lockJson.packages)) {
-      if (/aioncore/i.test(pkgPath) && (meta?.link === true || /^file:/i.test(String(meta?.resolved || "")))) {
+      const rule = protectedUpstreamRule(pkgPath);
+      if (rule && (meta?.link === true || /^file:/i.test(String(meta?.resolved || "")))) {
         violations.push({
-          rule: "aioncore-fork-override",
+          rule,
           file: lockLabel,
-          message: `Forbidden AionCore fork/link override in ${lockLabel} (${pkgPath})`,
+          message: `Forbidden upstream fork/link override in ${lockLabel} (${pkgPath})`,
         });
       }
     }
   }
 }
 
-export function auditProtectedBoundaries({ studioRoot = null, appRoot = null, repoRoot = null, baseRef = null } = {}) {
+export function auditProtectedBoundaries({ studioRoot = null, appRoot = null, repoRoot = null, studioBaseRef = null, appBaseRef = null } = {}) {
   const violations = [];
   let studioChangedPaths = [];
   let appChangedPaths = [];
 
-  if (studioRoot && fs.existsSync(studioRoot)) {
-    const studioGit = collectGitChangedPaths(path.resolve(studioRoot), { baseRef });
-    studioChangedPaths = studioGit.paths;
+  if (studioRoot || studioBaseRef) {
+    auditUpstreamOverrides(studioRoot, "studioRoot", violations);
+    studioChangedPaths = collectGitChangedPaths(studioRoot, studioBaseRef);
     for (const p of studioChangedPaths) {
       if (FORBIDDEN_STUDIO_PATH_RE.test(p)) {
         violations.push({
@@ -788,9 +757,8 @@ export function auditProtectedBoundaries({ studioRoot = null, appRoot = null, re
     }
   }
 
-  if (appRoot && fs.existsSync(appRoot)) {
-    const appGit = collectGitChangedPaths(path.resolve(appRoot), { baseRef });
-    appChangedPaths = appGit.paths;
+  if (appRoot || appBaseRef) {
+    appChangedPaths = collectGitChangedPaths(appRoot, appBaseRef);
     for (const p of appChangedPaths) {
       if (FORBIDDEN_APP_PATH_RE.test(p)) {
         violations.push({
@@ -800,11 +768,11 @@ export function auditProtectedBoundaries({ studioRoot = null, appRoot = null, re
         });
       }
     }
-    auditAionCoreOverrides(appRoot, "appRoot", violations);
+    auditUpstreamOverrides(appRoot, "appRoot", violations);
   }
 
   if (repoRoot && fs.existsSync(repoRoot)) {
-    auditAionCoreOverrides(repoRoot, "", violations);
+    auditUpstreamOverrides(repoRoot, "", violations);
   }
 
   return {

@@ -404,7 +404,16 @@ describe("Tier 2 — F15 Negative & Boundary: Clean Env & Red-Line Violations", 
       JSON.stringify({ name: "one-person-lab-app", overrides: { aioncore: "file:../aioncore-fork" } }, null, 2),
       "utf8"
     );
-    const badBoundaries = auditProtectedBoundaries({ studioRoot: studioRepo, appRoot: appDir, repoRoot: cleanRepo });
+    assert.equal(
+      auditProtectedBoundaries({ studioRoot: studioRepo, repoRoot: cleanRepo }).ok, true,
+      "Independent Studio changes belong to the Studio checkout"
+    );
+    fs.writeFileSync(path.join(studioRepo, "package.json"), JSON.stringify({
+      overrides: { "@deepseek-ai/dsh-cua-mcp": "file:../local-cua" },
+    }));
+    const baselineAudit = auditProtectedBoundaries({ studioRoot: studioRepo, appRoot: appDir, repoRoot: cleanRepo });
+    assert.deepEqual(baselineAudit.violations.map(item => item.rule).sort(), ["aioncore-fork-override", "dsh-cua-fork-override"]);
+    const badBoundaries = auditProtectedBoundaries({ studioRoot: studioRepo, studioBaseRef: "HEAD", appRoot: appDir, repoRoot: cleanRepo });
     assert.equal(badBoundaries.ok, false, "Expected DSH CUA/preload edits and appRoot aioncore override to fail auditProtectedBoundaries");
     const boundaryRules = new Set(badBoundaries.violations.map((v) => v.rule));
     assert.equal(boundaryRules.has("protected-studio-cua-boundary"), true);
