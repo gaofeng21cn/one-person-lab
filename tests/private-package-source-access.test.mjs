@@ -108,3 +108,48 @@ echo 'fixture-gh-secret'
   assert.equal(fixture.run(), 'source_not_configured');
   assert.equal(fs.readFileSync(fixture.calls, 'utf8'), '');
 });
+
+test('private source checks distinguish GitHub identity from package access and keep diagnostics local', t => {
+  const fixture = sandbox(t);
+  const provider = new URL('../packages/pack/src/distribution/private-package-source-provider.ts', import.meta.url);
+  const script = `
+    import assert from 'node:assert/strict';
+    import { probePrivatePackageSourceIdentity } from ${JSON.stringify(provider.href)};
+    const handle = 'env:OPL_GITHUB_PACKAGES_TOKEN';
+    let response;
+    let checks = 0;
+    globalThis.fetch = async (url, options) => {
+      checks++;
+      assert.equal(url, 'https://api.github.com/user');
+      assert.equal(options.redirect, 'error');
+      assert.equal(options.headers.Authorization, 'Bearer fixture-env-secret');
+      if (response instanceof Error) throw response;
+      return response;
+    };
+    for (const [reply, status, verification_reason] of [
+      [Response.json({login:'example',id:42}), 'authorized', 'provider_identity_verified_package_grants_checked_at_install'],
+      [new Response(null, {status:401}), 'expired', 'provider_credential_expired'],
+      [new Response(null, {status:403}), 'forbidden', 'provider_identity_forbidden'],
+      [new Response(null, {status:503}), 'unknown', 'software_source_verification_unavailable'],
+      [new Response(null, {status:302}), 'unknown', 'software_source_verification_unavailable'],
+      [new Response('<html>proxy login</html>'), 'unknown', 'software_source_verification_unavailable'],
+      [Response.json({message:'fixture-diagnostic-secret'}), 'unknown', 'software_source_verification_unavailable'],
+      [new Error('fixture-diagnostic-secret'), 'unknown', 'software_source_verification_unavailable'],
+    ]) {
+      response = reply;
+      assert.deepEqual(await probePrivatePackageSourceIdentity(handle), {status, verification_reason});
+    }
+    delete process.env.OPL_GITHUB_PACKAGES_TOKEN;
+    assert.deepEqual(await probePrivatePackageSourceIdentity(handle), {
+      status:'signed_out', verification_reason:'provider_credential_unavailable',
+    });
+    assert.equal(checks, 8);
+  `;
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+    env: { HOME: fixture.state, OPL_STATE_DIR: fixture.state, PATH: fixture.bin, OPL_GITHUB_PACKAGES_TOKEN: 'fixture-env-secret',
+      ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot } : {}) },
+    encoding: 'utf8', timeout: 10000,
+  });
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(child.stdout + child.stderr, '');
+});
