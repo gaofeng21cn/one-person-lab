@@ -64,13 +64,26 @@ def run_observation(run):
             'run_url': run['html_url'], 'workflow_source_commit': run['head_sha']}
 
 
+def tag_run(repository, workflow, tag, source):
+    if not tag or not source:
+        return None
+    query = urllib.parse.urlencode({'head_sha': source, 'per_page': 100})
+    runs = gh(f'repos/{repository}/actions/workflows/{workflow}/runs?{query}')['workflow_runs']
+    exact = [run for run in runs if run['head_sha'] == source and run['head_branch'] == tag]
+    if exact:
+        return {'tag': tag, **run_observation(max(exact, key=lambda run: run['id']))}
+    return None
+
+
 def observe_lanes(config, prepared):
     repository = config['repository']
     tag, source = prepared.get('tag'), prepared.get('source_commit')
     public = prepared.get('published_channel') or {}
     public_tag, public_source = public.get('tag'), public.get('source_commit')
-    if prepared.get('status') == 'needs_release' and public_tag:
-        tag, source = public_tag, public_source
+    previous = prepared.get('previous_candidate') or {}
+    if prepared.get('status') == 'needs_release':
+        tag = previous.get('tag') or public_tag
+        source = previous.get('source_commit') or public_source
     scheduled = config['strategy'] == 'owner_schedule'
     primary = {'lane': config.get('primary_lane', 'stable'), 'workflow': config['publisher_workflow'],
                'channel': config.get('channel'), 'schedule': scheduled}
@@ -81,12 +94,12 @@ def observe_lanes(config, prepared):
         try:
             if lane is primary and not scheduled:
                 row.update({key: prepared[key] for key in ('status', 'run_id', 'run_url') if key in prepared})
-                if row['status'] in ('unchanged', 'needs_release') and tag and source:
-                    runs = gh(f"repos/{repository}/actions/workflows/{lane['workflow']}/runs?" +
-                              urllib.parse.urlencode({'head_sha': source, 'per_page': 100}))['workflow_runs']
-                    runs = [run for run in runs if run['head_sha'] == source and run['head_branch'] == tag]
-                    if runs:
-                        row['observed_publication_run'] = run_observation(max(runs, key=lambda run: run['id']))
+                if row['status'] in ('unchanged', 'needs_release'):
+                    if selected := tag_run(repository, lane['workflow'], tag, source):
+                        row['observed_publication_run'] = selected
+                    if public_tag != tag:
+                        if selected := tag_run(repository, lane['workflow'], public_tag, public_source):
+                            row['public_tag_publisher'] = selected
                 if row['status'] == 'publisher_success':
                     row['status'] = 'publication_pending'
                 elif row['status'] in ('publisher_failure', 'publisher_cancelled', 'publisher_timed_out') and row.get('run_id'):
@@ -113,6 +126,8 @@ def observe_lanes(config, prepared):
                 if runs:
                     selected = max(runs, key=lambda run: run['id'])
                     row.update(run_observation(selected))
+                    if tag_bound or lane.get('title_from_tag'):
+                        row['observed_tag'] = tag
                     if tag_bound and row['status'] == 'publisher_success':
                         row['status'] = 'candidate_ready'
                     if lane.get('receipt') == 'cloud' and selected['status'] == 'completed':
@@ -139,10 +154,22 @@ def observe_lanes(config, prepared):
                     exact = source and readback.get('source_commit') == source and (not tag or readback.get('tag') == tag)
                     if lane is primary and not scheduled and exact and row['status'] == 'publication_pending':
                         row['status'] = 'publication_verified'
-                    if (lane is primary and scheduled and row['status'] == 'publisher_success'
-                            and (readback.get('source_commit') == row['workflow_source_commit']
-                                 or row['workflow_source_commit'] in readback['parent_commits'])):
-                        row['status'] = 'publication_verified'
+                    if lane is primary and scheduled:
+                        # Current public and latest scheduled runs may differ when the
+                        # owner also has a deliberate manual publication path.
+                        if row['status'] == 'publisher_success' and row['workflow_source_commit'] in (
+                                readback['source_commit'], *readback['parent_commits']):
+                            row['status'] = 'publication_verified'
+                        elif config.get('product_id') == 'opl-dsh':
+                            sources = {readback['source_commit'], *readback['parent_commits']}
+                            eligible = [run for run in workflow_runs(repository, lane['workflow'], event='workflow_dispatch')
+                                        if run['head_sha'] in sources and run['conclusion'] == 'success']
+                            for run in sorted(eligible, key=lambda item: item['id'], reverse=True):
+                                jobs = gh(f"repos/{repository}/actions/runs/{run['id']}/jobs?per_page=100")['jobs']
+                                if any(job['name'] == 'publish' and job['conclusion'] == 'success' for job in jobs):
+                                    row['public_tag_publisher'] = {'tag': readback['tag'],
+                                                                   **run_observation(run), 'status': 'publication_verified'}
+                                    break
                     if lane.get('receipt') == 'cloud' and row.get('owner_stage') == 'published' and exact:
                         row['status'] = 'publication_verified'
                     if readback.get('asset_present') is False:

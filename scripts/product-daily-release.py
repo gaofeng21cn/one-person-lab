@@ -137,14 +137,21 @@ def plan(root, config, channel):
         if current == channel['version']:
             a, b, c = version_tuple(current)
             current = f'{a}.{b}.{c + 1}'
+    previous_candidate = None
     while True:
         tag = tag_for(config, current)
         existing = run(['git', 'rev-parse', '--verify', f'refs/tags/{tag}^{{commit}}'], cwd=root, check=False)
         if existing.returncode:
-            return {'status': 'needs_release', 'version': current, 'tag': tag, 'source_commit': source}
+            result = {'status': 'needs_release', 'version': current, 'tag': tag, 'source_commit': source}
+            if previous_candidate:
+                result['previous_candidate'] = previous_candidate
+            return result
         frozen = existing.stdout.strip()
-        if not run(['git', 'merge-base', '--is-ancestor', frozen, source], cwd=root, check=False).returncode and not delivery_changed(root, frozen, config):
-            return {'status': 'resume', 'version': current, 'tag': tag, 'source_commit': frozen}
+        if not run(['git', 'merge-base', '--is-ancestor', frozen, source], cwd=root, check=False).returncode:
+            if not delivery_changed(root, frozen, config):
+                return {'status': 'resume', 'version': current, 'tag': tag, 'source_commit': frozen}
+            if not channel or version_tuple(current) > version_tuple(channel['version']):
+                previous_candidate = {'tag': tag, 'source_commit': frozen}
         a, b, c = version_tuple(current)
         current = f'{a}.{b}.{c + 1}'
 

@@ -78,7 +78,9 @@ def markdown(report):
             owner_run = lane.get('observed_publication_run', lane)
             run = f"[Actions]({owner_run['run_url']})" if owner_run.get('run_url') else '—'
             if 'observed_publication_run' in lane:
-                run += f" · `{owner_run['status']}`"
+                run += f" · `{owner_run['tag']}` `{owner_run['status']}`"
+            if public_run := lane.get('public_tag_publisher'):
+                run += f" · [Public tag Actions]({public_run['run_url']}) `{public_run['status']}`"
             status = lane['status']
             if lane.get('observation') == 'unavailable':
                 status += ' (observation incomplete)'
