@@ -3,6 +3,7 @@ import path from 'node:path';
 import { isRecord, resolveStatePaths } from '@opl/core';
 import { buildPackage, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
+import { coerceInstallSourceSpec } from '../utils/normalize.ts';
 import { prepareGatewayCommand } from './gateway-account.ts';
 import { DaemonRpcError, mapErrorToCliExitCode, toJsonRpcError } from '../errors.ts';
 import {
@@ -778,7 +779,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack install requires <source>.');
           }
           const syncCodex = !getBoolFlag(parsed, '--no-codex-sync');
-          emitOutput(await rpc('pack.install', { source, sync_codex: syncCodex }), parsed);
+          emitOutput(await rpc('pack.install', { source: coerceInstallSourceSpec(source), sync_codex: syncCodex }), parsed);
           return 0;
         }
         if (sub === 'update') {
@@ -793,7 +794,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!packageId || !source) {
             throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'opl pack update requires <packageId> --source <spec>.');
           }
-          emitOutput(await rpc('pack.update', { package_id: packageId, source }), parsed);
+          emitOutput(await rpc('pack.update', { package_id: packageId, source: coerceInstallSourceSpec(source, packageId) }), parsed);
           return 0;
         }
         if (sub === 'uninstall') {

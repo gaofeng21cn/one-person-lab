@@ -266,10 +266,35 @@ function writeMarketplaceDocs(paths: CodexMarketplacePaths, doc: MarketplaceDocu
   fs.writeFileSync(paths.root_marketplace_json, jsonText, 'utf8');
 }
 
-function createZeroCopySymlink(target: string, linkPath: string, type: 'dir' | 'file'): void {
-  fs.rmSync(linkPath, { recursive: true, force: true });
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  fs.symlinkSync(target, linkPath, type);
+// Codex omits symlinks when it stages a local plugin in its installation cache.
+// Materialize declared resources with copy-on-write where the filesystem supports it.
+function copyCarrierResource(
+  packageRoot: string,
+  source: string,
+  destination: string,
+  allowSymlinks: boolean,
+  ancestors = new Set<string>(),
+): void {
+  let stat = fs.lstatSync(source);
+  if (stat.isSymbolicLink()) {
+    const relativePath = path.relative(packageRoot, source).split(path.sep).join('/');
+    source = resolveSafePackagePath(packageRoot, relativePath, { allowSymlinks });
+    stat = fs.statSync(source);
+  }
+  if (stat.isFile()) {
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(source, destination, fs.constants.COPYFILE_FICLONE);
+    return;
+  }
+  if (!stat.isDirectory() || ancestors.has(source) || isWithinDirectory(source, destination)) {
+    throw new PackError('INVALID_INPUT', `Invalid or recursive Codex plugin resource at '${source}'.`);
+  }
+  ancestors.add(source);
+  fs.mkdirSync(destination, { recursive: true });
+  for (const entry of fs.readdirSync(source)) {
+    copyCarrierResource(packageRoot, path.join(source, entry), path.join(destination, entry), allowSymlinks, ancestors);
+  }
+  ancestors.delete(source);
 }
 
 export function projectPackageToCodexMarketplace(input: {
@@ -309,74 +334,64 @@ export function projectPackageToCodexMarketplace(input: {
   const pluginJson = buildCodexPluginJson(input.manifest);
   const mcpJson = buildCodexMcpJson(input.manifest, realInstall, allowSymlinks);
 
-  fs.rmSync(pluginDir, { recursive: true, force: true });
-  fs.mkdirSync(path.join(pluginDir, '.codex-plugin'), { recursive: true });
-  fs.writeFileSync(
-    path.join(pluginDir, '.codex-plugin', 'plugin.json'),
-    `${JSON.stringify(pluginJson, null, 2)}\n`,
-    'utf8',
-  );
-
-  if (mcpJson) {
+  // A failed resource copy must leave the previously installed projection usable.
+  fs.mkdirSync(paths.plugins_dir, { recursive: true });
+  const staging = fs.mkdtempSync(path.join(paths.plugins_dir, '.opl-stage-'));
+  const stagedPlugin = path.join(staging, 'next');
+  const priorPlugin = path.join(staging, 'previous');
+  try {
+    fs.mkdirSync(path.join(stagedPlugin, '.codex-plugin'), { recursive: true });
     fs.writeFileSync(
-      path.join(pluginDir, 'mcp.json'),
-      `${JSON.stringify(mcpJson, null, 2)}\n`,
+      path.join(stagedPlugin, '.codex-plugin', 'plugin.json'),
+      `${JSON.stringify(pluginJson, null, 2)}\n`,
       'utf8',
     );
-  }
 
-  // Zero-copy skills symlink(s)
-  const skills = input.manifest.provides?.skills ?? [];
-  if (skills.length > 0) {
-    const rootSkillsDir = path.join(realInstall, 'skills');
-    const allUnderStandardSkillsDir =
-      fs.existsSync(rootSkillsDir)
-      && fs.statSync(rootSkillsDir).isDirectory()
-      && skills.every((s) => {
-        const clean = normalizeRelativePosixPath(s.path).replace(/\/+$/, '');
-        return clean === `skills/${s.id}`;
+    if (mcpJson) {
+      fs.writeFileSync(
+        path.join(stagedPlugin, 'mcp.json'),
+        `${JSON.stringify(mcpJson, null, 2)}\n`,
+        'utf8',
+      );
+    }
+
+    // Only package-declared skills belong in the native installation cache.
+    for (const skill of input.manifest.provides?.skills ?? []) {
+      const skillDir = resolveSafePackagePath(realInstall, skill.path, { allowSymlinks });
+      resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
+        allowSymlinks,
       });
+      copyCarrierResource(realInstall, skillDir, path.join(stagedPlugin, 'skills', skill.id), allowSymlinks);
+    }
 
-    if (allUnderStandardSkillsDir) {
-      for (const skill of skills) {
-        resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
-          allowSymlinks,
-        });
-      }
-      createZeroCopySymlink(rootSkillsDir, path.join(pluginDir, 'skills'), 'dir');
-    } else {
-      const skillsContainer = path.join(pluginDir, 'skills');
-      fs.mkdirSync(skillsContainer, { recursive: true });
-      for (const skill of skills) {
-        const resolvedSkillDir = resolveSafePackagePath(realInstall, skill.path, { allowSymlinks });
-        resolveSafePackagePath(realInstall, `${normalizeRelativePosixPath(skill.path)}/SKILL.md`, {
-          allowSymlinks,
-        });
-        if (!isWithinDirectory(realInstall, resolvedSkillDir)) {
-          throw new PackError('PACK_SYMLINK_ESCAPE', `Skill path '${skill.path}' escapes package root.`);
-        }
-        createZeroCopySymlink(resolvedSkillDir, path.join(skillsContainer, skill.id), 'dir');
+    const rootAssetsDir = path.join(realInstall, 'assets');
+    const assetsLstat = fs.lstatSync(rootAssetsDir, { throwIfNoEntry: false });
+    if (assetsLstat) {
+      const resolvedAssets = resolveSafePackagePath(realInstall, 'assets', { allowSymlinks });
+      if (fs.statSync(resolvedAssets).isDirectory()) {
+        copyCarrierResource(realInstall, resolvedAssets, path.join(stagedPlugin, 'assets'), allowSymlinks);
       }
     }
-  }
 
-  // Zero-copy assets / icon symlink(s)
-  const rootAssetsDir = path.join(realInstall, 'assets');
-  const assetsLstat = fs.lstatSync(rootAssetsDir, { throwIfNoEntry: false });
-  if (assetsLstat) {
-    const resolvedAssets = resolveSafePackagePath(realInstall, 'assets', { allowSymlinks });
-    if (fs.statSync(resolvedAssets).isDirectory()) {
-      createZeroCopySymlink(resolvedAssets, path.join(pluginDir, 'assets'), 'dir');
+    if (input.manifest.identity.icon) {
+      const cleanIcon = normalizeRelativePosixPath(input.manifest.identity.icon);
+      const resolvedIcon = resolveSafePackagePath(realInstall, cleanIcon, { allowSymlinks });
+      if (!cleanIcon.startsWith('assets/')) {
+        const iconDestination = path.join(stagedPlugin, cleanIcon);
+        copyCarrierResource(realInstall, resolvedIcon, iconDestination, allowSymlinks);
+      }
     }
-  }
 
-  if (input.manifest.identity.icon) {
-    const cleanIcon = normalizeRelativePosixPath(input.manifest.identity.icon);
-    const resolvedIcon = resolveSafePackagePath(realInstall, cleanIcon, { allowSymlinks });
-    if (!cleanIcon.startsWith('assets/')) {
-      const iconLinkTarget = path.join(pluginDir, cleanIcon);
-      createZeroCopySymlink(resolvedIcon, iconLinkTarget, 'file');
+    if (fs.existsSync(pluginDir)) fs.renameSync(pluginDir, priorPlugin);
+    try {
+      fs.renameSync(stagedPlugin, pluginDir);
+    } catch (error) {
+      if (fs.existsSync(priorPlugin)) fs.renameSync(priorPlugin, pluginDir);
+      throw error;
     }
+    fs.rmSync(priorPlugin, { recursive: true, force: true });
+  } finally {
+    if (!fs.existsSync(priorPlugin)) fs.rmSync(staging, { recursive: true, force: true });
   }
 
   // Update marketplace.json (.agents/plugins/marketplace.json + root mirror)

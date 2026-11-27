@@ -14,27 +14,21 @@
 
 [Package 拓扑](./project.md#package-拓扑) 将拆仓与发布分开判断：前者解决责任和复用，后者解决分发与回滚。该选择避免提前平台化，也避免真实通用能力被单一产品发布节奏锁住。
 
-## Package 生命周期服从 native carrier
+## 安装事实由实际载体维护
 
-Package identity 由 owner descriptor 持有，物理 installed/enabled/currentness 由 native carrier 持有。Framework 只做配置 carrier 的薄 adapter、presence/callability 和统一 projection。
-
-Framework 不维护普通 Package 的中央版本求解、installed lock、payload lock、LKG、materializer 或 transaction。required dependency 只要求指定 identity 存在且入口可调用。
+Package owner 声明身份、依赖和公开的能力。Pack 管理本机安装、链接及制品内容校验。原生 carrier 保留自身的物理安装事实；App 从 Framework 投影获取安装状态和可用动作。
 
 ## Family capability 使用动态 portfolio
 
 [Portfolio](./references/family-capability-portfolio.md) 用于解释能力，物理源码、安装和发布分别由实际 owner 持有。品牌名称不能决定目录或安装成员，因而新增能力不需要复制一套品牌状态文档。
 
-## Cordis 是共同的进程内 composition runtime，Host 唯一性按 scope 判断
+## Studio 和 Framework 各自管理进程内状态
 
-采用官方 Cordis 可复用现成的进程内组合机制，避免再维护一套 service locator、event bus 或 lifecycle。Host 的唯一性限定在责任范围内：Framework 管运行、Package graph 与 App 投影，Studio 管 DSH、Codex 与 delivery composition。具体连接和禁止共享的状态见 [Host scope boundary](./architecture.md#host-scope-boundary)。
+Studio 使用 DSH/Cordis 装配客户端插件和 Codex 会话。Framework 将任务、Package 与连接状态集中在本机 `opld`，让 GUI、CLI 和 SDK 可使用相同的读写入口。两者通过带会话握手的本地 RPC 协作。[Host scope boundary](./architecture.md#host-scope-boundary)
 
-## Temporal 承担 durable execution，不承担专业判断
+## 长任务由 Runway 持久化
 
-Temporal service 和 worker 承担 workflow history、retry、task queue 和 durable execution。Framework 将其投影为 Stage/Attempt、repair route 和 operator state。
-
-Scheduler、StageRun、StageAttempt 和 worker 使用同一个按 runtime 数据根解析的 task queue。非默认数据根保持队列隔离；`OPL_TEMPORAL_TASK_QUEUE` 是显式覆盖入口，不能由容器布局暗中合并不同数据根。
-
-workflow 完成只能证明 transport/runtime 结果可读取。是否接受产物、是否进入下一 Stage、是否可发布，仍由 domain owner 和 human gate 决定。
+Runway 将工作状态、执行尝试与调度记录保存到相应状态目录的 SQLite 数据库。守护进程恢复时依据任务状态和租约协调重启，任务可保留人工暂停。领域负责人和人工评审保留产物验收和发布决定。
 
 ## Codex carrier 随安装载体归属
 
