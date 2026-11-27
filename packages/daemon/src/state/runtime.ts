@@ -990,7 +990,7 @@ export class DaemonRuntime {
     return res;
   }
 
-  async installPackage(input: Parameters<PackService['install']>[0]): Promise<ReturnType<PackService['install']>> {
+  async installPackage(input: Parameters<PackService['install']>[0]): ReturnType<PackService['install']> {
     const res = await this.packService.install(input);
     try {
       await this.probeCliExtensions(res.package.install_path, res.package.manifest);
