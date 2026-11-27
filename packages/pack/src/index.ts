@@ -240,3 +240,4 @@ export {
   type OfficialPackageCatalogOptions,
 } from './distribution/official-package-catalog.ts';
 export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
+export { ensurePackage, type ResolvedPackageForInstall } from './lifecycle/ensure-package.ts';
