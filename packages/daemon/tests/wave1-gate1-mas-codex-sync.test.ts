@@ -168,73 +168,6 @@ afterEach(async () => {
   }
 });
 
-function writeGate1CodexProtocolStub(stubPath: string, oplHome: string): string {
-  const script = `#!/usr/bin/env node
-import fs from 'node:fs';
-import path from 'node:path';
-import readline from 'node:readline';
-
-const args = process.argv.slice(2);
-if (args[0] === '--version' || args[0] === '-V') {
-  process.stdout.write('codex-cli 0.171.0\\n');
-  process.exit(0);
-}
-if (args[0] === 'app-server') {
-  const mpPath = path.join(${JSON.stringify(oplHome)}, 'carriers', 'codex-marketplace', 'marketplace.json');
-  const mpDir = path.dirname(mpPath);
-  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
-  rl.on('line', (line) => {
-    const t = line.trim();
-    if (!t) return;
-    const frame = JSON.parse(t);
-    if (frame.method === 'initialized' && frame.id === undefined) return;
-    if (frame.method === 'initialize') {
-      process.stdout.write(JSON.stringify({ id: frame.id, result: { userAgent: 'codex-stub/0.171.0' } }) + '\\n');
-      return;
-    }
-    if (frame.method === 'plugin/list') {
-      const marketplaces = [];
-      if (fs.existsSync(mpPath)) {
-        const mpJson = JSON.parse(fs.readFileSync(mpPath, 'utf8'));
-        const mpName = mpJson.name || 'opl-local';
-        const plugins = (mpJson.plugins || []).map((entry) => {
-          const rawSource = typeof entry.source === 'string'
-            ? entry.source
-            : (entry.source && typeof entry.source.path === 'string' ? entry.source.path : './plugins/' + entry.name);
-          const pluginDir = path.resolve(mpDir, rawSource);
-          const pjPath = path.join(pluginDir, '.codex-plugin', 'plugin.json');
-          const pj = fs.existsSync(pjPath) ? JSON.parse(fs.readFileSync(pjPath, 'utf8')) : {};
-          const pluginName = entry.name || pj.name || path.basename(pluginDir);
-          const version = pj.version || entry.version || '0.0.0';
-          return {
-            id: entry.id || (pluginName + '@' + mpName),
-            name: pluginName,
-            version,
-            localVersion: version,
-            source: { type: 'local', path: pluginDir },
-            installed: entry.installed !== undefined ? Boolean(entry.installed) : true,
-            enabled: entry.enabled !== undefined ? Boolean(entry.enabled) : true,
-          };
-        });
-        marketplaces.push({ name: mpName, path: mpDir, plugins });
-      }
-      process.stdout.write(JSON.stringify({ id: frame.id, result: { marketplaces, marketplaceLoadErrors: [] } }) + '\\n');
-      return;
-    }
-    if (frame.id !== undefined) {
-      process.stdout.write(JSON.stringify({ id: frame.id, error: { code: -32601, message: 'Method not found' } }) + '\\n');
-    }
-  });
-  rl.on('close', () => process.exit(0));
-} else {
-  process.exit(2);
-}
-`;
-  fs.mkdirSync(path.dirname(stubPath), { recursive: true });
-  fs.writeFileSync(stubPath, script, { mode: 0o755 });
-  return stubPath;
-}
-
 async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
   // 1. migrate-v1 --apply --clean removes plugins/ source mirror
   const mig = await sb.spawnCli(['pack', 'migrate-v1', tmpMas, '--json']);
@@ -296,8 +229,6 @@ async function runGate1Flow(sb: DaemonSandbox, tmpMas: string): Promise<void> {
 describe('Wave 1 Gate 1: MAS migrate-v1 + build + link + codex plugin/list parity', () => {
   it('migrates self-contained synthetic MAS v1 fixture, builds lock, projects cacheable Codex plugin files, verifies plugin/list parity, and unlinks cleanly', async () => {
     const sb = trackSandbox();
-    const gate1Stub = writeGate1CodexProtocolStub(path.join(sb.root, 'gate1-bin', 'codex.mjs'), sb.oplHome);
-    sb.env.OPL_CODEX_BIN = gate1Stub;
     await sb.startInProcess();
 
     const tmpMas = path.join(sb.workspaceDir, 'med-autoscience');
@@ -313,8 +244,6 @@ describe('Wave 1 Gate 1: MAS migrate-v1 + build + link + codex plugin/list parit
     }
 
     const sb = trackSandbox();
-    const gate1Stub = writeGate1CodexProtocolStub(path.join(sb.root, 'gate1-bin', 'codex.mjs'), sb.oplHome);
-    sb.env.OPL_CODEX_BIN = gate1Stub;
     await sb.startInProcess();
 
     const tmpMas = path.join(sb.workspaceDir, 'med-autoscience');

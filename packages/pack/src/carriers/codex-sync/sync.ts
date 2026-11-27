@@ -352,6 +352,9 @@ export async function discoverExternalCodexPlugins(options: {
   const managedIds = options.managedPluginIds ?? new Set<string>();
 
   const response = await options.runner.listPlugins({ forceRefetch: false }, options.env);
+  if (response.marketplaceLoadErrors.length) {
+    throw new PackError('PACK_CODEX_SYNC_FAILED', 'Incomplete external Codex inventory: marketplaceLoadErrors.');
+  }
   const imported: ImportedExternalPluginRecord[] = [];
   const seenIds = new Set<string>();
 

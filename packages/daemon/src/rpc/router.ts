@@ -706,7 +706,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     return migrateV1Package({ repoDir, apply, clean });
   });
 
-  const handleCodexSync: RpcHandler = async (params) => {
+  const handleCodexSync: RpcHandler = async (params, conn) => {
+    requireTrustedHost(conn, 'pack.codexSync');
     const packageId = pickString(params, 'package_id', 'packageId');
     const importExternal = pickBoolean(params, 'import_external', 'importExternal') ?? true;
     return runtime.codexSync({ packageId, importExternal });

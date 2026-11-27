@@ -294,6 +294,10 @@ describe("E2E-M1 Protocol Stubs Self-Tests (ST-01 .. ST-12)", () => {
       ]),
     };
 
+    const beforeRegistration = spawnSync(CODEX_BIN, ["plugin", "marketplace", "list", "--json"], { env: extEnv, encoding: "utf8" });
+    assert.deepEqual(JSON.parse(beforeRegistration.stdout).marketplaces.map((mp) => mp.name), ["external-local"]);
+    const register = spawnSync(CODEX_BIN, ["plugin", "marketplace", "add", mpDir, "--json"], { env: extEnv, encoding: "utf8" });
+    assert.equal(register.status, 0, register.stderr);
     const mpList = spawnSync(CODEX_BIN, ["plugin", "marketplace", "list", "--json"], { env: extEnv, encoding: "utf8" });
     assert.equal(mpList.status, 0, mpList.stderr);
     const mpParsed = JSON.parse(mpList.stdout);
@@ -316,6 +320,14 @@ describe("E2E-M1 Protocol Stubs Self-Tests (ST-01 .. ST-12)", () => {
     assert.equal(frames[1].result.marketplaceLoadErrors.length, 0);
     assert.equal(frames[1].result.marketplaces[0].plugins[0].id, "med-autoscience@opl-local");
     assert.equal(frames[1].result.marketplaces[1].plugins[0].name, "obsidian-helper");
+
+    assert.equal(frames[1].result.marketplaces[0].plugins[0].installed, false);
+    const install = spawnSync(CODEX_BIN, ["plugin", "add", "med-autoscience@opl-local", "--json"], { env: extEnv, encoding: "utf8" });
+    assert.equal(install.status, 0, install.stderr);
+    const installedReadback = spawnSync(CODEX_BIN, ["app-server", "--stdio"], { env: extEnv, input: rpcInput, encoding: "utf8" });
+    const installed = JSON.parse(installedReadback.stdout.trim().split("\n")[1]).result.marketplaces[0].plugins[0];
+    assert.equal(installed.installed, true);
+    assert.equal(installed.enabled, true);
 
     // Fault modes: invalid_json, load_error, rpc_error, stall
     const invRes = spawnSync(CODEX_BIN, ["app-server", "--stdio"], {
@@ -636,6 +648,8 @@ describe("E2E-M1 Protocol Stubs Self-Tests (ST-01 .. ST-12)", () => {
       "utf8"
     );
 
+    const registered = spawnSync(CODEX_BIN, ["plugin", "marketplace", "add", mpDir, "--json"], { env: sb.env, encoding: "utf8" });
+    assert.equal(registered.status, 0, registered.stderr);
     const rpcInput = [
       JSON.stringify({ id: 1, method: "initialize", params: {} }),
       JSON.stringify({ id: 2, method: "plugin/list", params: {} }),
@@ -728,6 +742,8 @@ describe("E2E-M1 Protocol Stubs Self-Tests (ST-01 .. ST-12)", () => {
       "utf8"
     );
 
+    const registered = spawnSync(CODEX_BIN, ["plugin", "marketplace", "add", mpDir, "--json"], { env: sb.env, encoding: "utf8" });
+    assert.equal(registered.status, 0, registered.stderr);
     const mpList = spawnSync(CODEX_BIN, ["plugin", "marketplace", "list", "--json"], { env: sb.env, encoding: "utf8" });
     assert.equal(mpList.status, 0, mpList.stderr);
     const mpParsed = JSON.parse(mpList.stdout);
@@ -749,7 +765,8 @@ describe("E2E-M1 Protocol Stubs Self-Tests (ST-01 .. ST-12)", () => {
     const plugin = frames[1].result.marketplaces[0].plugins[0];
     assert.equal(plugin.id, "med-autoscience@opl-local");
     assert.equal(plugin.name, "med-autoscience");
-    assert.equal(plugin.version, "0.4.0");
-    assert.deepEqual(plugin.source, { type: "local", path: masPluginDir });
+    assert.equal(plugin.version, null);
+    assert.equal(plugin.localVersion, "0.4.0");
+    assert.deepEqual(plugin.source, { type: "local", path: fs.realpathSync(masPluginDir) });
   });
 });
