@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { acceptDomainRead, type TaskWorkbenchItem } from '@opl/mcp-app-shared/task-workbench';
 import type { CatalogCommandDescriptor, McpAppCatalog } from '@opl/mcp-app-shared/types';
 import { collectionFrom } from '@opl/mcp-app-shared/view';
 import { connectTestRpc, createDaemonSandbox, ROOT_OPL_BIN, writeMinimalV2Package } from './helpers/sandbox.ts';
@@ -13,8 +14,7 @@ interface WorkItem {
   identity: { work_item_id: string; work_item_kind: string };
 }
 
-interface Detail {
-  item_id: string;
+interface Detail extends TaskWorkbenchItem {
   artifacts?: Array<{ artifact_ref: string; summary: string; media_type: string }>;
   runtime_actions: CatalogCommandDescriptor[];
 }
@@ -31,11 +31,17 @@ test('Studio opens the selected runtime task over stdio and changes visibility w
   fs.mkdirSync(path.join(pkg, 'contracts'));
   fs.writeFileSync(path.join(pkg, 'contracts', 'domain_descriptor.json'), JSON.stringify({
     surface_kind: 'domain_agent_descriptor', domain_id: 'research', package_id: agentId,
+    task_provider: { views: [{
+      view_id: 'research-roadmap', view_kind: 'research-roadmap',
+      schema_ref: 'contracts/schemas/v2/mas-research-trajectory-snapshot-v2.schema.json',
+      source_kind: 'work_item_relative_json', relative_path: 'roadmap.json',
+      owner_task_binding: { task_id_pointer: '/study_id', task_ref_pointer: '/study_ref/ref', task_ref_template: 'mas-study:{task_id}' },
+    }] },
     standard_agent_interface: {
       version: 'opl_standard_agent_interface.v1',
       inventory_projection: {
         source_kind: 'workspace_relative_json', relative_path: 'index.json', items_pointer: '/items',
-        field_map: { work_item_id: 'id', display_name: 'title' },
+        field_map: { work_item_id: 'id', display_name: 'title', work_item_root: 'root' },
       },
     },
   }));
@@ -50,8 +56,15 @@ test('Studio opens the selected runtime task over stdio and changes visibility w
 
   // A different project's owner deliberately uses the same unqualified ID.
   const otherRoot = path.join(sandbox.root, 'other-project');
-  fs.mkdirSync(otherRoot);
-  fs.writeFileSync(path.join(otherRoot, 'index.json'), JSON.stringify({ items: [{ id: task.task_id, title: 'Domain work item' }] }));
+  fs.mkdirSync(path.join(otherRoot, 'study'), { recursive: true });
+  fs.writeFileSync(path.join(otherRoot, 'index.json'), JSON.stringify({
+    items: [{ id: task.task_id, title: 'Domain work item', root: 'study' }],
+  }));
+  const roadmap = {
+    study_id: task.task_id, study_ref: { ref: 'mas-study:' + task.task_id },
+    revision: 4, summary: {}, nodes: [{ id: 'review', label: 'Review', source_refs: [] }], edges: [],
+  };
+  fs.writeFileSync(path.join(otherRoot, 'study', 'roadmap.json'), JSON.stringify(roadmap));
   await rpc.call('workspace.init', { root_path: otherRoot, domain_id: 'research' });
 
   const projected = async () => {
@@ -103,6 +116,17 @@ test('Studio opens the selected runtime task over stdio and changes visibility w
   assert.equal((await read(view.data_ref, { work_item_id: task.task_id })).state, 'unavailable');
   const domainDetail = await detail(domain);
   assert.deepEqual(domainDetail.artifacts ?? [], []);
+  const descriptor = domainDetail.domain_detail_views?.find(view => view.view_id === 'research-roadmap');
+  assert.ok(descriptor);
+  const domainInput = { item_id: domain.item_id, view_id: descriptor.view_id };
+  const first = await read('opl.runtime.v1#domain-detail', domainInput);
+  assert.equal(first.state, 'ready');
+  const accepted = acceptDomainRead(first.data.detail, domainDetail, descriptor);
+  assert.equal(accepted.revision, roadmap.revision);
+  assert.deepEqual(accepted.snapshot.nodes, roadmap.nodes);
+  const next = await read('opl.runtime.v1#domain-detail', { ...domainInput, if_revision: accepted.revision });
+  assert.equal(next.state, 'ready');
+  assert.strictEqual(acceptDomainRead(next.data.detail, domainDetail, descriptor, accepted), accepted);
   const runwayDetail = await detail(runway);
   assert.deepEqual(runwayDetail.artifacts?.map(({ artifact_ref, summary, media_type }) => ({ artifact_ref, summary, media_type })), [
     { artifact_ref: artifact.path, summary: artifact.summary, media_type: artifact.media_type },
