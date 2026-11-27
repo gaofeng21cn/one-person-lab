@@ -13,6 +13,7 @@ case "$lane" in
     npm run v2:typecheck
     npm run v2:guard
     npm run v2:test
+    npm run v2:performance
     npm run lint
     ./scripts/repo-hygiene.sh
     node --experimental-strip-types ./scripts/generate-v2-contracts.mjs --check

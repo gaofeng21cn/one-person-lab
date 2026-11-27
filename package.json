@@ -31,6 +31,7 @@
     "v2:typecheck": "tsc -b --noEmit tsconfig.packages.json",
     "v2:guard": "node ./scripts/check-v2-import-guard.mjs --strict-m4",
     "v2:test": "node --experimental-strip-types --test packages/core/tests/*.test.ts packages/ledger/tests/*.test.ts packages/workspace/tests/*.test.ts packages/mcp-app-shared/tests/*.test.ts packages/connect/tests/*.test.ts packages/pack/tests/*.test.ts packages/runway/tests/*.test.ts packages/daemon/tests/*.test.ts",
+    "v2:performance": "node --conditions=opl-source --experimental-strip-types --test --test-concurrency=1 packages/daemon/tests/performance/*.test.ts",
     "prepare": "npm run build",
     "docs:whitepaper": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/whitepaper_profile.json",
     "docs:whitepaper:framework": "node --experimental-strip-types ./scripts/run-domain-whitepaper.ts --repo-root . --profile contracts/framework-whitepaper_profile.json",
