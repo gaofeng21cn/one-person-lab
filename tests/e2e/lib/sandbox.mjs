@@ -11,6 +11,65 @@ import { fileURLToPath } from "node:url";
 const LIB_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_WORKTREE_ROOT = path.resolve(LIB_DIR, "../../..");
 
+export function resolveSiblingRepoRoot(
+  repoName,
+  { envVar, worktreeRoot = DEFAULT_WORKTREE_ROOT, markerRelPaths = [] } = {}
+) {
+  if (envVar && process.env[envVar]) {
+    return path.resolve(process.env[envVar]);
+  }
+  const candidates = [
+    path.resolve(worktreeRoot, "..", repoName),
+    path.resolve(worktreeRoot, "../..", repoName),
+  ];
+  if (markerRelPaths.length > 0) {
+    for (const candidate of candidates) {
+      if (markerRelPaths.some((rel) => fs.existsSync(path.join(candidate, rel)))) {
+        return candidate;
+      }
+    }
+  }
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return candidates[0];
+}
+
+export function resolveStudioRoot(worktreeRoot = DEFAULT_WORKTREE_ROOT) {
+  return resolveSiblingRepoRoot("opl-studio", {
+    envVar: "OPL_STUDIO_ROOT",
+    worktreeRoot,
+    markerRelPaths: [
+      path.join("plugins", "core", "opl-framework-bridge", "src"),
+      path.join("plugins", "opl-framework-bridge", "src"),
+    ],
+  });
+}
+
+export function resolveBridgeDir(studioRoot = resolveStudioRoot()) {
+  if (process.env.OPL_STUDIO_BRIDGE_DIR) {
+    return path.resolve(process.env.OPL_STUDIO_BRIDGE_DIR);
+  }
+  const coreBridge = path.join(studioRoot, "plugins", "core", "opl-framework-bridge");
+  const legacyBridge = path.join(studioRoot, "plugins", "opl-framework-bridge");
+  if (fs.existsSync(path.join(coreBridge, "src")) || fs.existsSync(path.join(coreBridge, "package.json"))) {
+    return coreBridge;
+  }
+  if (fs.existsSync(path.join(legacyBridge, "src")) || fs.existsSync(path.join(legacyBridge, "package.json"))) {
+    return legacyBridge;
+  }
+  return fs.existsSync(coreBridge) ? coreBridge : legacyBridge;
+}
+
+export function resolveAppRoot(worktreeRoot = DEFAULT_WORKTREE_ROOT) {
+  return resolveSiblingRepoRoot("one-person-lab-app", {
+    envVar: "OPL_APP_ROOT",
+    worktreeRoot,
+  });
+}
+
 function sleepMs(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

@@ -287,7 +287,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'link', usage: 'link <dir> [--no-codex-sync]' },
     { name: 'unlink', usage: 'unlink <packageId>' },
     { name: 'sync', usage: 'sync [codex] [--package <id>]' },
-    { name: 'build', usage: 'build [<dir>] [--no-write-lock]' },
+    { name: 'build', usage: 'build [<dir>] [--no-write-lock] [--dry-run]' },
     { name: 'migrate-v1', usage: 'migrate-v1 [<dir>] [--dry-run] [--no-clean]' },
   ],
   connect: [
@@ -682,8 +682,9 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!fs.existsSync(dir)) {
             throw new DaemonRpcError(-32602, 'PACK_MISSING_PATH', `Package directory does not exist: ${dir}`);
           }
-          const writeLock = !getBoolFlag(parsed, '--no-write-lock');
-          const built = buildPackage(dir, { writeLock });
+          const dryRun = getBoolFlag(parsed, '--dry-run');
+          const writeLock = !dryRun && !getBoolFlag(parsed, '--no-write-lock');
+          const built = buildPackage(dir, { writeLock, dryRun });
           emitOutput(built, parsed);
           return 0;
         }

@@ -383,4 +383,56 @@ describe('OPL Foundry extension (zero external deps, pure Node ESM)', () => {
     assert.equal(symVal.exit_code, 2);
     assert.equal(symVal.errors.some((e) => e.code === 'SYMLINK_FORBIDDEN'), true);
   });
+
+  it('excludes nested node_modules, .codegraph, and .tsbuildinfo with @opl/pack parity and rejects excluded-named symlinks', () => {
+    const root = makeTempDir();
+    const cleanPkg = path.join(root, 'clean-m8-agent');
+    const noisyPkg = path.join(root, 'noisy-m8-agent');
+    const outsideFile = path.join(root, 'outside.txt');
+    fs.writeFileSync(outsideFile, 'secret\n', 'utf8');
+
+    const ext = registerFoundryCli();
+    assert.equal(ext.handlers.init([cleanPkg], { id: 'm8-excl-agent', 'pkg-version': '1.0.0' }).ok, true);
+    fs.mkdirSync(path.join(cleanPkg, 'workbench', 'src'), { recursive: true });
+    fs.writeFileSync(path.join(cleanPkg, 'workbench', 'src', 'app.ts'), 'export const x = 1;\n', 'utf8');
+
+    fs.cpSync(cleanPkg, noisyPkg, { recursive: true });
+    fs.mkdirSync(path.join(noisyPkg, 'workbench', 'node_modules', '.bin'), { recursive: true });
+    fs.mkdirSync(path.join(noisyPkg, 'workbench', 'node_modules', 'esbuild'), { recursive: true });
+    fs.writeFileSync(path.join(noisyPkg, 'workbench', 'node_modules', 'esbuild', 'cli.js'), '1', 'utf8');
+    fs.symlinkSync('../esbuild/cli.js', path.join(noisyPkg, 'workbench', 'node_modules', '.bin', 'esbuild'));
+    fs.mkdirSync(path.join(noisyPkg, '.codegraph'), { recursive: true });
+    fs.writeFileSync(path.join(noisyPkg, '.codegraph', 'codegraph.db'), 'db', 'utf8');
+    fs.mkdirSync(path.join(noisyPkg, '.tsbuildinfo'), { recursive: true });
+    fs.writeFileSync(path.join(noisyPkg, '.tsbuildinfo', 'tests.tsbuildinfo'), '{}', 'utf8');
+    fs.writeFileSync(path.join(noisyPkg, 'workbench', 'types.tsbuildinfo'), '{}', 'utf8');
+
+    const cleanBuild = buildPackage(cleanPkg, { writeLock: true });
+    const noisyBuild = buildPackage(noisyPkg, { writeLock: true });
+    assert.equal(noisyBuild.digest, cleanBuild.digest);
+
+    const foundryLock = computeReleaseLock(noisyPkg);
+    assert.equal(foundryLock.digest, cleanBuild.digest);
+    assert.deepEqual(foundryLock.paths, cleanBuild.lock.paths);
+
+    const valRes = validatePackage(noisyPkg);
+    assert.equal(valRes.ok, true, JSON.stringify(valRes.errors));
+
+    // Symlinks literally named node_modules, .codegraph, .tsbuildinfo, or *.tsbuildinfo MUST fail closed
+    for (const badRel of [
+      'workbench/node_modules',
+      '.codegraph',
+      '.tsbuildinfo',
+      'workbench/evil.tsbuildinfo',
+    ]) {
+      const linkPath = path.join(cleanPkg, badRel);
+      fs.symlinkSync(outsideFile, linkPath);
+      const symVal = validatePackage(cleanPkg);
+      assert.equal(symVal.ok, false, `Expected validatePackage failure for symlink ${badRel}`);
+      assert.equal(symVal.exit_code, 2);
+      assert.equal(symVal.errors.some((e) => e.code === 'SYMLINK_FORBIDDEN'), true);
+      assert.throws(() => computeReleaseLock(cleanPkg), /Symlink forbidden/);
+      fs.rmSync(linkPath);
+    }
+  });
 });

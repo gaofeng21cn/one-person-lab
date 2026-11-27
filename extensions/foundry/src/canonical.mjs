@@ -10,10 +10,18 @@ export const SHA256_DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
 export const CODEX_PLUGIN_NAME_RE = /^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._-]*$/;
 export const SAFE_SINGLE_SEGMENT_ID_RE = /^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
-const EXCLUDED_TOP_DIRS = new Set(['.git', 'node_modules']);
-const EXCLUDED_DIRS = new Set(['__pycache__', '.pytest_cache', '.ruff_cache', '.venv']);
+const EXCLUDED_TOP_DIRS = new Set(['.git']);
+const EXCLUDED_DIRS = new Set([
+  'node_modules',
+  '.codegraph',
+  '.tsbuildinfo',
+  '__pycache__',
+  '.pytest_cache',
+  '.ruff_cache',
+  '.venv',
+]);
 const EXCLUDED_RELEASE_NAMES = new Set(['.DS_Store', 'opl-release.lock.json']);
-const EXCLUDED_FILE_SUFFIXES = ['.pyc'];
+const EXCLUDED_FILE_SUFFIXES = ['.pyc', '.tsbuildinfo'];
 
 export function isSafeSingleSegmentId(value) {
   return (

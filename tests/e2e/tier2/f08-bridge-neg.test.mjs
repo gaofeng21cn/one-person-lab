@@ -6,18 +6,15 @@ import { pathToFileURL } from "node:url";
 
 import { runCliOk } from "../lib/cli.mjs";
 import { buildV2Package } from "../lib/fixtures.mjs";
-import { createSandbox } from "../lib/sandbox.mjs";
+import {
+  createSandbox,
+  resolveBridgeDir,
+  resolveStudioRoot,
+} from "../lib/sandbox.mjs";
 import { getInstalledPackage, openOplDb } from "../lib/sqlite-inspector.mjs";
 
-const STUDIO_ROOT = path.resolve(
-  process.env.OPL_STUDIO_ROOT || "/Users/gaofeng/workspace/.worktrees/opl-studio-v2-bridge"
-);
-const BRIDGE_DIR = path.resolve(
-  process.env.OPL_STUDIO_BRIDGE_DIR ||
-    (fs.existsSync(path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge"))
-      ? path.join(STUDIO_ROOT, "plugins", "core", "opl-framework-bridge")
-      : path.join(STUDIO_ROOT, "plugins", "opl-framework-bridge"))
-);
+const STUDIO_ROOT = resolveStudioRoot();
+const BRIDGE_DIR = resolveBridgeDir(STUDIO_ROOT);
 
 const activeSandboxes = [];
 const activeBridges = [];

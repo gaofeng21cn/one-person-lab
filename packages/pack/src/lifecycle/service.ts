@@ -188,6 +188,8 @@ function copyDirectoryPhysical(srcDir: string, destDir: string): void {
       }
       if (lstat.isDirectory()) {
         if (
+          entry.name === '.codegraph' ||
+          entry.name === '.tsbuildinfo' ||
           entry.name === '__pycache__' ||
           entry.name === '.pytest_cache' ||
           entry.name === '.ruff_cache' ||
@@ -198,7 +200,7 @@ function copyDirectoryPhysical(srcDir: string, destDir: string): void {
         fs.mkdirSync(toPath, { recursive: true });
         copyWalk(fromPath, toPath);
       } else if (lstat.isFile()) {
-        if (entry.name.endsWith('.pyc')) {
+        if (entry.name.endsWith('.pyc') || entry.name.endsWith('.tsbuildinfo')) {
           continue;
         }
         fs.copyFileSync(fromPath, toPath);
@@ -996,11 +998,13 @@ export class PackService {
   build(input: {
     readonly dir: string;
     readonly writeLock?: boolean;
+    readonly dryRun?: boolean;
     readonly builtAt?: string;
     readonly gitCommit?: string;
   }): BuildPackageResult {
     return buildPackage(input.dir, {
       writeLock: input.writeLock,
+      dryRun: input.dryRun,
       builtAt: input.builtAt,
       gitCommit: input.gitCommit,
     });
