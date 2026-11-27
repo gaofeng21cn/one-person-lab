@@ -20,8 +20,9 @@ PREEXISTING_OPL_PATH=$(command -v opl 2>/dev/null || true)
 SYSTEM_GIT_PATH=${OPL_SYSTEM_GIT_PATH:-/usr/bin/git}
 XCODE_SELECT=${OPL_XCODE_SELECT:-/usr/bin/xcode-select}
 
-INSTALL_ARGS=()
-INSTALL_MODE_EXPLICIT=0
+HEADLESS=0
+WITH_APP=0
+APP_ARGS=()
 for arg in "$@"; do
   case "$arg" in
     --ensure-node)
@@ -30,26 +31,31 @@ for arg in "$@"; do
     --carrier-only)
       CARRIER_ONLY=1
       ;;
-    --headless|--with-app)
-      INSTALL_MODE_EXPLICIT=1
-      INSTALL_ARGS+=("$arg")
+    --headless)
+      HEADLESS=1
+      ;;
+    --with-app)
+      WITH_APP=1
+      ;;
+    --skip-packages|--skip-engines|--skip-native-helper-repair|--no-online-runtime)
+      # Framework v2 bootstrap only installs and verifies OPL Base.
+      ;;
+    --yes|--open|--no-open)
+      APP_ARGS+=("$arg")
       ;;
     *)
-      INSTALL_ARGS+=("$arg")
+      printf 'Unsupported Framework installer option: %s\n' "$arg" >&2
+      exit 1
       ;;
   esac
 done
-if [ "$CARRIER_ONLY" != "1" ] && [ "$INSTALL_MODE_EXPLICIT" != "1" ]; then
-  if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
-    INSTALL_ARGS=(--headless "${INSTALL_ARGS[@]}")
-  else
-    INSTALL_ARGS=(--headless)
-  fi
+if [ "$HEADLESS" = "1" ] && [ "$WITH_APP" = "1" ]; then
+  printf '%s\n' '--headless and --with-app are mutually exclusive.' >&2
+  exit 1
 fi
-if [ "${#INSTALL_ARGS[@]}" -gt 0 ]; then
-  set -- "${INSTALL_ARGS[@]}"
-else
-  set --
+if [ "${#APP_ARGS[@]}" -ne 0 ] && [ "$WITH_APP" != "1" ]; then
+  printf '%s\n' 'App installation options require --with-app.' >&2
+  exit 1
 fi
 
 case "$INSTALL_SOURCE_MODE" in
@@ -243,7 +249,7 @@ need_cmd() {
     fi
     printf '\n' >&2
     printf 'After that, rerun:\n' >&2
-    printf '  curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main/install.sh | bash\n' >&2
+    printf '  curl -fsSL https://raw.githubusercontent.com/gaofeng21cn/one-person-lab/main/install.sh | bash\n' >&2
     exit 1
   fi
 }
@@ -536,26 +542,24 @@ if [ "$CARRIER_ONLY" = "1" ]; then
   exit 0
 fi
 
-log "Preparing the local background-service runtime"
-export PATH="$HOME/.local/bin:$PATH"
+OPL_INSTALL_CLI="$(resolve_cli_prefix)/bin/opl"
+log "Checking the installed OPL daemon"
+"$OPL_INSTALL_CLI" daemon doctor --include-first-run
 
-OPL_INSTALL_CLI=./bin/opl
-if command -v opl >/dev/null 2>&1; then
-  OPL_INSTALL_CLI=opl
+log "OPL Framework is ready"
+if [ "$WITH_APP" = "1" ]; then
+  log "Running the One Person Lab App installer"
+  set -- --desktop ${APP_ARGS[@]+"${APP_ARGS[@]}"}
+  if is_darwin; then
+    set -- "$@" --stable-macos-install
+  fi
+  if [ -n "${OPL_RELEASE_VERSION:-}" ]; then
+    set -- "$@" --release-tag "v${OPL_RELEASE_VERSION#v}"
+  fi
+  export OPL_APP_RELEASE_REPO="${OPL_RELEASE_REPO:-${OPL_APP_RELEASE_REPO:-gaofeng21cn/one-person-lab-app}}"
+  curl -fsSL "${OPL_APP_INSTALL_SCRIPT_URL:-https://raw.githubusercontent.com/gaofeng21cn/one-person-lab-app/main/install.sh}" | bash -s -- "$@"
+  exit 0
 fi
-
-log "Refreshing the official software catalog"
-if ! "$OPL_INSTALL_CLI" sources refresh --source-id public-registry:opl >/dev/null; then
-  log "Software catalog refresh unavailable. Continuing with the local catalog, if present."
-fi
-
-log "Running complete One Person Lab setup"
-"$OPL_INSTALL_CLI" install "$@"
-log "Inspecting OPL system state"
-"$OPL_INSTALL_CLI" system initialize
-
-log "One Person Lab is ready"
 printf '\nNext steps:\n'
-printf '  1. Use OPL from Codex/CLI, or install the optional One Person Lab App as a GUI.\n'
-printf '  2. Choose a workspace root when the App asks for it.\n'
-printf '  3. Re-run "opl system initialize" any time you want to inspect Codex, modules, skills, runtime provider, and GUI state.\n'
+printf '  1. Run "opl daemon doctor --include-first-run --json" to check the daemon and local Packages.\n'
+printf '  2. Run "opl pack --help" for Package management, or see https://github.com/gaofeng21cn/one-person-lab-app for the desktop App.\n'
