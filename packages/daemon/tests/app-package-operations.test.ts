@@ -20,6 +20,21 @@ test('the App reads Pack history and measured progress independently of backgrou
   assert.equal(failure.package_id, 'sample');
   assert.equal(failure.error_code, 'PACK_NOT_FOUND');
 
+  const localDir = path.join(root, 'local-build-dir');
+  fs.mkdirSync(localDir);
+  fs.writeFileSync(path.join(localDir, 'opl-package.json'), JSON.stringify({
+    schema_version: 'opl.package.v2',
+    identity: {
+      id: 'sample', version: '1.0.0', intent: 'app', publisher: 'Example',
+      name: { 'en-US': 'Sample', 'zh-CN': '示例' }, summary: { 'en-US': 'Sample app', 'zh-CN': '示例应用' },
+    },
+  }));
+  const installed = await pack.install({ source: { kind: 'local_dir', path: localDir }, syncCodex: false });
+  assert.equal(installed.operation.package_id, 'sample');
+  assert.equal(readAppPackageOperations(pack).operations[0].package_id, 'sample');
+  pack.store.createOperation({ op_id: 'legacy', package_id: localDir, action: 'install', status: 'succeeded' });
+  assert.ok(!readAppPackageOperations(pack).operations.some(row => row.operation_id === 'legacy'));
+
   pack.store.createOperation({
     op_id: 'download', package_id: 'sample', action: 'update', status: 'downloading',
     progress: { stage: 'downloading', bytes_done: 32, bytes_total: 128, speed_bps: 24 },

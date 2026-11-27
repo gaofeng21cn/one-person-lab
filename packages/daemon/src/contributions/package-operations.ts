@@ -1,7 +1,9 @@
-import type { PackService, PackageOperationRecord } from '@opl/pack';
+import { KebabIdSchema, type PackService, type PackageOperationRecord } from '@opl/pack';
 
 function appOperation(operation: PackageOperationRecord) {
   const { action, status, progress } = operation;
+  // Older local installs journaled their source path before reading the manifest.
+  if (!KebabIdSchema.safeParse(operation.package_id).success) return [];
   if (action !== 'install' && action !== 'update' && action !== 'repair') return [];
   const terminal = status === 'succeeded' || status === 'failed' || status === 'cancelled' || status === 'interrupted';
   const stage = status === 'queued' ? 'preparing' : status;
