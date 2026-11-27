@@ -1,3 +1,6 @@
+import { projectPackageDirectory, packageActions } from './package-projection.ts';
+import { readAppPackagePreferences } from './app-package-preferences.ts';
+import { projectUiContributions } from './ui-projection.ts';
 import type { SqliteDb } from '@opl/core';
 import { readLocalCodexAccessState, readOplGatewayAccount, withGatewayStateDirectory, type ConnectService } from '@opl/connect';
 import type { InstalledPackageRecord, PackService } from '@opl/pack';
@@ -83,6 +86,9 @@ export interface AppStateSnapshot {
   readonly schedules: readonly Record<string, unknown>[];
   readonly recent_operations?: ReturnType<PackService['operationStatus']>;
   readonly app_state: {
+    readonly agent_packages: ReturnType<typeof projectPackageDirectory>;
+    readonly ui_contributions: ReturnType<typeof projectUiContributions>;
+    readonly actions: readonly Record<string, unknown>[];
     readonly packages: readonly ProjectedPackageSummary[];
     readonly installed_packages: readonly ProjectedPackageSummary[];
     readonly workspaces: readonly Record<string, unknown>[];
@@ -167,7 +173,10 @@ export class AppStateCache {
       return this.#fullSnapshot;
     }
 
-    const packages = this.#packService.list().map(toProjectedPackageSummary);
+    const installed = this.#packService.list();
+    const packages = installed.map(toProjectedPackageSummary);
+    const preferences = readAppPackagePreferences(this.#db);
+    const appPackages = installed.filter(pkg => preferences.enabled.get(pkg.package_id) !== false);
     const workspaces = this.#db
       .prepare(
         'SELECT workspace_id, name, root_path, domain_id, revision, metadata_json, created_at, updated_at FROM workspaces ORDER BY created_at ASC, rowid ASC',
@@ -212,6 +221,9 @@ export class AppStateCache {
       tasks,
       schedules,
       app_state: {
+        agent_packages: projectPackageDirectory(installed, preferences),
+        ui_contributions: projectUiContributions(appPackages),
+        actions: packageActions,
         packages,
         installed_packages: packages,
         workspaces,
