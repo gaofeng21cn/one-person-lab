@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import path from 'node:path';
 import { KernelError } from '@opl/core';
-import { resolveSafePackagePath, type PackService } from '@opl/pack';
+import { resolveConfiguredCodexHome, resolveSafePackagePath, type PackService } from '@opl/pack';
 import { readCodexUserInstructions, writeCodexUserInstructions } from './codex-user-instructions.ts';
+import { fileStatFingerprint } from './file-stat-cache.ts';
 
 function readFlowDefault(pack: PackService) {
   const flow = pack.inspect('opl-flow');
@@ -37,18 +39,90 @@ function readFlowDefault(pack: PackService) {
   }
 }
 
-export function readCodexPersonalization(pack: PackService) {
-  let userAgents;
-  try {
-    userAgents = readCodexUserInstructions();
-  } catch {
-    userAgents = { status: 'unavailable', source: 'codex_home_agents_md' };
-  }
+export type CodexPersonalizationSnapshot = {
+  readonly surface_kind: 'opl_codex_personalization.v1';
+  readonly user_agents: ReturnType<typeof readCodexUserInstructions> | { readonly status: 'unavailable'; readonly source: 'codex_home_agents_md' };
+  readonly opl_flow_default_user_agents: ReturnType<typeof readFlowDefault>;
+};
+
+export function createCodexPersonalizationReader() {
+  let cachedUser: { key: string; value: CodexPersonalizationSnapshot['user_agents'] } | null = null;
+  let cachedFlow: {
+    flowKey: string;
+    profileDirPath: string;
+    profileDirStat: string;
+    manifestPath: string;
+    manifestStat: string;
+    templatePath: string | null;
+    templateStat: string;
+    value: ReturnType<typeof readFlowDefault>;
+  } | null = null;
+  let cachedSnapshot: CodexPersonalizationSnapshot | null = null;
+
   return {
-    surface_kind: 'opl_codex_personalization.v1',
-    user_agents: userAgents,
-    opl_flow_default_user_agents: readFlowDefault(pack),
+    invalidate() {
+      cachedUser = null;
+      cachedFlow = null;
+      cachedSnapshot = null;
+    },
+    read(pack: PackService): CodexPersonalizationSnapshot {
+      const targetPath = path.join(resolveConfiguredCodexHome(), 'AGENTS.md');
+      const userKey = `${targetPath}\0${fileStatFingerprint(targetPath, false)}`;
+      if (!cachedUser || cachedUser.key !== userKey) {
+        let userAgents: CodexPersonalizationSnapshot['user_agents'];
+        try {
+          userAgents = readCodexUserInstructions();
+        } catch {
+          userAgents = { status: 'unavailable', source: 'codex_home_agents_md' };
+        }
+        cachedUser = { key: userKey, value: userAgents };
+        cachedSnapshot = null;
+      }
+
+      const flow = pack.inspect('opl-flow');
+      const flowKey = !flow?.enabled || flow.origin === 'external'
+        ? `unavailable:${flow?.version ?? ''}`
+        : [flow.version, flow.install_mode, flow.install_path, flow.content_digest].join('\0');
+      const profileDirPath = flow ? path.join(flow.install_path, 'profile') : '';
+      const manifestPath = flow ? path.join(profileDirPath, 'manifest.json') : '';
+      const profileDirStat = flow ? fileStatFingerprint(profileDirPath, false) : 'missing';
+      const manifestStat = flow ? fileStatFingerprint(manifestPath, false) : 'missing';
+      const flowCacheHit = cachedFlow
+        && cachedFlow.flowKey === flowKey
+        && cachedFlow.profileDirPath === profileDirPath
+        && cachedFlow.profileDirStat === profileDirStat
+        && cachedFlow.manifestPath === manifestPath
+        && cachedFlow.manifestStat === manifestStat
+        && (!cachedFlow.templatePath || fileStatFingerprint(cachedFlow.templatePath, false) === cachedFlow.templateStat);
+      if (!flowCacheHit) {
+        const value = readFlowDefault(pack);
+        const templatePath = value.source_path;
+        cachedFlow = {
+          flowKey,
+          profileDirPath,
+          profileDirStat,
+          manifestPath,
+          manifestStat,
+          templatePath,
+          templateStat: templatePath ? fileStatFingerprint(templatePath, false) : 'none',
+          value,
+        };
+        cachedSnapshot = null;
+      }
+
+      return (cachedSnapshot ??= {
+        surface_kind: 'opl_codex_personalization.v1',
+        user_agents: cachedUser.value,
+        opl_flow_default_user_agents: cachedFlow!.value,
+      });
+    },
   };
+}
+
+const defaultReader = createCodexPersonalizationReader();
+
+export function readCodexPersonalization(pack: PackService) {
+  return defaultReader.read(pack);
 }
 
 export function restoreCodexUserInstructions(

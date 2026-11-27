@@ -1,10 +1,13 @@
 import { isRecord } from '@opl/core';
 import {
   officialPackageInstallSource,
+  officialPackagePrivateSourceId,
   officialPackageRuntimeRoot,
   readOfficialPackageCatalog,
+  type InstalledPackageRecord,
   type OfficialPackageCatalogEntry,
   type OfficialPackageCatalogOptions,
+  type PackStore,
 } from '@opl/pack';
 
 function localized(value: unknown): Record<string, string> {
@@ -78,14 +81,77 @@ function projectEntry(entry: OfficialPackageCatalogEntry, runtimeRoot: string | 
 }
 
 type CatalogRow = NonNullable<ReturnType<typeof projectEntry>>;
+type PrivatePackageAccessInfo = {
+  readonly sourceId: string;
+  readonly selectedVersion: string;
+};
 export type SoftwareCatalogSnapshot = {
   readonly status: 'loading' | 'ready' | 'unavailable' | 'stale';
   readonly entries: ReadonlyMap<string, CatalogRow>;
   readonly repositories: ReadonlyMap<string, string>;
+  readonly privateAccess?: ReadonlyMap<string, PrivatePackageAccessInfo>;
 };
 
 export function projectCatalogEntries(snapshot: SoftwareCatalogSnapshot, installedIds: ReadonlySet<string>): CatalogRow[] {
   return [...snapshot.entries.values()].filter(entry => !installedIds.has(entry.package_id));
+}
+
+export function applyAuthorizedPrivatePackageOverlay<
+  T extends { readonly directory: { readonly entries: readonly Record<string, unknown>[] } },
+>(
+  agentPackages: T,
+  catalog: SoftwareCatalogSnapshot,
+  authorizedSourceIds: ReadonlySet<string>,
+  installedPackages: ReadonlyArray<Pick<InstalledPackageRecord, 'package_id' | 'origin' | 'install_mode'>>,
+  store: Pick<PackStore, 'getInstallSource'>,
+): T {
+  if (!authorizedSourceIds.size || !catalog.privateAccess?.size) return agentPackages;
+  const installedById = new Map(installedPackages.map(pkg => [pkg.package_id, pkg]));
+  let changed = false;
+  const entries = agentPackages.directory.entries.map(entry => {
+    const packageId = typeof entry.package_id === 'string' ? entry.package_id : '';
+    const priv = catalog.privateAccess?.get(packageId);
+    if (!priv || !authorizedSourceIds.has(priv.sourceId)) return entry;
+    if (entry.installed === true) {
+      const pkg = installedById.get(packageId);
+      const updateSource = pkg && entry.catalog_origin === 'opl' && pkg.origin === 'opl' && pkg.install_mode === 'release'
+        ? store.getInstallSource(packageId)
+        : null;
+      if (updateSource?.kind === 'official' && updateSource.package_id === packageId && entry.selected_version !== priv.selectedVersion) {
+        changed = true;
+        return { ...entry, selected_version: priv.selectedVersion };
+      }
+      return entry;
+    }
+    changed = true;
+    const installAction = {
+      action_id: 'agent_package_install',
+      action_ref: 'app_state.actions#agent_package_install',
+      required_payload_fields: ['package_id'],
+      payload: { package_id: packageId },
+      confirmation_required: true,
+      semantic: 'install',
+    };
+    return {
+      ...entry,
+      selected_version: priv.selectedVersion,
+      package_access: {
+        visibility: 'authorized_only',
+        status: 'authorized',
+        discover_allowed: true,
+        download_allowed: true,
+      },
+      installability: { installable: true },
+      available_actions: [installAction],
+      recommended_action: installAction.action_id,
+      recommended_action_ref: installAction,
+    };
+  });
+  if (!changed) return agentPackages;
+  return {
+    ...agentPackages,
+    directory: { ...agentPackages.directory, entries },
+  };
 }
 
 function normalizedRepository(repository: string): string {
@@ -99,7 +165,7 @@ export function isOfficialCatalogPackage(snapshot: SoftwareCatalogSnapshot, pack
 
 /** All fast readers share the in-flight lookup. The renderer receives a change event once it settles. */
 export class OfficialSoftwareCatalog {
-  #snapshot: SoftwareCatalogSnapshot = { status: 'loading', entries: new Map(), repositories: new Map() };
+  #snapshot: SoftwareCatalogSnapshot = { status: 'loading', entries: new Map(), repositories: new Map(), privateAccess: new Map() };
   #refreshAfter = 0;
   readonly #onChange: () => void;
   readonly #options: OfficialPackageCatalogOptions;
@@ -123,14 +189,23 @@ export class OfficialSoftwareCatalog {
       const catalog = await readOfficialPackageCatalog({ ...this.#options, runtimeRoot });
       const entries = new Map<string, CatalogRow>();
       const repositories = new Map<string, string>();
+      const privateAccess = new Map<string, PrivatePackageAccessInfo>();
       for (const entry of catalog.values()) {
         const row = projectEntry(entry, runtimeRoot);
-        if (!row) continue;
-        entries.set(row.package_id, row);
+        if (row) entries.set(row.package_id, row);
         const owner = entry.manifest?.source_repo;
-        if (typeof owner === 'string' && owner) repositories.set(row.package_id, normalizedRepository(owner));
+        if (typeof owner === 'string' && owner) repositories.set(entry.package_id, normalizedRepository(owner));
+        if (entry.visibility === 'authorized_only') {
+          const sourceId = officialPackagePrivateSourceId(entry);
+          if (sourceId) {
+            try {
+              const source = officialPackageInstallSource(entry, runtimeRoot, 'preferred', { allowAuthorizedOnly: true });
+              if (source.version) privateAccess.set(entry.package_id, { sourceId, selectedVersion: source.version });
+            } catch { /* Unavailable private or offline source stays non-installable. */ }
+          }
+        }
       }
-      this.#snapshot = { status: 'ready', entries, repositories };
+      this.#snapshot = { status: 'ready', entries, repositories, privateAccess };
       this.#refreshAfter = Date.now() + 5 * 60_000;
     } catch {
       const previous = this.#snapshot;

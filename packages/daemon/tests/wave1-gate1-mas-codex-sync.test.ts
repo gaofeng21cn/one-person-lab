@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { createDaemonSandbox, type DaemonSandbox } from './helpers/sandbox.ts';
 
-const DEFAULT_REAL_MAS_DIR = '/Users/gaofeng/workspace/med-autoscience';
+const SIBLING_MAS_DIR = path.resolve(import.meta.dirname, '../../../../med-autoscience');
 const sandboxes: DaemonSandbox[] = [];
 
 function resolveRealMasDir(): string | null {
@@ -13,7 +13,7 @@ function resolveRealMasDir(): string | null {
     const trimmed = override.trim();
     return trimmed ? trimmed : null;
   }
-  return DEFAULT_REAL_MAS_DIR;
+  return fs.existsSync(SIBLING_MAS_DIR) ? SIBLING_MAS_DIR : null;
 }
 
 function trackSandbox(): DaemonSandbox {
@@ -236,18 +236,15 @@ describe('Wave 1 Gate 1: MAS migrate-v1 + build + link + codex plugin/list parit
     await runGate1Flow(sb, tmpMas);
   });
 
-  it('migrates isolated real MAS checkout when present on disk, builds lock, projects cacheable Codex plugin files, verifies plugin/list parity, and unlinks cleanly', async (t) => {
-    const realMasDir = resolveRealMasDir();
-    if (!realMasDir || !fs.existsSync(realMasDir)) {
-      t.skip('Optional external med-autoscience checkout not present on disk');
-      return;
-    }
+  const realMasDir = resolveRealMasDir();
+  if (realMasDir && fs.existsSync(realMasDir)) {
+    it('migrates isolated real MAS checkout when present on disk, builds lock, projects cacheable Codex plugin files, verifies plugin/list parity, and unlinks cleanly', async () => {
+      const sb = trackSandbox();
+      await sb.startInProcess();
 
-    const sb = trackSandbox();
-    await sb.startInProcess();
-
-    const tmpMas = path.join(sb.workspaceDir, 'med-autoscience');
-    copyMasIsolated(realMasDir, tmpMas);
-    await runGate1Flow(sb, tmpMas);
-  });
+      const tmpMas = path.join(sb.workspaceDir, 'med-autoscience');
+      copyMasIsolated(realMasDir, tmpMas);
+      await runGate1Flow(sb, tmpMas);
+    });
+  }
 });

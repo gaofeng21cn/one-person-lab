@@ -26,8 +26,10 @@ test('publisher authority uses the trusted daily commit for v2 and retains immut
     currentPackage }), 'release-stable-automated');
   const privatePackage = { ...currentPackage, visibility: 'authorized_only' };
   const privateEntry = { ...entry, visibility: 'authorized_only' };
+  assert.equal(validateScheduledPublication({ run, plan: { ...plan, packages: [privateEntry] },
+    inputs, callerRepository: 'gaofeng21cn/demo', currentPackage: privatePackage }), 'release-stable');
   assert.throws(() => validateScheduledPublication({ run, plan: { ...plan, packages: [privateEntry] },
-    inputs, callerRepository: 'gaofeng21cn/demo', currentPackage: privatePackage }), /current canonical Package release/);
+    inputs, callerRepository, currentPackage: privatePackage }), /access policy/);
   const wrongTooling = { ...inputs, expected_framework_source_commit: legacySource };
   assert.throws(() => validateScheduledPublication({ run, plan: { ...plan, packages: [{ ...entry, ...wrongTooling }] },
     inputs: wrongTooling, callerRepository, currentPackage }), /current canonical Package release/);

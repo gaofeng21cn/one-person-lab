@@ -1,17 +1,40 @@
 #!/usr/bin/env node
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { detectLeakedProcesses, reapProcesses } from "./lib/sandbox.mjs";
+import { detectLeakedProcesses, reapProcesses, resolveAppRoot, resolveStudioRoot } from "./lib/sandbox.mjs";
 
 const E2E_DIR = path.dirname(fileURLToPath(import.meta.url));
 const WORKTREE_ROOT = path.resolve(E2E_DIR, "../..");
 const REPORTER_PATH = path.join(E2E_DIR, "lib/ndjson-reporter.mjs");
 const PRELOAD_PATH = path.join(E2E_DIR, "lib/spawn-tracker-preload.mjs");
+
+function inspectGitRepo(repoPath) {
+  if (!repoPath || !fs.existsSync(path.join(repoPath, ".git"))) {
+    return { present: false, path: repoPath || null };
+  }
+  const git = (args) =>
+    execFileSync("git", args, { cwd: repoPath, encoding: "utf8", timeout: 5_000 }).trim();
+  try {
+    const commit = git(["rev-parse", "HEAD"]);
+    const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]);
+    const dirty = git(["status", "--porcelain"]).length > 0;
+    return {
+      present: true,
+      path: repoPath,
+      commit,
+      short_commit: commit.slice(0, 9),
+      branch,
+      dirty,
+    };
+  } catch {
+    return { present: false, path: repoPath };
+  }
+}
 
 function printUsage() {
   process.stdout.write(
@@ -363,6 +386,7 @@ async function main() {
 
   const runId = crypto.randomBytes(6).toString("hex");
   const files = discoverTestFiles(opts.rootDir, opts.tiers, opts.features);
+  const startedAt = new Date().toISOString();
   const startMs = performance.now();
 
   const fileResults = [];
@@ -428,6 +452,7 @@ async function main() {
   }
 
   totals.duration_ms = Math.round(performance.now() - startMs);
+  const finishedAt = new Date().toISOString();
 
   const ok =
     totals.passed > 0 &&
@@ -440,6 +465,13 @@ async function main() {
 
   const summary = {
     run_id: runId,
+    started_at: startedAt,
+    finished_at: finishedAt,
+    repositories: {
+      framework: inspectGitRepo(WORKTREE_ROOT),
+      studio: inspectGitRepo(resolveStudioRoot(WORKTREE_ROOT)),
+      app: inspectGitRepo(resolveAppRoot(WORKTREE_ROOT)),
+    },
     tiers: opts.tiers,
     features: opts.features,
     totals,

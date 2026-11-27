@@ -58,6 +58,14 @@ function selectedCredential(handle: string) {
   }
 }
 
+export function resolvePrivatePackageAuthHeader(handle: string | null): string | null {
+  if (!isPrivatePackageSourceHandle(handle)) return null;
+  const selected = selectedCredential(handle);
+  if (!selected) return null;
+  const auth = Buffer.from(`${selected.username}:${selected.token}`, 'utf8').toString('base64');
+  return `Basic ${auth}`;
+}
+
 export function preparePrivatePackageSourceCredential(handle: string | null, registryConfigRoot?: string) {
   if (!isPrivatePackageSourceHandle(handle)) return 'source_not_configured';
   const selected = selectedCredential(handle);

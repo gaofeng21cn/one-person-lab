@@ -75,3 +75,14 @@ if [ -n "$unignored_generated" ]; then
   printf '%s\n' 'Route the producer to OPL_REPO_TEMP_ROOT or add an explicit ignore for unavoidable local runtime output.' >&2
   exit 1
 fi
+
+hardcoded_personal_paths="$(
+  git grep -nE '(/Users/[A-Za-z0-9._-]+/workspace|C:\\Users\\[^\\]+\\workspace)' -- \
+    packages tests scripts extensions sdks \
+    ':(exclude)scripts/repo-hygiene.sh' 2>/dev/null || true
+)"
+
+if [ -n "$hardcoded_personal_paths" ]; then
+  printf '%s\n%s\n' 'repo hygiene: hardcoded personal workspace paths found:' "$hardcoded_personal_paths" >&2
+  exit 1
+fi
