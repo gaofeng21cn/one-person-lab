@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import { renderArtifact } from '@opl/mcp-app-shared/presentation';
 import { acceptDomainRead, type TaskWorkbenchItem } from '@opl/mcp-app-shared/task-workbench';
 import type { CatalogCommandDescriptor, McpAppCatalog } from '@opl/mcp-app-shared/types';
 import { collectionFrom } from '@opl/mcp-app-shared/view';
@@ -131,6 +132,9 @@ test('Studio opens the selected runtime task over stdio and changes visibility w
   assert.deepEqual(runwayDetail.artifacts?.map(({ artifact_ref, summary, media_type }) => ({ artifact_ref, summary, media_type })), [
     { artifact_ref: artifact.path, summary: artifact.summary, media_type: artifact.media_type },
   ]);
+  const openLink = renderArtifact(runwayDetail.artifacts![0]).match(/data-open-link="([^"]+)"/)?.[1];
+  assert.ok(openLink, 'The evidence tab must expose the workspace artifact preview.');
+  assert.equal(new URL(openLink).searchParams.get('ref'), path.join(fs.realpathSync(sandbox.workspaceDir), artifact.path));
 
   const applyVisibility = async (selected: Detail, nextState: string, generation: number) => {
     const action = selected.runtime_actions.find(command => command.action_ref === 'work_item_visibility_set');

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type {
   AppStateSnapshotLike, CatalogCommandDescriptor, CatalogViewDescriptor,
   OpldRpcTransport, RuntimeWorkItem,
@@ -60,14 +61,15 @@ function visibilityActions(item: RuntimeWorkItem): CatalogCommandDescriptor[] {
   }];
 }
 
-async function runwayArtifacts(transport: OpldRpcTransport, taskId: string) {
+async function runwayArtifacts(transport: OpldRpcTransport, item: RuntimeWorkItem) {
+  const { work_item_id: taskId, workspace_path: workspace } = item.identity;
   const ledger = await transport.call<{
     task_id: string;
     artifacts: { task_id: string; payload: { path: string; artifact_id?: string; media_type?: string; summary?: string } }[];
   }>('ledger.artifacts', { task_id: taskId });
   if (ledger.task_id !== taskId) throw new Error('Artifact readback belongs to a different task.');
   return ledger.artifacts.filter(entry => entry.task_id === taskId).map(({ payload }) => ({
-    artifact_ref: payload.path, title: payload.artifact_id || payload.path,
+    artifact_ref: payload.path, path: path.join(workspace, payload.path), title: payload.artifact_id || payload.path,
     summary: payload.summary, media_type: payload.media_type,
   }));
 }
@@ -113,7 +115,7 @@ export async function readRuntimeView(
   }
   const item = matches[0]!;
   const detail = { ...item, runtime_actions: visibilityActions(item),
-    ...(item.identity.work_item_kind === 'runway_task' && { artifacts: await runwayArtifacts(transport, item.identity.work_item_id) }),
+    ...(item.identity.work_item_kind === 'runway_task' && { artifacts: await runwayArtifacts(transport, item) }),
   };
   return readResult(ref, { state: 'ready', data: { items: [listItem(item)], detail } });
 }
