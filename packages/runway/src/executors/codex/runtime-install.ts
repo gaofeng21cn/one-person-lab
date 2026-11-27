@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireAdvisoryLock, KernelError } from '@opl/core';
@@ -63,12 +63,20 @@ async function install(env: NodeJS.ProcessEnv) {
   }
 }
 
+function configuredRuntime(env: NodeJS.ProcessEnv) {
+  // The App can export the stable OPL executable before first install.
+  const configured = env.OPL_CODEX_BIN?.trim();
+  if (configured && path.resolve(configured) === managedCodexBinary(env)
+    && !statSync(configured, { throwIfNoEntry: false })) return null;
+  return resolveCodexBinary(undefined, env);
+}
+
 export async function ensureCodexRuntime(env: NodeJS.ProcessEnv = process.env) {
   return withInstallLock(codexRuntimeRoot(env), async () => {
     await activateLegacyCodexGeneration(codexRuntimeRoot(env), env);
     // A configured external path is authoritative. Surface an unusable
     // external selection instead of installing a tool that it would shadow.
-    const candidate = resolveCodexBinary(undefined, env);
+    const candidate = configuredRuntime(env);
     if (candidate) {
       try {
         const version = await verifyCodexAppServer(candidate.path, env);
@@ -88,7 +96,7 @@ export async function activateCodexRuntime(env: NodeJS.ProcessEnv = process.env)
   if (existsSync(pending)) {
     deferred = await withInstallLock(root, () => activateLegacyCodexGeneration(root, env)) === 'deferred_same_app_instance';
   }
-  const selected = resolveCodexBinary(undefined, env);
+  const selected = configuredRuntime(env);
   return {
     status: deferred ? 'deferred_same_app_instance' as const : selected ? 'active' as const : 'unavailable' as const,
     runtime_binary_path: selected?.path ?? null,

@@ -5,6 +5,23 @@ import path from 'node:path';
 import test from 'node:test';
 import { createPackageSourceArchive } from '@opl/pack';
 import { stageCodexPayload } from '../src/executors/codex/runtime-payload.ts';
+import { activateCodexRuntime, ensureCodexRuntime } from '../src/executors/codex/runtime-install.ts';
+import { managedCodexBinary } from '../src/executors/codex/binary.ts';
+
+test('an explicit private Codex path permits first install, while an invalid external selection stays authoritative', async (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-first-selection-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  const env: NodeJS.ProcessEnv = { HOME: home, PATH: '', OPL_FULL_RUNTIME_HOME: home };
+  env.OPL_CODEX_BIN = managedCodexBinary(env);
+  fs.mkdirSync(path.join(home, 'manifest'));
+  fs.writeFileSync(path.join(home, 'manifest', 'full-package-manifest.json'), '{}');
+  assert.deepEqual(await activateCodexRuntime(env), { status: 'unavailable', runtime_binary_path: null });
+  await assert.rejects(ensureCodexRuntime(env), /missing its verified Codex offline seed/);
+
+  env.OPL_CODEX_BIN = path.join(home, 'external', 'codex');
+  await assert.rejects(activateCodexRuntime(env), /OPL_CODEX_BIN/);
+  await assert.rejects(ensureCodexRuntime(env), /OPL_CODEX_BIN/);
+});
 
 test('Full Codex staging verifies frozen bytes and refuses an archive for another platform', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-codex-seed-'));
