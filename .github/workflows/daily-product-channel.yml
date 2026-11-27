@@ -114,6 +114,7 @@ jobs:
           name: opl-product-release-${{ matrix.product.product_id }}-${{ github.run_id }}
           path: ${{ runner.temp }}/product-release-result.json
           if-no-files-found: warn
+          overwrite: true
   cohort:
     name: Reconcile release cohort
     if: always() && needs.inventory.result == 'success'
@@ -148,3 +149,4 @@ jobs:
           name: opl-product-release-cohort-${{ github.run_id }}
           path: ${{ runner.temp }}/product-release-cohort.json
           if-no-files-found: error
+          overwrite: true

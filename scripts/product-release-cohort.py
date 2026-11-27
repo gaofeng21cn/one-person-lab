@@ -73,7 +73,10 @@ def markdown(report):
         for lane in row.get('lanes', [row]):
             published = lane.get('published_channel') or {}
             version = published.get('tag', published.get('version', '—'))
-            run = f"[Actions]({lane['run_url']})" if lane.get('run_url') else '—'
+            owner_run = lane.get('observed_publication_run', lane)
+            run = f"[Actions]({owner_run['run_url']})" if owner_run.get('run_url') else '—'
+            if 'observed_publication_run' in lane:
+                run += f" · `{owner_run['status']}`"
             status = lane['status']
             if lane.get('observation') == 'unavailable':
                 status += ' (observation incomplete)'

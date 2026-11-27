@@ -187,7 +187,7 @@ def prepare(root, config, *, apply):
     channel = published(root, config)
     result = plan(root, config, channel)
     if result['status'] == 'unchanged':
-        return {**result, 'published_channel': channel}
+        return {**result, 'tag': channel.get('tag', tag_for(config, channel['version'])), 'published_channel': channel}
     if not apply:
         if result['status'] == 'resume':
             result.update(publisher_status(config, result['tag'], result['source_commit']))

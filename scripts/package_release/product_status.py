@@ -61,6 +61,10 @@ def run_observation(run):
 def observe_lanes(config, prepared):
     repository = config['repository']
     tag, source = prepared.get('tag'), prepared.get('source_commit')
+    public = prepared.get('published_channel') or {}
+    public_tag, public_source = public.get('tag'), public.get('source_commit')
+    if prepared.get('status') == 'needs_release' and public_tag:
+        tag, source = public_tag, public_source
     scheduled = config['strategy'] == 'owner_schedule'
     primary = {'lane': config.get('primary_lane', 'stable'), 'workflow': config['publisher_workflow'],
                'channel': config.get('channel'), 'schedule': scheduled}
@@ -71,6 +75,12 @@ def observe_lanes(config, prepared):
         try:
             if lane is primary and not scheduled:
                 row.update({key: prepared[key] for key in ('status', 'run_id', 'run_url') if key in prepared})
+                if row['status'] in ('unchanged', 'needs_release') and tag and source:
+                    runs = gh(f"repos/{repository}/actions/workflows/{lane['workflow']}/runs?" +
+                              urllib.parse.urlencode({'head_sha': source, 'per_page': 100}))['workflow_runs']
+                    runs = [run for run in runs if run['head_sha'] == source and run['head_branch'] == tag]
+                    if runs:
+                        row['observed_publication_run'] = run_observation(max(runs, key=lambda run: run['id']))
                 if row['status'] == 'publisher_success':
                     row['status'] = 'publication_pending'
                 elif row['status'] in ('publisher_failure', 'publisher_cancelled', 'publisher_timed_out') and row.get('run_id'):
