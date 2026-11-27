@@ -121,7 +121,19 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
       `Expected sync result to reference synced plugin, got: ${serialized}`
     );
 
+    const cacheDir = path.join(sb.codexHome, "plugins", "cache", "opl-local", "med-autoscience");
+    const cachedSkill = path.join(cacheDir, pkg.manifest.identity.version, "skills", "mas", "SKILL.md");
+    const sourceSkill = path.join(pkg.skillsDir, "mas", "SKILL.md");
+    const updated = fs.readFileSync(sourceSkill, "utf8") + "\nUpdated local instructions.\n";
+    fs.writeFileSync(sourceSkill, updated);
+    const repeated = await runCliJson(["pack", "sync", "codex"], { sandbox: sb });
+    assert.equal(repeated.synced.filter((item) => item.package_id === "mas").length, 1);
+    assert.deepEqual(fs.readdirSync(cacheDir), [pkg.manifest.identity.version]);
+    assert.equal(fs.readFileSync(cachedSkill, "utf8"), updated);
+
     const stubLogs = readStubJsonl(path.join(sb.stubLogDir, "codex.jsonl"));
+    const registrations = stubLogs.filter((ev) => ev.event === "invocation" && ev.subcommand === "plugin_marketplace_add");
+    assert.equal(registrations.length, 1);
     assert.ok(
       stubLogs.some((ev) => ev.event === "invocation" && ev.subcommand === "app_server"),
       "Expected codex app-server --stdio invocation in stub logs"
@@ -147,6 +159,8 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
       sandbox: sb,
       env: { OPL_STUB_CODEX_EXTERNAL_PLUGINS_JSON: externalPluginsEnv },
     });
+    const calls = readStubJsonl(path.join(sb.stubLogDir, "codex.jsonl"));
+    assert.equal(calls.some((ev) => ["plugin_add", "plugin_remove", "plugin_marketplace_add"].includes(ev.subcommand)), false);
     const listRes = await runCliJson(["pack", "list"], {
       sandbox: sb,
       env: { OPL_STUB_CODEX_EXTERNAL_PLUGINS_JSON: externalPluginsEnv },

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import {
@@ -100,27 +99,12 @@ if (leading.hasLeadingVersion) {
   finishWithExit(0, { subcommand: "version" });
 }
 
-function resolveMarketplacePaths() {
-  const candidates = [];
-  if (process.env.OPL_STUB_CODEX_MARKETPLACE_PATH?.trim()) {
-    candidates.push(process.env.OPL_STUB_CODEX_MARKETPLACE_PATH.trim());
-  }
-  if (process.env.OPL_HOME?.trim()) {
-    candidates.push(path.join(process.env.OPL_HOME.trim(), "carriers", "codex-marketplace", "marketplace.json"));
-  }
-  candidates.push(path.join(process.env.HOME || os.homedir(), ".opl", "carriers", "codex-marketplace", "marketplace.json"));
-
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      return { marketplacePath: p, marketplaceDir: path.dirname(p) };
-    }
-  }
-  const fallback = candidates[0];
-  return { marketplacePath: fallback, marketplaceDir: path.dirname(fallback) };
-}
+const carrierStatePath = path.join(resolveCodexHome(), "stub-plugin-marketplace.json");
+const registeredSource = fs.existsSync(carrierStatePath) ? JSON.parse(fs.readFileSync(carrierStatePath, "utf8")) : null;
 
 function loadMarketplaceEntries() {
-  const { marketplacePath, marketplaceDir } = resolveMarketplacePaths();
+  const marketplaceDir = registeredSource;
+  const marketplacePath = marketplaceDir && path.join(marketplaceDir, "marketplace.json");
   const marketplaces = [];
   const marketplaceLoadErrors = [];
 
@@ -152,18 +136,21 @@ function loadMarketplaceEntries() {
       const pluginName = entry.name || pluginJson.name || path.basename(pluginDir);
       const version = pluginJson.version || entry.version || "0.0.0";
       const pluginId = entry.id || `${pluginName}@${mpName}`;
+      const cached = path.join(resolveCodexHome(), "plugins", "cache", mpName, pluginName, version);
+      const installed = fs.existsSync(path.join(cached, ".codex-plugin", "plugin.json"));
       plugins.push({
         id: pluginId,
         name: pluginName,
-        version,
+        version: null,
         localVersion: version,
         source: { type: "local", path: pluginDir },
-        installed: entry.installed !== undefined ? Boolean(entry.installed) : true,
-        enabled: entry.enabled !== undefined ? Boolean(entry.enabled) : true,
+        installed,
+        enabled: installed,
       });
     }
     marketplaces.push({
       name: mpName,
+      path: path.join(marketplaceDir, ".agents", "plugins", "marketplace.json"),
       marketplaceSource: { sourceType: "local", source: marketplaceDir },
       plugins,
     });
@@ -263,6 +250,40 @@ function findSubcommandTokens(args) {
 }
 
 const subTokens = leading.subcommandIdx !== -1 ? findSubcommandTokens(rawArgs.slice(leading.subcommandIdx)) : [];
+
+if (subTokens[0] === "plugin" && subTokens[1] === "marketplace" && subTokens[2] === "add") {
+  const source = fs.realpathSync(subTokens[3]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(source, "marketplace.json"), "utf8"));
+  fs.mkdirSync(path.dirname(carrierStatePath), { recursive: true });
+  fs.writeFileSync(carrierStatePath, JSON.stringify(source));
+  appendStubLog({ event: "invocation", tool: "codex", argv: rawArgs, subcommand: "plugin_marketplace_add" });
+  writeNdjson({ marketplaceName: manifest.name, installedRoot: source, alreadyAdded: source === registeredSource });
+  finishWithExit(0, { subcommand: "plugin_marketplace_add" });
+}
+
+if (subTokens[0] === "plugin" && ["add", "remove"].includes(subTokens[1])) {
+  const action = subTokens[1];
+  const id = subTokens[2];
+  const { marketplaces } = loadMarketplaceEntries();
+  const managed = marketplaces.find((mp) => mp.marketplaceSource?.source === registeredSource);
+  const plugin = managed?.plugins.find((candidate) => candidate.id === id);
+  appendStubLog({ event: "invocation", tool: "codex", argv: rawArgs, subcommand: `plugin_${action}` });
+  if (!plugin || !registeredSource || !fs.existsSync(path.join(plugin.source.path, ".codex-plugin", "plugin.json"))) {
+    process.stderr.write(`Unknown managed plugin: ${id}\n`);
+    finishWithExit(1, { subcommand: `plugin_${action}` });
+  }
+  const cached = path.join(resolveCodexHome(), "plugins", "cache", managed.name, plugin.name, plugin.localVersion);
+  if (action === "add") {
+    fs.cpSync(plugin.source.path, cached, {
+      recursive: true,
+      filter: (file) => !fs.lstatSync(file).isSymbolicLink(),
+    });
+  } else {
+    fs.rmSync(cached, { recursive: true, force: true });
+  }
+  writeNdjson({ pluginId: id, name: plugin.name, marketplaceName: managed.name, installedPath: cached });
+  finishWithExit(0, { subcommand: `plugin_${action}` });
+}
 
 // 2. plugin marketplace list --json
 if (subTokens[0] === "plugin" && subTokens[1] === "marketplace" && subTokens[2] === "list") {
@@ -378,10 +399,26 @@ if (subTokens[0] === "app-server") {
       writeNdjson({
         id: frame.id,
         result: {
-          marketplaces: marketplaces.map((m) => ({ name: m.name, plugins: m.plugins })),
+          marketplaces: marketplaces.map((m) => ({ name: m.name, path: m.path ?? null, plugins: m.plugins })),
           marketplaceLoadErrors,
         },
       });
+      return;
+    }
+
+    if (frame.method === "skills/list") {
+      const skills = [];
+      const local = loadMarketplaceEntries().marketplaces.find((mp) => mp.marketplaceSource?.source === registeredSource);
+      for (const plugin of local?.plugins ?? []) {
+        if (!plugin.installed || !plugin.enabled) continue;
+        const dir = path.join(resolveCodexHome(), "plugins", "cache", local.name, plugin.name, plugin.localVersion, "skills");
+        if (!fs.existsSync(dir)) continue;
+        for (const skill of fs.readdirSync(dir)) {
+          const file = path.join(dir, skill, "SKILL.md");
+          if (fs.existsSync(file)) skills.push({ name: skill, path: fs.realpathSync(file), pluginId: plugin.id });
+        }
+      }
+      writeNdjson({ id: frame.id, result: { data: [{ cwd: process.cwd(), skills, errors: [] }] } });
       return;
     }
 
