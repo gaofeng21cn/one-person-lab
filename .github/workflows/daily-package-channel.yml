@@ -25,7 +25,11 @@ permissions:
   packages: read
 
 concurrency:
-  group: opl-daily-package-channel-${{ github.repository_owner }}
+  # GitHub replaces pending runs in a concurrency group even when its job is skipped.
+  group: >-
+    ${{ github.event_name == 'schedule' && vars.OPL_RELEASE_CENTRAL_DAILY == 'true'
+      && format('opl-daily-package-channel-disabled-{0}', github.run_id)
+      || format('opl-daily-package-channel-{0}', github.repository_owner) }}
   cancel-in-progress: false
 
 env:
