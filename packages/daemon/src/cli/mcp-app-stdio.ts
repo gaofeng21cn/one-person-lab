@@ -44,7 +44,8 @@ function createServer(stateDir: string | undefined, version: string, readOnly: b
     annotations: { readOnlyHint: true }, _meta: operationMeta,
   }, async ({ package_id, ref, input }) => {
     const catalog = buildCatalogFromAppState(await bridge.getAppState('fast'));
-    if (!catalog.views.some(view => view.package_id === package_id && view.data_ref === ref)) {
+    if (!(package_id === 'opl-runtime' && ref === 'opl.runtime.v1#domain-detail')
+      && !catalog.views.some(view => view.package_id === package_id && view.data_ref === ref)) {
       return toolResult({ error: { code: 'VIEW_NOT_FOUND', message: 'The selected Package does not expose this view.' } }, true);
     }
     return toolResult(await bridge.readContribution({ packageId: package_id, ref, input }));
@@ -56,6 +57,9 @@ function createServer(stateDir: string | undefined, version: string, readOnly: b
     title: 'Execute a workbench action', inputSchema: z.strictObject({ ...target, confirmed: z.boolean() }),
     annotations: { readOnlyHint: false, idempotentHint: false }, _meta: operationMeta,
   }, async ({ package_id, ref, input, confirmed }) => {
+    if (package_id === 'opl-runtime') {
+      return toolResult(await bridge.executeContribution({ packageId: package_id, actionId: ref, payload: input, confirmed }));
+    }
     const receipt = await rpc<Record<string, unknown>>('app.action.execute', {
       action_id: 'package_contribution_execute', dry_run: false, payload: { package_id, ref, input: input ?? {}, confirmed },
     });
