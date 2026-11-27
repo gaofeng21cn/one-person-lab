@@ -1,9 +1,9 @@
 import { resolveCodexPluginName, type InstalledPackageRecord } from '@opl/pack';
 
-type AppPreferences = {
-  enabled: Map<string, boolean>;
-  shortcuts: Map<string, Map<string, { visible: boolean | null; sort_order: number | null }>>;
-};
+import { isOfficialCatalogPackage, projectCatalogEntries, type SoftwareCatalogSnapshot } from './package-catalog.ts';
+import type { readAppPackagePreferences } from './app-package-preferences.ts';
+
+type AppPreferences = ReturnType<typeof readAppPackagePreferences>;
 
 function defineAction(id: string, label: string, fields: string[], confirmation: boolean) {
   return {
@@ -22,7 +22,9 @@ const preferences = defineAction('agent_package_preferences_set', 'Edit home sho
 const uninstall = defineAction('agent_package_uninstall', 'Uninstall', ['package_id'], true);
 const contribution = defineAction('package_contribution_execute', 'Run package action', ['package_id', 'ref'], false);
 
-export const packageActions = [toggle, preferences, uninstall, contribution];
+const install = defineAction('agent_package_install', 'Install', ['package_id'], true);
+const updates = defineAction('settings_apply_opl_packages', 'Update packages', [], true);
+export const packageActions = [install, toggle, preferences, uninstall, contribution, updates];
 
 function rowAction(definition: ReturnType<typeof defineAction>, semantic: string, payload: Record<string, unknown>) {
   return {
@@ -62,7 +64,7 @@ function projectHomeShortcuts(pkg: InstalledPackageRecord, prefs: AppPreferences
   });
 }
 
-export function projectPackageDirectory(installed: readonly InstalledPackageRecord[], prefs: AppPreferences) {
+export function projectPackageDirectory(installed: readonly InstalledPackageRecord[], prefs: AppPreferences, catalog: SoftwareCatalogSnapshot) {
   const entries = installed.map(pkg => {
     const { identity, ui } = pkg.manifest;
     const appEnabled = prefs.enabled.get(pkg.package_id) ?? true;
@@ -75,6 +77,7 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
     if (enabled && home.length) availableActions.push(rowAction(preferences, 'preferences', { package_id: pkg.package_id }));
     if (pkg.origin !== 'external') availableActions.push(rowAction(uninstall, 'uninstall', { package_id: pkg.package_id }));
     const description = identity.description ?? identity.summary;
+    const official = isOfficialCatalogPackage(catalog, pkg.package_id, identity.repository);
     return {
       package_id: pkg.package_id,
       display_name: identity.name['en-US'] ?? pkg.package_id,
@@ -91,7 +94,7 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
       catalog_scope: 'software',
       // Pack records install origin, not publisher identity. In particular,
       // installing an arbitrary tarball does not establish official status.
-      catalog_origin: pkg.origin === 'external' ? 'external' : 'unknown',
+      catalog_origin: official ? 'opl' : pkg.origin === 'external' ? 'external' : 'unknown',
       origin_basis: 'owner_projection',
       catalog_source: { manager: pkg.origin === 'external' ? 'codex_plugin_manager' : 'opl_framework', delivery: 'local' },
       software_type: pkg.intent === 'app' ? 'application' : pkg.intent,
@@ -110,9 +113,15 @@ export function projectPackageDirectory(installed: readonly InstalledPackageReco
       available_actions: availableActions,
     };
   });
+  const missing = projectCatalogEntries(catalog, new Set(entries.map(entry => entry.package_id)));
   return {
     surface_kind: 'opl_app_agent_packages_projection',
-    directory: { entries, entry_count: entries.length, installed_package_count: installed.length },
+    directory: {
+      entries: [...entries, ...missing],
+      entry_count: entries.length + missing.length,
+      installed_package_count: installed.length,
+      source_catalog_status: catalog.status,
+    },
     status_index: {
       installed_package_count: installed.length,
       packages: Object.fromEntries(entries.map(entry => [entry.package_id, {

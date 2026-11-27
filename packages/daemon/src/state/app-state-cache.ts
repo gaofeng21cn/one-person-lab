@@ -1,3 +1,4 @@
+import { OfficialSoftwareCatalog } from './package-catalog.ts';
 import { buildRunwayWorkbench } from './task-projection.ts';
 import { ensureTaskVisibilitySchema } from './task-visibility.ts';
 import { createDomainTaskInventoryReader, type DomainTaskInventory } from './domain-task-inventory.ts';
@@ -114,6 +115,7 @@ export class AppStateCache {
   readonly #packService: PackService;
   readonly #connectService: ConnectService;
   readonly #version: string;
+  readonly #catalog: OfficialSoftwareCatalog;
   readonly #inventoryReader = createDomainTaskInventoryReader();
   #lastInventory: DomainTaskInventory | undefined;
   #revision = 1;
@@ -125,12 +127,17 @@ export class AppStateCache {
     readonly packService: PackService;
     readonly connectService: ConnectService;
     readonly version: string;
+    readonly onCatalogChanged?: () => void;
   }) {
     this.#db = options.db;
     ensureTaskVisibilitySchema(this.#db);
     this.#packService = options.packService;
     this.#connectService = options.connectService;
     this.#version = options.version;
+    this.#catalog = new OfficialSoftwareCatalog(() => {
+      this.invalidate();
+      options.onCatalogChanged?.();
+    });
   }
 
   get revision(): number {
@@ -173,6 +180,7 @@ export class AppStateCache {
   }
 
   #getSharedState(profile: 'fast' | 'full'): AppStateSnapshot {
+    const catalog = this.#catalog.read();
     const previous = this.#fastSnapshot ?? this.#fullSnapshot;
     if (previous) {
       const inventory = this.#inventoryReader.read(previous.packages, previous.workspaces);
@@ -232,7 +240,7 @@ export class AppStateCache {
       schedules,
       app_state: {
         operator: { workbench: buildRunwayWorkbench(this.#db, packages, generatedAt, inventory) },
-        agent_packages: projectPackageDirectory(installed, preferences),
+        agent_packages: projectPackageDirectory(installed, preferences, catalog),
         ui_contributions: projectUiContributions(appPackages),
         actions: [...packageActions, {
           action_id: 'work_item_visibility_set', label: 'Change work item visibility',
