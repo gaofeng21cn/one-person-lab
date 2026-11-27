@@ -285,7 +285,9 @@ class ProductReleaseTests(unittest.TestCase):
         self.assertEqual((plan['status'], plan['source_commit']), ('resume', frozen))
         (self.root / 'app/main').write_text('different new product bytes')
         self.commit()
-        self.assertEqual(product.plan(self.root, self.config, self.channel)['tag'], 'v1.2.5')
+        next_plan = product.plan(self.root, self.config, self.channel)
+        self.assertEqual(next_plan['tag'], 'v1.2.5')
+        self.assertEqual(next_plan['previous_candidate'], {'tag': 'v1.2.4', 'source_commit': frozen})
         self.assertEqual(self.git('rev-parse', 'v1.2.4^{commit}'), frozen)
 
     def test_deleted_delivery_file_is_a_change(self):
