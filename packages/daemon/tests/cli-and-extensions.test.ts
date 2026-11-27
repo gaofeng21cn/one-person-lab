@@ -40,6 +40,9 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     const run = (args: string[]) => sb.spawnRootCli([...prefix, ...args, '--json'], env);
     const configFile = path.join(selected, 'software-sources.json');
 
+    const missingStateDir = await sb.spawnRootCli(['--state-dir', '--quiet', 'sources', 'configure', ...sourceArg, '--enabled', 'false', '--json'], env);
+    assert.equal(missingStateDir.code, 2);
+    assert.equal(fs.existsSync(path.join(sb.workspaceDir, '--quiet', 'software-sources.json')), false);
     const invalidFlag = await run(['configure', ...sourceArg, '--enabled', 'no']);
     assert.equal(invalidFlag.code, 2);
     const absentValue = await run(['configure', ...sourceArg, '--credential-handle']);

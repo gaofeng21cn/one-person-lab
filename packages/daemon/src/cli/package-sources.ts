@@ -28,7 +28,7 @@ export async function runPackageSourcesCommand(
   const allowed = new Set<string>(['--state-dir', ...optionsByCommand[command as keyof typeof optionsByCommand]]);
   for (const [name, value] of flags) {
     if (!allowed.has(name)) invalid('Unexpected software source command option.');
-    if (typeof value !== 'string' || !value.trim()) invalid(`Flag '${name}' requires a value.`);
+    if (typeof value !== 'string' || !value.trim() || value.startsWith('--')) invalid(`Flag '${name}' requires a value.`);
   }
   const stateDir = flags.get('--state-dir') as string | undefined;
   if (command === 'list') {
