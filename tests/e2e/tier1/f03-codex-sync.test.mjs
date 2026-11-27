@@ -236,6 +236,22 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
       fs.writeFileSync(path.join(dir, ".codex-plugin", "plugin.json"), JSON.stringify({ name, version: "1.2.0" }));
       return { name, version: "1.2.0", path: dir, enabled: index === 0 };
     });
+    const cachedRoot = path.join(sb.codexHome, "plugins", "cache", "external-local", "active-plugin", "1.2.0");
+    fs.mkdirSync(cachedRoot, { recursive: true });
+    const ownerDescriptor = JSON.stringify({
+      surface_kind: "opl_agent_package_manifest.v1",
+      package_id: "legacy-agent",
+      kind: "agent",
+      version: "1.2.0",
+      codex_surface: { plugin_id: "active-plugin" },
+      requires: [{ package_id: "agent-skills" }],
+    });
+    fs.writeFileSync(path.join(cachedRoot, "opl-package.json"), ownerDescriptor);
+    // The marketplace already advertises a different identity. Only the
+    // installed payload can provide the old Package's identity and dependencies.
+    fs.writeFileSync(path.join(plugins[0].path, "opl-package.json"), JSON.stringify({
+      surface_kind: "opl_agent_package_manifest.v1", package_id: "other-package", version: "2.0.0",
+    }));
     const config = plugins.map(({ name, enabled }) =>
       `[plugins."${name}@external-local"]\nenabled = ${enabled}\n`
     ).join("\n");
@@ -258,6 +274,11 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
           assert.equal(found.carrier, "codex");
         }
       }
+      const inspected = await runCliJson(["pack", "inspect", "legacy-agent"], { sandbox: sb });
+      assert.equal(inspected.installed.package_id, "legacy-agent");
+      assert.equal(inspected.manifest.identity.intent, "agent");
+      assert.ok(inspected.manifest.dependencies.packages.some((dep) => dep.id === "agent-skills"));
+      assert.equal(fs.readFileSync(path.join(cachedRoot, "opl-package.json"), "utf8"), ownerDescriptor);
       assert.equal(fs.readFileSync(configPath, "utf8"), config);
     } finally {
       await rpc.close();
