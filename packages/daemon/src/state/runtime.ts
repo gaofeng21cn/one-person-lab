@@ -471,6 +471,7 @@ export class DaemonRuntime {
     });
 
     this.contributionDispatcher = new ContributionDispatcher({
+      appStateCache: this.appStateCache,
       isAppPackageEnabled: (packageId: string) => isAppPackageEnabled(this.db, packageId),
       packService: this.packService,
       connectService: this.connectService,

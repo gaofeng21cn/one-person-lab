@@ -224,7 +224,7 @@ export async function runModuleOrCommandEntrypoint(
   packageRoot: string,
   entrypoint: ModuleOrCommandEntrypoint,
   payload: unknown,
-  options: { readonly timeoutMs?: number } = {},
+  options: { readonly timeoutMs?: number; readonly env?: NodeJS.ProcessEnv } = {},
 ): Promise<unknown> {
   if (entrypoint.kind === 'cli') {
     return runCliEntrypoint(packageRoot, entrypoint, payload, options);

@@ -7,6 +7,7 @@ import { isWithinDirectory, type PackService } from '@opl/pack';
 import type { WorkspaceService } from '@opl/workspace';
 import { DaemonRpcError } from '../errors.ts';
 import { runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
+import type { AppStateCache } from '../state/app-state-cache.ts';
 
 const MAX_WORKSPACE_READ_BYTES = 1024 * 1024;
 
@@ -37,13 +38,16 @@ export class ContributionDispatcher {
   readonly #connectService: ConnectService;
   readonly #workspaceService: WorkspaceService;
   readonly #isAppPackageEnabled: (packageId: string) => boolean;
+  readonly #appStateCache?: AppStateCache;
 
   constructor(options: {
     readonly packService: PackService;
     readonly connectService: ConnectService;
     readonly workspaceService: WorkspaceService;
     readonly isAppPackageEnabled?: (packageId: string) => boolean;
+    readonly appStateCache?: AppStateCache;
   }) {
+    this.#appStateCache = options.appStateCache;
     this.#packService = options.packService;
     this.#connectService = options.connectService;
     this.#workspaceService = options.workspaceService;
@@ -54,6 +58,43 @@ export class ContributionDispatcher {
     if (!this.#isAppPackageEnabled(packageId)) {
       throw new DaemonRpcError(-32003, 'PACKAGE_DISABLED_IN_APP', `Package '${packageId}' is disabled in the App.`);
     }
+  }
+
+  // Runtime detail sends a public identity. Only the registered workspace
+  // and current domain inventory can resolve its local directory.
+  private invocationContext(packageId: string, input: Record<string, unknown>) {
+    const { workspace_path: explicitPath, work_item_root, ...ownerInput } = input;
+    const identity = input.work_item_identity;
+    let workspace: string | undefined;
+    if (identity !== undefined) {
+      if (!isRecord(identity) || identity.agent_id !== packageId || identity.identity_state !== 'resolved'
+        || !['domain_id', 'work_item_id', 'domain_work_item_id', 'work_item_scope_id'].every(key =>
+          typeof identity[key] === 'string' && identity[key] !== '')) {
+        throw new DaemonRpcError(-32602, 'CONTRIBUTION_IDENTITY_INVALID', 'Invalid domain work item identity.');
+      }
+      const items = this.#appStateCache?.getState('fast').app_state.operator.workbench.work_item_projection_v2.items ?? [];
+      const matches = items.filter(({ identity: candidate }) =>
+        candidate.agent_id === packageId && candidate.domain_id === identity.domain_id
+        && candidate.work_item_id === identity.work_item_id && candidate.domain_work_item_id === identity.domain_work_item_id
+        && candidate.work_item_scope_id === identity.work_item_scope_id && candidate.identity_state === 'resolved');
+      if (matches.length !== 1) {
+        throw new DaemonRpcError(-32004, 'CONTRIBUTION_IDENTITY_UNAVAILABLE', 'This work item no longer resolves to one workspace.');
+      }
+      workspace = matches[0]!.identity.workspace_path;
+    }
+    if (explicitPath !== undefined) {
+      if (typeof explicitPath !== 'string' || !path.isAbsolute(explicitPath)) {
+        throw new DaemonRpcError(-32602, 'CONTRIBUTION_WORKSPACE_INVALID', 'Expected an absolute registered workspace path.');
+      }
+      const explicitRoot = fs.realpathSync(explicitPath);
+      const registered = this.#workspaceService.listWorkspaces().some(ws =>
+        fs.existsSync(ws.root_path) && fs.realpathSync(ws.root_path) === explicitRoot);
+      if (!registered || (workspace !== undefined && fs.realpathSync(workspace) !== explicitRoot)) {
+        throw new DaemonRpcError(-32602, 'CONTRIBUTION_WORKSPACE_MISMATCH', 'The requested workspace does not match the registered selection.');
+      }
+      workspace = explicitRoot;
+    }
+    return { input: ownerInput, env: workspace ? { ...process.env, OPL_PROFILE_WORKSPACE: workspace } : undefined };
   }
 
   async readContribution(req: ContributionReadRequest): Promise<Record<string, unknown>> {
@@ -122,13 +163,14 @@ export class ContributionDispatcher {
       });
     }
 
+    const context = this.invocationContext(pkg.package_id, req.input);
     const out = await runModuleOrCommandEntrypoint(pkg.install_path, handler, {
       schema_version: 'opl-package-app-contribution-request.v1',
       operation: 'read',
       package_id: pkg.package_id,
       ref: req.ref,
-      input: req.input,
-    });
+      input: context.input,
+    }, { env: context.env });
 
     if (out && typeof out === 'object' && !Array.isArray(out)) {
       return out as Record<string, unknown>;
@@ -303,6 +345,7 @@ export class ContributionDispatcher {
       authorityBoundary: 'app_bridge_no_domain_authority',
       confirmation_required: confirmationRequired,
     };
+    const context = this.invocationContext(packageId, input);
     if (dryRun) return { ...receipt, ok: true, status: 'preview' };
     const confirmed = appAction ? req.payload.confirmed : req.confirmed;
     if (confirmationRequired && confirmed !== true) {
@@ -313,8 +356,8 @@ export class ContributionDispatcher {
       schema_version: 'opl-package-app-contribution-request.v1',
       operation: 'execute',
       package_id: packageId,
-      ...(appAction ? { ref, input } : { action_id: ref, payload: input, dry_run: false }),
-    });
+      ...(appAction ? { ref, input: context.input } : { action_id: ref, payload: context.input, dry_run: false }),
+    }, { env: context.env });
     // Direct SDK callers receive the Package's native result. The Studio action
     // additionally binds its declared receipt to the requested Package and ref.
     if (appAction || (isRecord(response) && response.schema_version !== undefined)) {
