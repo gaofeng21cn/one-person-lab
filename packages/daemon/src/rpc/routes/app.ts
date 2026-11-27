@@ -15,6 +15,7 @@ import { activateAppCodexRuntime, codexInstallAction, executeCodexInstall, readC
 import { connectionActions, executeConnectionAction } from '../connection-actions.ts';
 import { requireClientContext, requireTrustedHost } from '../context.ts';
 import { executeGatewayAction, gatewayAccountActions } from '../gateway-actions.ts';
+import { executeKnowledgeSourceAction, knowledgeSourceActions } from '../knowledge-source-actions.ts';
 import { executeSoftwareSourceAction, softwareSourceActions } from '../software-source-actions.ts';
 
 export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: DaemonRuntime): void {
@@ -79,7 +80,7 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
     }
     const item = runtime.appStateCache.getState('fast').app_state.operator.workbench.work_item_projection_v2.items
       .find(entry => entry.item_id === itemId);
-    if (item) return readDomainTaskDetail(runtime.packService.inspect(item.identity.agent_id), item, viewId, ifRevision);
+    if (item) return readDomainTaskDetail(item.identity.agent_id ? runtime.packService.inspect(item.identity.agent_id) : null, item, viewId, ifRevision);
     const pkg = runtime.packService.inspect(itemId);
     const view =
       pkg?.manifest.ui?.declarative?.views?.find((v) => v.id === viewId)
@@ -182,6 +183,22 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       if (!dryRun) runtime.appStateCache.invalidate();
       return result;
     }
+    const knowledgeAction = knowledgeSourceActions.find(action => action.action_id === actionId);
+    if (knowledgeAction) {
+      requireTrustedHost(conn, actionId);
+      return executeKnowledgeSourceAction(knowledgeAction, pickRecord(params, 'payload', 'input') ?? {},
+        pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview', runtime.workspaceService);
+    }
+    if (actionId === 'runway_human_gate_resolve') {
+      requireTrustedHost(conn, actionId);
+      if (pickBoolean(params, 'dry_run', 'dryRun') || params.mode === 'preview') {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Runway decisions require execution mode.');
+      }
+      const result = await handlers.get('runway.humanGate.resolve')!(pickRecord(params, 'payload', 'input') ?? {}, conn);
+      return { ok: true, status: 'executed', app_action_execution: {
+        surface_kind: 'opl_app_action_execution.v1', action_id: actionId, dry_run: false, result,
+      } };
+    }
     const sourceAction = softwareSourceActions.find(action => action.action_id === actionId);
     if (sourceAction) {
       requireTrustedHost(conn, actionId);
@@ -191,7 +208,9 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
       try {
-        return await executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.db, () => runtime.appStateCache.invalidate());
+        return await executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.db,
+          () => runtime.appStateCache.invalidate(),
+          () => Promise.resolve(handlers.get('pack.sources.refresh')!(payload, conn)));
       } finally {
         if (!dryRun && actionId !== 'source_list') runtime.appStateCache.invalidate();
       }
@@ -214,7 +233,8 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       const result = setTaskVisibility(runtime.db, payload, {
         dryRun,
         resolveTask: (agentId, projectId, itemId) => items.some(({ identity }) =>
-          identity.agent_id === agentId && identity.project_id === projectId && identity.work_item_id === itemId),
+          identity.agent_id !== null && identity.agent_id === agentId
+          && identity.project_id === projectId && identity.work_item_id === itemId),
       });
       if (result.status === 'executed') runtime.appStateCache.invalidate();
       return result;

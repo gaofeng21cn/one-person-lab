@@ -20,6 +20,8 @@ interface EnsurePackageOptions {
   readonly dryRun?: boolean;
   readonly clientContext?: ClientContext;
   readonly resolveSource: (packageId: string) => Promise<ResolvedPackageForInstall>;
+  readonly repair?: boolean;
+  readonly operation?: Parameters<PackService['install']>[0]['operation'];
   readonly installSource?: PackService['install'];
 }
 
@@ -84,6 +86,7 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
         if (existing.source || existing.installed?.origin !== 'opl' || existing.installed.install_mode !== 'release') throw error;
       }
     }
+    options.operation?.signal.throwIfAborted();
     const installed = existing?.installed ?? pack.inspect(id);
     const release = id === packageId ? options.exactRelease : undefined;
     if (release && installed && (installed.origin !== 'opl' || installed.install_mode !== 'release')) {
@@ -95,6 +98,9 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
     let action: Action = 'none';
     let source: InstallSourceSpec | undefined;
     let replace = !presence?.files_present;
+    if (id === packageId && options.repair && installed?.install_mode === 'release' && installed.origin === 'opl') {
+      replace ||= !(await pack.verifyRuntimeDigest(installed));
+    }
     if (manifest) {
       for (const edge of requirements) {
         try { assertRequiredPackageDependency(edge.parent, edge.requirement, manifest); }
@@ -164,6 +170,10 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
         // Codex plugin add/enable shares one configured carrier across packages.
         if (ordered.some(step => step.action !== 'none' && shouldSyncToCodex(step.manifest))) resourceIds.push('@codex');
         release = await acquireWrites(pack, resourceIds);
+        options.operation?.signal.throwIfAborted();
+        if (options.operation) pack.store.transitionOperation(options.operation.opId, {
+          status: 'installing', progress: { stage: 'installing' },
+        });
         for (const step of ordered) {
           const id = step.manifest.identity.id;
           const current = pack.inspect(id);
@@ -171,7 +181,8 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
           if (current?.enabled && step.action !== 'none' && isDeepStrictEqual(current.manifest, step.manifest)
               && (!exactRelease || installedMatchesRelease(current, exactRelease))) {
             const presence = await pack.readInstalledPackagePresence(id);
-            if (presence.files_present && presence.carrier_ready) {
+            if (presence.files_present && presence.carrier_ready
+              && (!(options.repair && id === packageId) || await pack.verifyRuntimeDigest(current))) {
               actions.set(id, 'none');
               continue;
             }
@@ -182,7 +193,12 @@ export async function ensurePackage(pack: PackService, options: EnsurePackageOpt
             assertRequiredPackageDependency(id, dep, provider?.enabled ? provider.manifest : null);
           }
           if (step.action === 'install') {
-            const input = { source: step.source!, clientContext, ensure: { exactRelease }, updateSource: { kind: 'official' as const, package_id: id } };
+            const input = {
+              source: step.source!, clientContext, ensure: { exactRelease },
+              operation: id === packageId ? options.operation : undefined,
+              updateSource: options.repair && step.installed ? pack.store.getInstallSource(id) ?? undefined
+                : { kind: 'official' as const, package_id: id },
+            };
             if (options.installSource) await options.installSource(input);
             else await pack.install(input);
           } else if (step.action === 'enable') {

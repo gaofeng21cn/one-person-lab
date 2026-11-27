@@ -17,7 +17,7 @@ App 与 Studio 通过 `app_state.agent_packages.directory.entries` 消费 Packag
 
 ### Framework v2 的已安装 Package 更新
 
-`opl pack update --all --dry-run --json` 从各包的安装来源读取候选版本，`opl pack update --all --json` 执行可用更新。Studio 分别通过可信宿主 RPC `pack.updatePlan` 和 `pack.updateAll` 使用同一计划。显式给 RPC 传空的 `updates` 数组表示空批次。后台执行传 `background: true`，跳过已停用的包。手动更新会保留包的启停状态。
+`opl pack update --all --dry-run --json` 与 `pack.updatePlan` 仅比对已安装版本与已校验 Catalog/seed 元数据以零下载生成更新计划；`opl pack update --all --json`、`pack.update` 和 `pack.updateAll` 执行实际更新并按内容摘要复用 `cacheRoot` 下载缓存。公共 Catalog 元数据与 `fetched_at` 持久化缓存在 `opl.db`，Official 安装 provenance 记录在 `pack_install_sources`，重启与冷启动不会把已安装的官方包降级为 `unknown`。Full 模式下，`OPL_FULL_RUNTIME_HOME` 仅作公开匹配版本及源码提交的本地字节加速器（不阻塞 `authorized_only` 私有源与在线目录合并；离线时优雅回退至公开 seed）。App 同时投影只读 `opl_base`（`app_state.managed_update`）以及每条 Package 的 `package_currentness`、`presence.callable`、`management_scope` 与 `package_access`（含已安装与未安装私有包）。后台执行传 `background: true`，跳过已停用的包。手动更新会保留包的启停状态。
 
 Framework 持久化来源身份。由官方目录验证的安装可按目录刷新，其余安装沿用原来源以及用户指定的版本或摘要。开发链接、外部载体和缺少来源的历史安装会显示需要手动管理。一个来源不可用时，其他包继续更新，结果列出失败项。
 
@@ -111,7 +111,7 @@ Codex 原生载体负责 Agent Package 的实际插件安装与回读；OPL App 
 
 ## 下载进度与后台安装
 
-安装、更新和修复通过 [Package 后台操作贡献](../../packages/daemon/src/contributions/package-operations.ts) 和 `PackService` 共享同一套操作与进度机制。确认后，后台 worker 执行相应的 `agent_package_install` / `agent_package_update` / `agent_package_repair`。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
+安装、更新和修复通过 [Package 后台操作贡献](../../packages/daemon/src/contributions/package-operations.ts) 和 `PackService` 共享同一套操作与进度机制。确认后，可通过同步或 `package_operation_start` 后台 worker 执行 `agent_package_install` / `agent_package_update` / `agent_package_repair`，并通过 `package_operation_cancel` 请求安全边界取消（`pack.operation.cancel`）。App 通过 `package_operation_status` 回读准备、下载、校验、解压、安装和最终结果；下载字节、速度和 ETA 来自传输实际写入量，其他阶段不伪造百分比。原生注册期间不可取消；下载或文件准备期间的取消只产生请求，worker 到达安全边界后才报告 `cancelled`。进程消失报告 `interrupted`，不自动重发生命周期操作。
 
 系统 curl 继续持有 HTTP、重定向与 Range。剩余归档达到 16 MiB 时，worker 默认并行发起 4 个有界 Range 请求，最多 8 个；只有每个响应都返回精确的 HTTP 206、Content-Range 和分片长度时才合并。任何不支持 Range、状态或长度不匹配的响应都会安全回退到既有单连接断点路径。Framework 只补齐当前 OCI 到原生 marketplace 的缺口：digest 命名的私有缓存目录、完整内容校验、暂存与进度投影。此缓存不决定版本、不替代 carrier registry。重复安装先重新验证缓存；断线重试保留 partial，取消和失败均不将 partial 激活。取消安装不会撤销此前已经成功安装的必需依赖。
 

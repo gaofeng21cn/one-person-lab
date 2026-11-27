@@ -71,6 +71,11 @@ test('trusted Studio connects, checks and disconnects a private software source 
   assert.equal(observed.verification_reason, 'provider_identity_and_registry_package_read_verified');
   assert.equal(fs.existsSync(path.join(sandbox.stateDir, 'software-sources.json')), false);
   await assert.rejects(external.call('pack.sources.list', {}), /TRUSTED_HOST_REQUIRED/);
+  const publicSource = sources.entries.find(source => source.source_id === 'public-registry:opl')!;
+  assert.deepEqual(publicSource.available_actions.map(action => action.action_id), ['source_refresh']);
+  const refresh = await request('source_refresh', { source_id: publicSource.source_id }) as any;
+  assert.equal(refresh.app_action_execution.result.refreshed, true);
+  assert.equal((await state('fast')).agent_packages.sources!.entries.find(source => source.source_id === publicSource.source_id)?.status, 'ready');
   await request('source_list', { confirmed: true });
   assert.equal(identityReads, 1);
 

@@ -25,7 +25,10 @@ export async function stageOfficialPackageSource(
   release?: { version: string; commit: string; contentDigest: string } | null,
   fetchImpl?: RegistryFetch,
   authHeader?: string,
+  options: Partial<Pick<Parameters<typeof downloadOciSource>[1], 'cacheRoot' | 'opId' | 'signal' | 'onProgress' | 'transport'>> = {},
+  seed?: { commit?: string; contentDigest?: string },
 ) {
+  options.signal?.throwIfAborted();
   if (!source.package_id) throw new PackError('INVALID_INPUT', 'Official package source requires its catalog identity.');
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-official-pkg-'));
   const dispose = () => fs.rmSync(tmpRoot, { recursive: true, force: true });
@@ -34,12 +37,17 @@ export async function stageOfficialPackageSource(
     if (source.kind === 'local_dir' && source.path) {
       copyDirectoryPhysical(source.path, pkgRoot);
     } else if (source.kind === 'oci') {
-      const archive = await downloadOciSource(source, { cacheRoot: path.join(tmpRoot, 'download'), fetchImpl, authHeader });
+      options.onProgress?.({ stage: 'resolving_oci', bytes_done: 0 });
+      const archive = await downloadOciSource(source, {
+        cacheRoot: options.cacheRoot ?? path.join(tmpRoot, 'download'), fetchImpl, authHeader,
+        onProgress: options.onProgress, signal: options.signal, opId: options.opId, transport: options.transport,
+      });
       extractPackageSourceArchive(archive, pkgRoot);
       pkgRoot = officialArchiveRoot(pkgRoot);
     } else {
       throw new PackError('INVALID_INPUT', 'Official package requires a local seed directory or an OCI source.');
     }
+    options.signal?.throwIfAborted();
     // The converter leaves root v2 manifests intact and only relocates legacy
     // files inside this private copy. The publisher's bytes stay untouched.
     const { manifest } = migrateV1Package({ repoDir: pkgRoot, apply: true, clean: false });
@@ -50,10 +58,13 @@ export async function stageOfficialPackageSource(
       throw new PackError('PACK_LOCK_MISMATCH', `Package version differs from the Catalog selection for '${source.package_id}'.`);
     }
     verifyManifestPathsExist(pkgRoot, manifest, { allowSymlinks: false });
-    if (release || fs.existsSync(path.join(pkgRoot, 'opl-release.lock.json'))) {
+    if (release || seed || fs.existsSync(path.join(pkgRoot, 'opl-release.lock.json'))) {
       const { lock } = verifyReleaseLock(pkgRoot);
       if (release && (lock.version !== release.version || lock.git_commit !== release.commit || lock.digest !== release.contentDigest)) {
         throw new PackError('PACK_LOCK_MISMATCH', `Packaged release lock differs from the Catalog release for '${source.package_id}'.`);
+      }
+      if ((seed?.commit && lock.git_commit !== seed.commit) || (seed?.contentDigest && lock.digest !== seed.contentDigest)) {
+        throw new PackError('PACK_LOCK_MISMATCH', `Packaged release lock differs from the Full seed for '${source.package_id}'.`);
       }
     }
     const localSource: InstallSourceSpec = { kind: 'local_dir', path: pkgRoot, package_id: source.package_id };

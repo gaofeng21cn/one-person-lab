@@ -387,9 +387,10 @@ export class WorkspaceService {
         }
         this.#db
           .prepare(
-            "UPDATE knowledge_sources SET status = 'active', updated_at = ? WHERE source_id = ?",
+            "UPDATE knowledge_sources SET scope = ?, adapter_kind = ?, accepted_revision = ?, status = 'active', updated_at = ? WHERE source_id = ?",
           )
-          .run(ts, sourceId);
+          .run(input.scope ?? existingSource.scope, input.adapter_kind?.trim() || existingSource.adapter_kind,
+            input.accepted_revision?.trim() || existingSource.accepted_revision, ts, sourceId);
       } else {
         this.#db
           .prepare(

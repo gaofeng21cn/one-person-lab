@@ -125,6 +125,9 @@ export class PackStore {
     if (!options.skipMigrations) {
       ensureConnectSchema(this.db);
     }
+    this.db.exec(`CREATE TABLE IF NOT EXISTS pack_install_sources (
+      package_id TEXT PRIMARY KEY, source_json TEXT NOT NULL, fetched_at TEXT NOT NULL
+    )`);
   }
 
   getInstalledPackage(packageId: string): InstalledPackageRecord | null {
@@ -140,7 +143,11 @@ export class PackStore {
     const row = this.db
       .prepare('SELECT update_source_json FROM installed_packages WHERE package_id = ?')
       .get(packageId) as { update_source_json: string | null } | undefined;
-    return row?.update_source_json ? JSON.parse(row.update_source_json) as PackageUpdateSource : null;
+    if (!row) return null;
+    if (row.update_source_json) return JSON.parse(row.update_source_json) as PackageUpdateSource;
+    const cached = this.db.prepare('SELECT source_json FROM pack_install_sources WHERE package_id = ?')
+      .get(packageId) as { source_json: string } | undefined;
+    return cached ? JSON.parse(cached.source_json) as PackageUpdateSource : null;
   }
 
   listInstalledPackages(filter: {
@@ -234,6 +241,13 @@ export class PackStore {
         installedAt,
         ts,
       );
+      if (input.source) {
+        db.prepare(`INSERT INTO pack_install_sources (package_id, source_json, fetched_at) VALUES (?, ?, ?)
+          ON CONFLICT(package_id) DO UPDATE SET source_json = excluded.source_json, fetched_at = excluded.fetched_at`)
+          .run(input.manifest.identity.id, JSON.stringify(input.source), ts);
+      } else {
+        db.prepare('DELETE FROM pack_install_sources WHERE package_id = ?').run(input.manifest.identity.id);
+      }
 
       const row = db
         .prepare(
@@ -300,6 +314,7 @@ export class PackStore {
           "UPDATE connection_grants SET status = 'revoked', revoked_at = ?, updated_at = ? WHERE consumer_package_id = ? AND status IN ('requested', 'granted')",
         )
         .run(ts, ts, packageId);
+      db.prepare('DELETE FROM pack_install_sources WHERE package_id = ?').run(packageId);
       db.prepare('DELETE FROM installed_packages WHERE package_id = ?').run(packageId);
       return {
         removed,

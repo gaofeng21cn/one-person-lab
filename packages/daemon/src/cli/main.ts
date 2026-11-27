@@ -318,6 +318,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'migrate-v1', usage: 'migrate-v1 [<dir>] [--dry-run] [--no-clean]' },
   ],
   connect: [
+    { name: 'configure-codex', usage: 'configure-codex --api-key-stdin [--json]' },
     { name: 'mcp-app-stdio', usage: 'mcp-app-stdio [--read-only]' },
     { name: 'gateway', usage: 'gateway <status|login|refresh|complete-setup|repair|use-for-model-access|authorize-companion|disconnect> ...' },
     { name: 'list', usage: 'list [--provider-type <t>] [--status <s>]' },
@@ -883,6 +884,30 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (!sub || !(NAMESPACE_SUBCOMMANDS.connect?.some((c) => c.name === sub))) {
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect subcommand '${sub ?? ''}'.`);
+        }
+        if (sub === 'configure-codex') {
+          if (rest.length || parsed.flags.get('--api-key-stdin') !== true
+            || [...parsed.flags.keys()].some(flag => !['--api-key-stdin', '--state-dir'].includes(flag))
+            || process.stdin.isTTY) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Use opl connect configure-codex --api-key-stdin with a key on stdin.');
+          }
+          const chunks: Buffer[] = [];
+          let size = 0;
+          for await (const chunk of process.stdin) {
+            const bytes = Buffer.from(chunk);
+            size += bytes.length;
+            if (size > 8192) throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'API key input exceeds 8192 bytes.');
+            chunks.push(bytes);
+          }
+          let key = '';
+          try { key = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)).trim(); }
+          catch { /* Reject malformed UTF-8 with the same input error. */ }
+          if (!key || /[\u0000-\u001f\u007f]/.test(key)) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Expected a non-empty UTF-8 API key on stdin.');
+          }
+          await rpc('connect.configureCodexApiKey', { api_key: key });
+          emitOutput({ ok: true }, parsed);
+          return 0;
         }
         if (sub === 'mcp-app-stdio') {
           const { runSharedWorkbenchStdio } = await import('./mcp-app-stdio.ts');

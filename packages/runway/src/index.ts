@@ -74,12 +74,13 @@ export {
   type TerminateProcessResult,
 } from './executors/spi.ts';
 
-export { codexStartupReady } from './executors/codex/runtime-probe.ts';
+export { codexStartupReady, observedCodexVersion } from './executors/codex/runtime-probe.ts';
 export { activateCodexRuntime, ensureCodexRuntime, readActiveCodexPath } from './executors/codex/runtime-install.ts';
 
 export { ExecutorRegistry } from './executors/registry.ts';
 
 export {
+  codexRuntimeRoot,
   managedCodexBinary,
   resolveCodexBinary,
   type CodexBinaryInfo,

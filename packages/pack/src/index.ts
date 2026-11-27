@@ -238,7 +238,10 @@ export {
   officialPackageInstallSource,
   officialPackagePrivateSourceId,
   officialPackageRuntimeRoot,
+  officialPackageSelectedVersion,
   readOfficialPackageCatalog,
+  readOfficialCatalogSelection,
+  readCachedOfficialPackageCatalog,
   type OfficialPackageCatalogEntry,
   type OfficialPackageCatalogOptions,
 } from './distribution/official-package-catalog.ts';

@@ -9,7 +9,7 @@ import { resolveCodexBinary } from './binary.ts';
 const readVersion = promisify(execFile);
 const timeoutMs = 8_000;
 
-type VersionCheck = { signature: string; ready: boolean };
+type VersionCheck = { signature: string; version: string | null };
 let lastVersionCheck: VersionCheck | undefined;
 const startupChecks = new Set<string>();
 
@@ -27,7 +27,7 @@ export function codexStartupReady(env: NodeJS.ProcessEnv = process.env): boolean
     if (!candidate) return false;
     const signature = binarySignature(candidate.path);
     if (!signature) return false;
-    if (lastVersionCheck?.signature === signature) return lastVersionCheck.ready;
+    if (lastVersionCheck?.signature === signature) return lastVersionCheck.version !== null;
     if (!startupChecks.has(signature)) {
       startupChecks.add(signature);
       void checkCodexExecutable(candidate.path, env).catch(() => false).finally(() => startupChecks.delete(signature));
@@ -36,6 +36,11 @@ export function codexStartupReady(env: NodeJS.ProcessEnv = process.env): boolean
   } catch {
     return false;
   }
+}
+
+export function observedCodexVersion(binaryPath: string): string | null {
+  const observation = lastVersionCheck;
+  return observation && observation.signature === binarySignature(binaryPath) ? observation.version : null;
 }
 
 async function readCodexVersion(binaryPath: string, env: NodeJS.ProcessEnv, cwd: string): Promise<string> {
@@ -50,15 +55,15 @@ async function readCodexVersion(binaryPath: string, env: NodeJS.ProcessEnv, cwd:
 export async function checkCodexExecutable(binaryPath: string, env: NodeJS.ProcessEnv): Promise<boolean> {
   const signature = binarySignature(binaryPath);
   if (!signature) return false;
-  let ready = true;
+  let version: string | null = null;
   try {
-    await readCodexVersion(binaryPath, env, os.tmpdir());
+    version = await readCodexVersion(binaryPath, env, os.tmpdir());
   } catch {
-    ready = false;
+    // The exact binary failed the version probe.
   }
   if (binarySignature(binaryPath) !== signature) return false;
-  lastVersionCheck = { signature, ready };
-  return ready;
+  lastVersionCheck = { signature, version };
+  return version !== null;
 }
 
 export async function verifyCodexAppServer(binaryPath: string, sourceEnv: NodeJS.ProcessEnv): Promise<string> {

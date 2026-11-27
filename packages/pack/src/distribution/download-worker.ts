@@ -14,6 +14,7 @@ export interface PackageDownloadRequest {
   readonly digest: string;
   readonly size: number;
   readonly packageId: string;
+  readonly operationId?: string;
   readonly cacheRoot: string;
   readonly parallelism?: number;
   readonly minParallelBytes?: number;
@@ -394,7 +395,7 @@ export async function downloadPackageArchive(request: PackageDownloadRequest): P
       }
     }
     if (alive) {
-      throw new PackError('PACK_OPERATION_BUSY', 'Another download is already active for this digest.');
+      throw new PackError('PACK_OPERATION_BUSY', 'Another download is already active for this digest.', { op_id: request.operationId });
     }
     fs.unlinkSync(lockPath);
   }
@@ -550,6 +551,7 @@ export async function downloadPackageArchive(request: PackageDownloadRequest): P
       assertNotCancelled(request.signal);
       const offset = physicalFileSize(partialPath);
       if (offset >= request.size) break;
+      const startedAt = Date.now();
 
       if (transport.fetchFull) {
         const res = await transport.fetchFull({
@@ -652,10 +654,14 @@ export async function downloadPackageArchive(request: PackageDownloadRequest): P
         }
       }
 
+      const bytesDone = physicalFileSize(partialPath);
+      const speedBps = Math.round((bytesDone - offset) / Math.max(0.001, (Date.now() - startedAt) / 1000));
       emitProgress({
         stage: 'downloading',
-        bytes_done: physicalFileSize(partialPath),
+        bytes_done: bytesDone,
         bytes_total: request.size,
+        speed_bps: speedBps,
+        eta_sec: bytesDone === request.size ? 0 : speedBps > 0 ? Math.ceil((request.size - bytesDone) / speedBps) : null,
       });
     }
 

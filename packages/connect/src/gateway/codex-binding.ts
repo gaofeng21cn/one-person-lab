@@ -73,6 +73,7 @@ export function readLocalCodexDefaultsIfAvailable() {
     const selected = provider(config, config.model_provider);
     return {
       model_provider: optional(config.model_provider),
+      provider_name: optional(selected.name) ?? optional(config.model_provider),
       model: optional(config.model),
       reasoning_effort: optional(config.model_reasoning_effort),
       provider_api_key: optional(selected.experimental_bearer_token),
@@ -117,6 +118,7 @@ export function readLocalCodexAccessState() {
     model_access_source: source,
     opl_gateway_configured: defaults?.opl_gateway_configured === true,
     provider_base_url: defaults?.provider_base_url ?? null,
+    provider_name: defaults?.provider_name ?? null,
     model: defaults?.model ?? null,
     reasoning_effort: defaults?.reasoning_effort ?? null,
   };

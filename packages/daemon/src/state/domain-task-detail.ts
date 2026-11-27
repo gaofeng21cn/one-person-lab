@@ -80,7 +80,7 @@ function boundedRead(file: string) {
 
 type InstalledAgent = { package_id: string; enabled: boolean; install_path: string };
 type WorkItem = { item_id: string; identity: {
-  agent_id: string; workspace_path: string; work_item_root?: string | null; work_item_id: string;
+  agent_id: string | null; workspace_path: string; work_item_root?: string | null; work_item_id: string;
 } };
 
 export function readDomainTaskDetail(pkg: InstalledAgent | null | undefined, item: WorkItem, viewId: string, ifRevision?: number) {

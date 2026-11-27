@@ -71,3 +71,60 @@ test('App reads a multi-capability request and can approve, deny and revoke thro
   assert.ok(!changed.requests.some(request => request.request_id === third.request_id));
   assert.ok(changed.grants.some(grant => grant.request_id === third.request_id && grant.status === 'superseded'));
 });
+
+test('trusted App Settings reads workspace sources and delegates resource and connection lifecycle actions', async t => {
+  const sandbox = createDaemonSandbox();
+  t.after(() => sandbox.cleanup());
+  const { runtime } = await sandbox.startInProcess();
+  const rpc = await connectTestRpc(sandbox.sessionPath);
+  t.after(() => rpc.close());
+  const action = async (action_id: string, payload: Record<string, unknown>) => {
+    const receipt = await rpc.call('app.action.execute', { action_id, payload }) as any;
+    return receipt.app_action_execution.result;
+  };
+  const state = () => rpc.call('app.state.get', { profile: 'fast' }) as Promise<any>;
+  const first = await state();
+  const app = first.app_state;
+  assert.deepEqual(app.meta, { generated_at: first.generated_at, profile: 'fast' });
+  assert.ok(app.core.codex.runtime_root);
+  assert.ok(['executable', 'unavailable'].includes(app.core.codex.executable_status));
+  assert.equal(app.managed_update.components.find((row: any) => row.component_id === 'opl_base').auto_apply.eligible, false);
+  assert.ok(app.transport_bindings);
+  assert.ok(app.services.runway.schedule_runner.tick_interval_ms);
+  const settings = app.settings_control_center.app_settings_read_model;
+  assert.ok(settings.local_environment.state_dir);
+  assert.equal(settings.storage_lifecycle.package_cache.path, runtime.packService.cacheRoot);
+  assert.equal(settings.resource_sources.surface_kind, 'opl_knowledge_sources_projection.v1');
+  assert.ok(app.settings_control_center.status_summary.model_access);
+  assert.ok('provider_name' in settings.codex_model_policy);
+  assert.ok('provider_base_url' in settings.codex_model_policy);
+
+  const workspace = runtime.workspaceService.initWorkspace({ root_path: sandbox.workspaceDir, name: 'Resources' });
+  const sourceId = 'fixture-knowledge';
+  const source = { source_id: sourceId };
+  const connected = await action('knowledge_source_connect', {
+    ...source, workspace_id: workspace.workspace_id, root_path: sandbox.workspaceDir, scope: 'project_local',
+  });
+  assert.equal(connected.source.status, 'active');
+  assert.equal((await action('knowledge_source_check', source)).source.source_id, sourceId);
+  assert.equal((await action('knowledge_source_configure', { ...source, accepted_revision: '2' })).source.accepted_revision, '2');
+  assert.equal((await action('knowledge_source_list', { workspace_id: workspace.workspace_id })).resource_sources.entries[0].source_id, sourceId);
+  const next = (await state()).app_state;
+  assert.equal(next.settings_control_center.app_settings_read_model.resource_sources.entries[0].accepted_revision, '2');
+  assert.ok(next.application_management.shared_resources.some((row: any) => row.source_id === sourceId));
+  await assert.rejects(action('knowledge_source_disconnect', source), /CONFIRMATION_REQUIRED/);
+  await action('knowledge_source_disconnect', { ...source, confirmed: true });
+  assert.equal((await action('knowledge_source_check', source)).source.status, 'revoked');
+
+  const registered = await rpc.call('connect.add', { provider_type: 'test.fixture', display_name: 'Settings Fixture', capabilities: [], credential_handle: 'provider:test-fixture:synthetic' }) as any;
+  const connectionId = registered.connection?.connection_id ?? registered.connection_id;
+  assert.ok(connectionId);
+  const connection = { connection_id: connectionId };
+  assert.deepEqual(await action('connection_test', connection), await rpc.call('connect.check', connection));
+  await action('connection_update', { ...connection, status: 'disabled' });
+  const list = await rpc.call('connect.list', {}) as any;
+  assert.equal(list.connections.find((row: any) => row.connection_id === connectionId).status, 'disabled');
+  await assert.rejects(action('connection_delete', connection), /CONFIRMATION_REQUIRED/);
+  await action('connection_delete', { ...connection, confirmed: true });
+  assert.ok(!(await rpc.call('connect.list', {}) as any).connections.some((row: any) => row.connection_id === connectionId));
+});
