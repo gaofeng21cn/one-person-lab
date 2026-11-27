@@ -16,7 +16,7 @@ function toolResult(payload: Record<string, unknown>, isError = false) {
   return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }], structuredContent: payload, isError };
 }
 
-function createServer(stateDir: string | undefined, version: string) {
+function createServer(stateDir: string | undefined, version: string, readOnly: boolean) {
   const server = new McpServer({ name: 'opl-apps', version }, { capabilities: { tools: {}, resources: {} } });
   const rpc = <T>(method: string, params: Record<string, unknown> = {}) =>
     callDaemonRpc(method, params, { stateDir }) as Promise<T>;
@@ -50,6 +50,8 @@ function createServer(stateDir: string | undefined, version: string) {
     return toolResult(await bridge.readContribution({ packageId: package_id, ref, input }));
   });
 
+  if (readOnly) return server;
+
   registerAppTool(server, 'opl_app_contribution_execute', {
     title: 'Execute a workbench action', inputSchema: z.strictObject({ ...target, confirmed: z.boolean() }),
     annotations: { readOnlyHint: false, idempotentHint: false }, _meta: operationMeta,
@@ -62,9 +64,9 @@ function createServer(stateDir: string | undefined, version: string) {
   return server;
 }
 
-export async function runSharedWorkbenchStdio(stateDir: string | undefined, version: string): Promise<void> {
+export async function runSharedWorkbenchStdio(stateDir: string | undefined, version: string, readOnly: boolean): Promise<void> {
   const completed = new Promise<void>(resolve => process.stdin.once('end', resolve));
-  const handle = serveStdio(() => createServer(stateDir, version));
+  const handle = serveStdio(() => createServer(stateDir, version, readOnly));
   try {
     await completed;
   } finally {

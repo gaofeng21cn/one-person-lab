@@ -46,4 +46,9 @@ test('the installed CLI serves the interactive shared workbench over MCP stdio',
   assert.deepEqual(read.structuredContent?.result, { seen: 'owner' });
   const missing = await client.callTool({ name: 'open_opl_apps', arguments: { package_id: 'missing', view_id: 'inbox' } });
   assert.equal(missing.isError, true);
+  const reader = new Client({ name: 'opl-read-only-workbench-test', version: '1.0.0' });
+  await reader.connect(new StdioClientTransport({ command: process.execPath, args: [ROOT_OPL_BIN, 'connect', 'mcp-app-stdio', '--read-only'], env }));
+  t.after(() => reader.close());
+  assert.deepEqual((await reader.listTools()).tools.map(tool => tool.name).sort(), ['open_opl_apps', 'opl_app_contribution_read']);
+  await assert.rejects(reader.callTool({ name: 'opl_app_contribution_execute', arguments: { ...focus, ref: 'panel.edit', confirmed: true } }), /Tool opl_app_contribution_execute not found/);
 });

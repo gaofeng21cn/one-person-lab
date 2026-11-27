@@ -291,7 +291,7 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'migrate-v1', usage: 'migrate-v1 [<dir>] [--dry-run] [--no-clean]' },
   ],
   connect: [
-    { name: 'mcp-app-stdio', usage: 'mcp-app-stdio' },
+    { name: 'mcp-app-stdio', usage: 'mcp-app-stdio [--read-only]' },
     { name: 'list', usage: 'list [--provider-type <t>] [--status <s>]' },
     { name: 'add', usage: 'add --provider-type <t> --display-name <n> [--connection-id <id>] [--secret <s>]' },
     { name: 'check', usage: 'check <connectionId>' },
@@ -784,7 +784,7 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
         }
         if (sub === 'mcp-app-stdio') {
           const { runSharedWorkbenchStdio } = await import('./mcp-app-stdio.ts');
-          await runSharedWorkbenchStdio(stateDir, readCliVersion());
+          await runSharedWorkbenchStdio(stateDir, readCliVersion(), getBoolFlag(parsed, '--read-only'));
           return 0;
         }
         if (sub === 'list') {
