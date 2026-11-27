@@ -124,8 +124,9 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     marketplace_root: runtime.marketplaceRoot,
   }));
 
-  handlers.set('daemon.doctor', (params) => {
+  handlers.set('daemon.doctor', async (params) => {
     const includeFirstRun = pickBoolean(params, 'include_first_run', 'includeFirstRun') ?? false;
+    if (includeFirstRun) await runtime.waitForInitialPackageDiscovery();
     return runtime.doctor(includeFirstRun);
   });
 
@@ -144,7 +145,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     if (!trusted) return state;
     return { ...state, app_state: { ...state.app_state, codex_personalization: readCodexPersonalization(runtime.packService) } };
   };
-  handlers.set('app.state.get', (params, conn) => {
+  handlers.set('app.state.get', async (params, conn) => {
+    await runtime.waitForInitialPackageDiscovery();
     const rawProfile = pickString(params, 'profile') ?? 'fast';
     const profile = rawProfile === 'full' ? 'full' : 'fast';
     return appState(profile, conn);
@@ -152,7 +154,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
 
   handlers.set('app.operatorDrilldown.get', () => readOperatorDrilldown(runtime));
 
-  handlers.set('app.initialize.get', (_params, conn) => {
+  handlers.set('app.initialize.get', async (_params, conn) => {
+    await runtime.waitForInitialPackageDiscovery();
     const doc = runtime.doctor(true, { repairPermissions: false });
     const state = appState('fast', conn);
     const model = state.app_state.settings_control_center?.app_settings_read_model.codex_model_policy;
@@ -163,7 +166,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
     };
   });
 
-  handlers.set('app.domainDetail.get', (params) => {
+  handlers.set('app.domainDetail.get', async (params) => {
+    await runtime.waitForInitialPackageDiscovery();
     const itemId = pickString(params, 'item_id', 'itemId');
     const viewId = pickString(params, 'view_id', 'viewId');
     const ifRevision = pickNumber(params, 'if_revision', 'ifRevision');
@@ -435,7 +439,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('workspace.knowledge.commitWriteback', handleWritebackCommit);
 
   // ---- pack.* ----
-  const handlePackList: RpcHandler = (params) => {
+  const handlePackList: RpcHandler = async (params) => {
+    await runtime.waitForInitialPackageDiscovery();
     const intent = pickString(params, 'intent') as PackageIntent | undefined;
     const origin = pickString(params, 'origin') as PackageOrigin | undefined;
     const query = pickString(params, 'query');
@@ -454,7 +459,8 @@ export function createDaemonRpcRouter(runtime: DaemonRuntime): Map<string, RpcHa
   handlers.set('pack.catalog.list', handlePackList);
   handlers.set('pack.search', handlePackList);
 
-  handlers.set('pack.inspect', (params) => {
+  handlers.set('pack.inspect', async (params) => {
+    await runtime.waitForInitialPackageDiscovery();
     const packageId = pickString(params, 'package_id', 'packageId', 'id');
     const dir = pickString(params, 'dir');
     if (dir) {

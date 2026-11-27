@@ -34,10 +34,12 @@ import { LedgerStore, verifyTaskLineage } from '@opl/ledger';
 import {
   createPackService,
   createOfficialPackageResolver,
+  createProcessCodexRunner,
   PackError,
   prunePackStateArtifacts,
   readPackageManifestFromDir,
   resolveCodexPluginName,
+  resolveConfiguredCodexHome,
   type CodexSyncProjectionResult,
   type InstalledPackageRecord,
   type ModuleOrCommandEntrypoint,
@@ -127,6 +129,7 @@ export class DaemonRuntime {
   readonly #activeTaskLoops = new Map<string, Promise<void>>();
   readonly #pendingTaskLoops = new Set<string>();
   readonly #launchingTaskStages = new Map<string, { readonly stageRunId: string; readonly promise: Promise<void> }>();
+  #initialPackageDiscovery: Promise<void> = Promise.resolve();
   #initializedAsync = false;
   #closed = false;
 
@@ -546,11 +549,25 @@ export class DaemonRuntime {
   async initializeAsync(): Promise<void> {
     if (this.#initializedAsync || this.#closed) return;
     this.#initializedAsync = true;
+    const carrierHomes = [resolveConfiguredCodexHome(), path.join(this.paths.state_dir, 'internal-package-carrier')];
+    if (carrierHomes.some((home) => fs.existsSync(path.join(home, 'config.toml')))) {
+      // Socket startup and unrelated RPCs may proceed while the native carrier answers.
+      this.#initialPackageDiscovery = this.packService
+        .refreshExternalCodexPackages(createProcessCodexRunner({ timeoutMs: 3000 }))
+        .then(() => { this.appStateCache.invalidate(); })
+        .catch(() => {
+          // Keep the last inventory. An explicit pack sync can retry and report the carrier error.
+        });
+    }
     await this.runwayRuntime.reconcile();
     this.runwayRuntime.start();
     this.scheduleRunner.start();
     await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
     await this.channelHost.refreshTransportBindings().catch(() => {});
+  }
+
+  waitForInitialPackageDiscovery(): Promise<void> {
+    return this.#initialPackageDiscovery;
   }
 
   resolveAgentStages(agentId?: string | null): Array<{
@@ -1011,6 +1028,7 @@ export class DaemonRuntime {
     readonly synced: readonly CodexSyncProjectionResult[];
     readonly imported_external: readonly InstalledPackageRecord[];
   }> {
+    await this.#initialPackageDiscovery;
     try {
       const result = await this.packService.codexSync({
         ...input,
@@ -1199,6 +1217,7 @@ export class DaemonRuntime {
       ]);
     }
 
+    await this.#initialPackageDiscovery;
     try {
       this.db.exec('PRAGMA wal_checkpoint(TRUNCATE);');
     } catch {

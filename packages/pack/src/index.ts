@@ -178,6 +178,7 @@ export {
 
 export {
   discoverExternalCodexPlugins,
+  discoverConfiguredCodexPackages,
   syncPackageToCodex,
   unsyncPackageFromCodex,
   type ImportedExternalPluginRecord,

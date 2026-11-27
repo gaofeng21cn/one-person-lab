@@ -22,12 +22,12 @@ import {
 import { verifyManifestPathsExist } from '../build/content-lock.ts';
 import {
   codexPluginPresenceProblem,
-  discoverExternalCodexPlugins,
+  discoverConfiguredCodexPackages,
   syncPackageToCodex,
   unsyncPackageFromCodex,
 } from '../carriers/codex-sync/sync.ts';
 import { resolveCodexMarketplaceRoot, resolveCodexPluginName, shouldSyncToCodex } from '../carriers/codex-sync/project.ts';
-import { createProcessCodexRunner, type CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
+import { createProcessCodexRunner, type CodexCarrierRunner, type CodexPluginListResponse } from '../carriers/codex-sync/readback.ts';
 import { extractPackageSourceArchive, packageSourceArchiveDigest } from '../distribution/archive.ts';
 import type { DownloadTransport } from '../distribution/download-worker.ts';
 import { copyDirectoryPhysical, downloadOciSource } from '../distribution/source-files.ts';
@@ -848,6 +848,10 @@ export class PackService {
       throw new PackError('PACK_NOT_FOUND', `Package '${packageId}' is not installed.`);
     }
 
+    if (existing.origin === 'external') {
+      throw new PackError('INVALID_INPUT', `Uninstall '${packageId}' through its Codex marketplace, then refresh Package discovery.`);
+    }
+
     const opId = newId('packop');
     this.store.createOperation({
       op_id: opId,
@@ -946,6 +950,9 @@ export class PackService {
     assertTrustedIfProvided(input.clientContext, 'pack.toggle');
     const release = await this.acquirePackageMutation(input.packageId);
     try {
+      if (this.inspect(input.packageId)?.origin === 'external') {
+        throw new PackError('INVALID_INPUT', `Enable or disable '${input.packageId}' through its Codex marketplace, then refresh Package discovery.`);
+      }
       const updated = this.store.setPackageEnabled(input.packageId, input.enabled);
       const syncResult = await syncPackageToCodex({
         manifest: updated.manifest,
@@ -1026,11 +1033,7 @@ export class PackService {
     }
     const runner = this.#codexRunner ?? (input.requireReadback ? createProcessCodexRunner() : undefined);
     const synced: CodexSyncProjectionResult[] = [];
-    const managedPluginIds = new Set<string>();
     for (const pkg of targets) {
-      const pluginName = resolveCodexPluginName(pkg.manifest);
-      managedPluginIds.add(pluginName);
-      managedPluginIds.add(`${pluginName}@opl-local`);
 
       const res = await syncPackageToCodex({
         manifest: pkg.manifest,
@@ -1045,42 +1048,43 @@ export class PackService {
       synced.push(res);
     }
 
-    const importedExternal: InstalledPackageRecord[] = [];
-    if (input.importExternal && runner) {
-      const discovered = await discoverExternalCodexPlugins({
-        runner,
-        managedPluginIds,
-        marketplaceRoot: this.marketplaceRoot,
-        stateDir: this.stateDir,
-      });
-      const seenExternalIds = new Set<string>();
-      for (const ext of discovered) {
-        seenExternalIds.add(ext.summary.package_id);
-        const rec = this.store.upsertInstalledPackage({
-          manifest: ext.manifest,
-          origin: 'external',
-          install_mode: 'release',
-          install_path: ext.summary.install_path,
-          content_digest: ext.content_digest,
-          enabled: ext.summary.enabled,
-          carrier_synced: true,
-        });
-        importedExternal.push(rec);
-      }
-
-      // Remove stale external rows uninstalled from Codex
-      const existingExternals = this.store.listInstalledPackages({ origin: 'external' });
-      for (const existing of existingExternals) {
-        if (!seenExternalIds.has(existing.package_id)) {
-          this.store.deleteInstalledPackageAndRevokeGrants(existing.package_id);
-        }
-      }
-    }
+    const importedExternal = input.importExternal && runner
+      ? await this.refreshExternalCodexPackages(runner)
+      : [];
 
     return {
       synced,
       imported_external: importedExternal,
     };
+  }
+
+  async refreshExternalCodexPackages(
+    runner: CodexCarrierRunner,
+    env = process.env,
+    primaryInventory?: CodexPluginListResponse,
+  ): Promise<InstalledPackageRecord[]> {
+    const discovered = await discoverConfiguredCodexPackages({
+      runner, env, primaryInventory, marketplaceRoot: this.marketplaceRoot, stateDir: this.stateDir,
+    });
+    // Take the managed snapshot after awaited readback. Another request may
+    // have installed a managed Package while the carrier was answering.
+    const managed = this.list().filter(pkg => pkg.origin !== 'external');
+    const managedNames = new Set(managed.map(pkg => resolveCodexPluginName(pkg.manifest)));
+    const managedIds = new Set(managed.map(pkg => pkg.package_id));
+    const imported = [];
+    for (const entry of discovered) {
+      const { summary, manifest, content_digest } = entry;
+      if (managedIds.has(summary.package_id) || managedNames.has(summary.name)) continue;
+      imported.push(this.store.upsertInstalledPackage({
+        manifest, content_digest, origin: 'external', install_mode: 'release',
+        install_path: summary.install_path, enabled: summary.enabled, carrier_synced: true,
+      }));
+    }
+    const seen = new Set(imported.map(pkg => pkg.package_id));
+    for (const record of this.list({ origin: 'external' })) {
+      if (!seen.has(record.package_id)) this.store.deleteInstalledPackageAndRevokeGrants(record.package_id);
+    }
+    return imported;
   }
 
   build(input: {

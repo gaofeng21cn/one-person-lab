@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
 import { runCliJson } from "../lib/cli.mjs";
+import { connectRpcClient } from "../lib/rpc-client.mjs";
 import {
   buildV2Package,
   createLocalPackageArchive,
@@ -225,5 +226,41 @@ describe("Tier 1 — F3: carriers/codex-sync & opl pack link/unlink/sync", () =>
     assert.equal(fs.existsSync(afterUninstall.pluginDir), false);
     assert.equal(fs.existsSync(path.join(sb.stateDir, "packages", "mas")), false);
     assert.equal(fs.existsSync(sourceSkill), true, "Source SKILL.md must remain intact after uninstall");
+  });
+
+  it("T1-F3-06: first App and CLI reads discover existing native plugins with their enabled states", async () => {
+    const sb = trackSandbox();
+    const plugins = ["active-plugin", "disabled-plugin"].map((name, index) => {
+      const dir = path.join(sb.workspaceDir, name);
+      fs.mkdirSync(path.join(dir, ".codex-plugin"), { recursive: true });
+      fs.writeFileSync(path.join(dir, ".codex-plugin", "plugin.json"), JSON.stringify({ name, version: "1.2.0" }));
+      return { name, version: "1.2.0", path: dir, enabled: index === 0 };
+    });
+    const config = plugins.map(({ name, enabled }) =>
+      `[plugins."${name}@external-local"]\nenabled = ${enabled}\n`
+    ).join("\n");
+    const configPath = path.join(sb.codexHome, "config.toml");
+    fs.writeFileSync(configPath, config);
+    await sb.startDaemon({ env: { OPL_STUB_CODEX_EXTERNAL_PLUGINS_JSON: JSON.stringify(plugins) } });
+
+    const rpc = await connectRpcClient({ sessionPath: sb.sessionPath, clientKind: "opl_app" });
+    try {
+      const [state, inventory] = await Promise.all([
+        rpc.call("app.state.get", { profile: "fast" }),
+        runCliJson(["pack", "list"], { sandbox: sb }),
+      ]);
+      for (const packages of [state.app_state.packages, inventory.packages]) {
+        for (const plugin of plugins) {
+          const found = packages.find((entry) => entry.name === plugin.name);
+          assert.ok(found, `First inventory did not discover ${plugin.name}`);
+          assert.equal(found.enabled, plugin.enabled);
+          assert.equal(found.origin, "external");
+          assert.equal(found.carrier, "codex");
+        }
+      }
+      assert.equal(fs.readFileSync(configPath, "utf8"), config);
+    } finally {
+      await rpc.close();
+    }
   });
 });

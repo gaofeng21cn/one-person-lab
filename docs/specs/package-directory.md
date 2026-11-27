@@ -33,6 +33,8 @@ Framework 持久化来源身份。由官方目录验证的安装可按目录刷�
 | 运行组件 | 有明确依赖或内嵌关系、由父产品统一维护的组件 | 显示父产品和依赖关系，从父产品维护入口处理 |
 | 部署目标 | 云端、移动端、设备端或远端服务产品 | 只提供部署向导、环境检查和远端状态；不进入本机安装清单 |
 
+Framework v2 首次读取软件目录时，从已配置的 Codex 载体读取原有安装。已安装版本的 OPL 描述符提供 Package ID，Codex 提供版本与启停状态。原先放在内部载体的无界面能力包仍从该载体读取。普通原生插件通过其 Codex 市场管理，执行 `opl pack sync codex` 可刷新 Framework 中的显示。升级发现只读取现有插件和配置。
+
 插件是一种交付方式。OPL 软件即使通过 Codex 插件安装，也仍在 OPL 软件中；PDF、Documents 等外部可选扩展即使随 Codex 提供，也仍属于其他来源。随附安装只证明交付方式，不能据此把扩展称为运行依赖。只有实际依赖合同支持时才使用 `catalog_scope=host_component`；独立软件或用户扩展使用 `catalog_scope=software`。
 
 产品分类使用 **智能体、应用、扩展、通道、依赖**。目录从 owner 声明的 `presentation.software_type` 输出 `agent`、`application`、`extension`、`channel` 或 `dependency`。已有 descriptor 的 `capability` 归一为 `extension`。未声明类型的标准智能体沿原合同归为 `agent`，其余显示 `unknown`。运行加载与调用使用 `standard_agent`、`workflow_profile` 和 `capability_package` 等合同。MCP App、桌面、Web、CLI 是软件入口，独立移动端、设备端和云端产品通过 `management_scope=deployment_target` 出现在部署关联中。

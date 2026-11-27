@@ -1,10 +1,14 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { isRecord } from '@opl/core';
 import semver from 'semver';
+import { resolveConfiguredCodexHome } from './temp-hygiene.ts';
 import { PackError } from '../../errors.ts';
+import { migrateV1Package } from '../../migrate/migrate-v1.ts';
 import {
   CODEX_PLUGIN_NAME_REGEX,
+  KebabIdSchema,
   SemverSchema,
   type OplPackageManifestV2,
 } from '../../manifest/schema.ts';
@@ -25,6 +29,7 @@ import {
 import {
   ensureMarketplaceAvailable,
   type CodexCarrierRunner,
+  type CodexPluginListResponse,
   type CodexPluginSummary,
 } from './readback.ts';
 
@@ -284,7 +289,46 @@ function normalizeExternalPluginVersion(rawVersion: string | null | undefined): 
   return '0.1.0';
 }
 
-function synthesizeExternalManifest(plugin: CodexPluginSummary, packageId: string): OplPackageManifestV2 {
+// Codex reports the mutable marketplace checkout for local sources. Prefer the
+// installed version in the selected carrier home, even after the checkout moves.
+function installedLocalRoot(plugin: CodexPluginSummary, env: NodeJS.ProcessEnv): string | null {
+  if (plugin.source.type !== 'local') return null;
+  const parts = [plugin.marketplaceName, plugin.name, plugin.localVersion ?? plugin.version];
+  if (parts.every((part): part is string => typeof part === 'string' && CODEX_PLUGIN_NAME_REGEX.test(part))) {
+    const cacheRoot = path.join(resolveConfiguredCodexHome(env), 'plugins', 'cache', ...parts);
+    if (fs.statSync(cacheRoot, { throwIfNoEntry: false })?.isDirectory()) return cacheRoot;
+  }
+  return plugin.source.path;
+}
+
+function installedPackageDescriptor(root: string | null, plugin: CodexPluginSummary) {
+  if (!root) return null;
+  try {
+    const input: unknown = JSON.parse(fs.readFileSync(path.join(root, 'opl-package.json'), 'utf8'));
+    if (!isRecord(input)) return null;
+    const codex = isRecord(input.codex_surface) ? input.codex_surface : {};
+    let manifest: OplPackageManifestV2;
+    if (input.schema_version === 'opl.package.v2') {
+      manifest = parsePackageManifestV2(input);
+    } else {
+      const kind = input.surface_kind;
+      if (kind !== 'opl_agent_package_manifest.v1' && kind !== 'opl_capability_package_manifest.v2'
+          && kind !== 'opl_workflow_profile_package_manifest.v1') return null;
+      if (!KebabIdSchema.safeParse(input.package_id).success) return null;
+      const configured = isRecord(codex.configured_codex_plugin_carrier) ? codex.configured_codex_plugin_carrier : {};
+      if (typeof configured.plugin_selector === 'string' && configured.plugin_selector !== plugin.id) return null;
+      if (typeof codex.plugin_id === 'string' && codex.plugin_id !== plugin.id && codex.plugin_id !== plugin.name) return null;
+      manifest = migrateV1Package({ repoDir: root, apply: false, clean: false }).manifest;
+    }
+    if (manifest.identity.version !== (plugin.localVersion ?? plugin.version)) return null;
+    return { manifest, internal: (input.codex_interaction_mode ?? codex.interaction_mode) === 'headless_internal' };
+  } catch {
+    // A native plugin without a readable OPL descriptor retains its carrier ID.
+    return null;
+  }
+}
+
+function synthesizeExternalManifest(plugin: CodexPluginSummary, packageId: string, descriptor?: OplPackageManifestV2): OplPackageManifestV2 {
   const iface = plugin.interface ?? {};
   const displayName =
     typeof iface.displayName === 'string' && iface.displayName.trim()
@@ -308,11 +352,18 @@ function synthesizeExternalManifest(plugin: CodexPluginSummary, packageId: strin
     identity: {
       id: packageId,
       version,
-      intent: 'extension',
+      intent: descriptor?.identity.intent ?? 'extension',
       name: { 'zh-CN': displayName, 'en-US': displayName },
       summary: { 'zh-CN': shortDesc, 'en-US': shortDesc },
       publisher: developer,
     },
+    // Preserve dependency and skill contracts. Executable entrypoints continue
+    // to run through the native carrier that owns the installed plugin.
+    dependencies: descriptor?.dependencies,
+    provides: descriptor?.provides ? {
+      skills: descriptor.provides.skills,
+      module_ids: descriptor.provides.module_ids,
+    } : undefined,
     host_hints: {
       codex: {
         sync_enabled: true,
@@ -334,13 +385,19 @@ export interface ImportedExternalPluginRecord {
   readonly content_digest: string;
 }
 
-export async function discoverExternalCodexPlugins(options: {
+interface ExternalDiscoveryOptions {
   readonly runner: CodexCarrierRunner;
   readonly managedPluginIds?: ReadonlySet<string>;
   readonly marketplaceRoot?: string;
   readonly stateDir?: string;
   readonly env?: NodeJS.ProcessEnv;
-}): Promise<ImportedExternalPluginRecord[]> {
+  readonly primaryInventory?: CodexPluginListResponse;
+}
+
+export async function discoverExternalCodexPlugins(
+  options: ExternalDiscoveryOptions,
+  internalOnly = false,
+): Promise<ImportedExternalPluginRecord[]> {
   const marketplaceRoot = resolveCodexMarketplaceRoot({
     marketplaceRoot: options.marketplaceRoot,
     stateDir: options.stateDir,
@@ -351,7 +408,7 @@ export async function discoverExternalCodexPlugins(options: {
     : path.resolve(marketplaceRoot);
   const managedIds = options.managedPluginIds ?? new Set<string>();
 
-  const response = await options.runner.listPlugins({ forceRefetch: false }, options.env);
+  const response = options.primaryInventory ?? await options.runner.listPlugins({ forceRefetch: false }, options.env);
   if (response.marketplaceLoadErrors.length) {
     throw new PackError('PACK_CODEX_SYNC_FAILED', 'Incomplete external Codex inventory: marketplaceLoadErrors.');
   }
@@ -371,7 +428,10 @@ export async function discoverExternalCodexPlugins(options: {
       if (!plugin.installed) continue;
       if (managedIds.has(plugin.name) || managedIds.has(plugin.id)) continue;
 
-      const baseId = toSafeKebabPackageId(`codex-${plugin.marketplaceName}-${plugin.name}`);
+      const localRoot = installedLocalRoot(plugin, options.env ?? process.env);
+      const identity = installedPackageDescriptor(localRoot, plugin);
+      if (internalOnly && !identity?.internal) continue;
+      const baseId = identity?.manifest.identity.id ?? toSafeKebabPackageId(`codex-${plugin.marketplaceName}-${plugin.name}`);
       const pkgId = seenIds.has(baseId)
         ? toSafeKebabPackageId(`${baseId}-${crypto.createHash('sha256').update(plugin.id).digest('hex').slice(0, 6)}`)
         : baseId;
@@ -379,17 +439,17 @@ export async function discoverExternalCodexPlugins(options: {
 
       const installPath =
         plugin.source.type === 'local'
-          ? plugin.source.path
+          ? localRoot!
           : plugin.source.type === 'git'
             ? plugin.source.path ?? plugin.source.url
             : plugin.source.type === 'npm'
               ? `npm:${plugin.source.package}`
               : `codex-remote://${plugin.id}`;
 
-      const manifest = synthesizeExternalManifest(plugin, pkgId);
+      const manifest = synthesizeExternalManifest(plugin, pkgId, identity?.manifest);
       const digest = `sha256:${crypto
         .createHash('sha256')
-        .update(JSON.stringify({ id: plugin.id, version: manifest.identity.version, source: plugin.source }))
+        .update(JSON.stringify({ id: plugin.id, version: manifest.identity.version, source: plugin.source, ...(identity ? { descriptor: manifest } : {}) }))
         .digest('hex')}`;
 
       imported.push({
@@ -410,4 +470,22 @@ export async function discoverExternalCodexPlugins(options: {
   }
 
   return imported;
+}
+
+
+export async function discoverConfiguredCodexPackages(options: ExternalDiscoveryOptions & { readonly stateDir: string }) {
+  const internalHome = path.join(options.stateDir, 'internal-package-carrier');
+  const env = options.env ?? process.env;
+  const primary = discoverExternalCodexPlugins(options);
+  if (internalHome === resolveConfiguredCodexHome(env) || !fs.existsSync(path.join(internalHome, 'config.toml'))) {
+    return primary;
+  }
+  const [userPackages, internalPackages] = await Promise.all([primary, discoverExternalCodexPlugins({
+    ...options, primaryInventory: undefined, env: { ...env, CODEX_HOME: internalHome },
+  }, true)]);
+  // v1 assigned headless Packages to its internal carrier, including when the
+  // same identity also appeared in the user's marketplace.
+  const entries = new Map(userPackages.map(entry => [entry.summary.package_id, entry]));
+  for (const entry of internalPackages) entries.set(entry.summary.package_id, entry);
+  return [...entries.values()];
 }
