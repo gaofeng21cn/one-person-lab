@@ -116,9 +116,32 @@ export interface AppStateSnapshotLike {
   readonly tasks?: readonly Record<string, unknown>[];
   readonly schedules?: readonly Record<string, unknown>[];
   readonly app_state?: {
+    readonly operator?: {
+      readonly workbench?: {
+        readonly work_item_projection_v2?: {
+          readonly items: readonly RuntimeWorkItem[];
+        };
+      };
+    };
     readonly packages?: readonly ProjectedPackageSummary[];
     readonly installed_packages?: readonly ProjectedPackageSummary[];
   };
+}
+
+export interface RuntimeWorkItem {
+  readonly [key: string]: unknown;
+  readonly item_id: string;
+  readonly identity: {
+    readonly agent_id: string;
+    readonly project_id: string;
+    readonly workspace_path: string;
+    readonly work_item_id: string;
+    readonly work_item_display_name: string;
+    readonly work_item_kind: string;
+    readonly work_item_root?: string;
+  };
+  readonly lifecycle: { readonly primary_state: string; readonly primary_state_label: string };
+  readonly visibility: { readonly state: string; readonly generation: number };
 }
 
 export interface CatalogCommandDescriptor {

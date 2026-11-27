@@ -1,4 +1,5 @@
 import { normalizeViewDescriptor } from './view.ts';
+import { executeRuntimeAction, readRuntimeView, RUNTIME_PACKAGE_ID, runtimeViews } from './runtime-views.ts';
 import type {
   AppStateSnapshotLike,
   CatalogProductSummary,
@@ -208,6 +209,9 @@ export class OpldContributionBridge {
     readonly sessionId?: string;
     readonly ifRevision?: number;
   }): Promise<Record<string, unknown>> {
+    if (input.packageId === RUNTIME_PACKAGE_ID) {
+      return readRuntimeView(this.#transport, input.ref, input.input ?? {});
+    }
     const sessionId = input.sessionId ?? this.#transport.getSessionId?.() ?? undefined;
     return this.#transport.call<Record<string, unknown>>('app.contribution.read', {
       ...(input.packageId ? { package_id: input.packageId } : {}),
@@ -244,8 +248,12 @@ export class OpldContributionBridge {
     readonly actionId: string;
     readonly payload?: Record<string, unknown>;
     readonly dryRun?: boolean;
+    readonly confirmed?: boolean;
     readonly mode?: string;
   }): Promise<Record<string, unknown>> {
+    if (input.packageId === RUNTIME_PACKAGE_ID) {
+      return executeRuntimeAction(this.#transport, input.actionId, input.payload ?? {}, input.confirmed === true, input.dryRun === true);
+    }
     return this.#transport.call<Record<string, unknown>>('app.contribution.execute', {
       ...(input.packageId ? { package_id: input.packageId } : {}),
       action_id: input.actionId,
@@ -434,7 +442,7 @@ export function buildCatalogFromAppState(
 
   for (const pkg of packages) {
     const pkgId = pkg.package_id || pkg.id || pkg.identity?.id || '';
-    if (!pkgId) continue;
+    if (!pkgId || pkgId === RUNTIME_PACKAGE_ID) continue;
     const pkgName =
       pkg.name
       || pkg.identity?.name?.['en-US']
@@ -538,6 +546,7 @@ export function buildCatalogFromAppState(
     }
   }
 
+  views.push(...runtimeViews(appState));
   return {
     products,
     views,
@@ -683,6 +692,7 @@ export function createOpldMcpAppHostAdapter(
             actionId,
             payload: asRecord(args.input ?? args.payload) ?? {},
             dryRun,
+            confirmed: args.confirmed === true,
             mode: typeof args.mode === 'string' ? args.mode : undefined,
           });
           return {
