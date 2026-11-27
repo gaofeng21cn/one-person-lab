@@ -312,7 +312,7 @@ export async function stopDaemonGracefully(stateDir?: string): Promise<{
     }
     let cleanup: AdvisoryLockHandle;
     try {
-      cleanup = acquireAdvisoryLock(paths.lock_file, { ownerId: 'opld_stop_cleanup', staleAfterMs: 0 });
+      cleanup = acquireAdvisoryLock(paths.lock_file, { ownerId: 'opld_stop_cleanup', staleAfterMs: 0, preserveLiveHolder: true });
     } catch (error) {
       if (error instanceof KernelError && error.code === 'LOCK_CONTENTION') return { ok: true, stopped: false };
       throw error;

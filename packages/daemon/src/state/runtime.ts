@@ -509,6 +509,7 @@ export class DaemonRuntime {
     fs.mkdirSync(path.join(paths.state_dir, 'logs'), { recursive: true });
     const lock = acquireAdvisoryLock(paths.lock_file, {
       ownerId: 'opld',
+      preserveLiveHolder: true,
       timeoutMs: 0,
       mode: 0o600,
     });

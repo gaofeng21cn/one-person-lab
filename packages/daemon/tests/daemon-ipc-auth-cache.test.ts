@@ -325,6 +325,9 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
       const threadAfterRestart = await cb2.startThread(identity);
       assert.deepEqual(threadAfterRestart, thread1);
 
+      // A quiet long-running daemon still owns the lock.
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      fs.utimesSync(sb.lockPath, oneHourAgo, oneHourAgo);
       // Verify foreground lock contention returns exit 1 (both in-process and via CLI processes)
       const prevExitCode = process.exitCode;
       try {
