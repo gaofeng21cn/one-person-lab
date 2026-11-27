@@ -82,13 +82,14 @@ test('Pack validates declared capability exports when a required provider is ins
     id: 'provider',
     providesExtra: {
       skills: [{ id: 'specialty', path: './skills/provider', exposure: 'opt_in' }],
+      module_ids: ['provider.stats'],
     },
   });
   writeSamplePkg(consumer, { id: 'consumer' });
   const manifestPath = path.join(consumer, 'opl-package.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   const requirements = [
-    { id: 'provider', required_capabilities: ['specialty', 'missing-skill'] },
+    { id: 'provider', required_capabilities: ['specialty', 'missing-skill'], required_module_ids: ['provider.stats'] },
     { id: 'optional', presence: 'optional', required_capabilities: ['unused'] },
   ];
   const writeRequirements = () => fs.writeFileSync(manifestPath, JSON.stringify({
@@ -105,6 +106,16 @@ test('Pack validates declared capability exports when a required provider is ins
   });
   assert.equal(pack.inspect('consumer'), null);
   requirements[0]!.required_capabilities = ['specialty'];
+  requirements[0]!.required_module_ids = ['provider.stats', 'specialty'];
+  writeRequirements();
+  await assert.rejects(installConsumer, (error: unknown) => {
+    assert.ok(error instanceof PackError);
+    assert.equal(error.code, 'PACK_DEPENDENCY_MISSING');
+    assert.deepEqual(error.details.missing_module_ids, ['specialty']);
+    return true;
+  });
+  assert.equal(pack.inspect('consumer'), null);
+  requirements[0]!.required_module_ids = ['provider.stats'];
   writeRequirements();
   assert.equal((await installConsumer()).package.enabled, true);
 });
