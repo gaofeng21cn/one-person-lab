@@ -735,3 +735,61 @@ test('syncPackageToCodex invokes codex plugin add (succeeds) rather than depreca
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('installed presence reads the configured carrier and files without writing either', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-pack-presence-'));
+  const marketplaceRoot = path.join(root, 'marketplace');
+  const stateDir = path.join(root, 'state');
+  const source = path.join(root, 'pkg');
+  const id = 'live-proof';
+  const pluginDir = path.join(marketplaceRoot, 'plugins', id);
+  fs.mkdirSync(stateDir);
+  const db = openSqliteStore(path.join(stateDir, 'opl.db'));
+  t.after(() => { db.close(); fs.rmSync(root, { recursive: true, force: true }); });
+
+  createTempPackage(source, {
+    schema_version: 'opl.package.v2',
+    identity: {
+      id, version: '1.0.0', intent: 'extension', publisher: 'test',
+      name: { 'zh-CN': id, 'en-US': id }, summary: { 'zh-CN': id, 'en-US': id },
+    },
+    provides: { skills: [{ id, path: './skills/my-pkg' }] },
+  });
+  let listed = true;
+  let offline = false;
+  let ownerPath = path.join(marketplaceRoot, '.agents', 'plugins', 'marketplace.json');
+  let reads = 0;
+  let loadErrorSource = path.join(root, 'other', 'marketplace.json');
+  const service = createPackService({ db, stateDir, marketplaceRoot, codexRunner: {
+    async runCli() { throw new Error('presence must only read'); },
+    async listPlugins() {
+      reads++;
+      if (offline) throw new PackError('PACK_CODEX_SYNC_FAILED', 'carrier unavailable');
+      return {
+        marketplaceLoadErrors: [{ marketplacePath: loadErrorSource, message: 'unavailable' }],
+        marketplaces: [{ name: 'opl-local', path: ownerPath, plugins: [{
+          id: id + '@opl-local', name: id, version: null, localVersion: '1.0.0',
+          installed: listed, enabled: listed, interface: null,
+          source: { type: 'local', path: pluginDir }, marketplaceName: 'opl-local', marketplacePath: ownerPath,
+        }] }],
+      };
+    },
+  } });
+  const linked = await service.link({ dir: source, syncCodex: false });
+  projectPackageToCodexMarketplace({ manifest: linked.package.manifest, installPath: source, marketplaceRoot });
+  const inspect = () => service.readInstalledPackagePresence(id);
+  assert.deepEqual(await inspect(), { carrier_ready: true, files_present: true });
+  loadErrorSource = ownerPath;
+  await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
+  loadErrorSource = path.join(root, 'other', 'marketplace.json');
+  listed = false;
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: true });
+  listed = true;
+  ownerPath = path.join(root, 'other', 'marketplace.json');
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: true });
+  offline = true;
+  await assert.rejects(inspect, { code: 'PACK_CODEX_SYNC_FAILED' });
+  fs.unlinkSync(path.join(source, 'skills/my-pkg/SKILL.md'));
+  assert.deepEqual(await inspect(), { carrier_ready: false, files_present: false });
+  assert.equal(reads, 5);
+});

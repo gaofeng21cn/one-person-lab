@@ -21,12 +21,13 @@ import {
 } from '../build/build-package.ts';
 import { verifyManifestPathsExist } from '../build/content-lock.ts';
 import {
+  codexPluginPresenceProblem,
   discoverExternalCodexPlugins,
   syncPackageToCodex,
   unsyncPackageFromCodex,
 } from '../carriers/codex-sync/sync.ts';
-import { resolveCodexPluginName } from '../carriers/codex-sync/project.ts';
-import type { CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
+import { resolveCodexMarketplaceRoot, resolveCodexPluginName, shouldSyncToCodex } from '../carriers/codex-sync/project.ts';
+import { createProcessCodexRunner, type CodexCarrierRunner } from '../carriers/codex-sync/readback.ts';
 import { extractPackageSourceArchive, packageSourceArchiveDigest } from '../distribution/archive.ts';
 import type { DownloadTransport } from '../distribution/download-worker.ts';
 import { copyDirectoryPhysical, downloadOciSource } from '../distribution/source-files.ts';
@@ -977,9 +978,34 @@ export class PackService {
     return this.store.getInstalledPackage(packageId);
   }
 
+  async readInstalledPackagePresence(packageId: string): Promise<{ files_present: boolean; carrier_ready: boolean }> {
+    const pkg = this.inspect(packageId);
+    const missing = { files_present: false, carrier_ready: false };
+    if (!pkg) return missing;
+
+    try {
+      const { manifest } = readPackageManifestFromDir(pkg.install_path);
+      if (manifest.identity.id !== pkg.package_id || manifest.identity.version !== pkg.version) return missing;
+      verifyManifestPathsExist(pkg.install_path, pkg.manifest, { allowSymlinks: pkg.install_mode === 'dev_link' });
+    } catch (error) {
+      if (error instanceof PackError && ['PACK_NOT_FOUND', 'PACK_MISSING_PATH'].includes(error.code)) return missing;
+      throw error;
+    }
+    if (!pkg.enabled || !shouldSyncToCodex(pkg.manifest)) {
+      return { files_present: true, carrier_ready: pkg.enabled };
+    }
+    const problem = await codexPluginPresenceProblem({
+      manifest: pkg.manifest,
+      marketplaceRoot: resolveCodexMarketplaceRoot({ marketplaceRoot: this.marketplaceRoot, stateDir: this.stateDir }),
+      runner: this.#codexRunner ?? createProcessCodexRunner(),
+    });
+    return { files_present: true, carrier_ready: problem === null };
+  }
+
   async codexSync(input: {
     readonly packageId?: string;
     readonly importExternal?: boolean;
+    readonly requireReadback?: boolean;
   } = {}): Promise<{
     readonly synced: readonly CodexSyncProjectionResult[];
     readonly imported_external: readonly InstalledPackageRecord[];
@@ -1008,7 +1034,7 @@ export class PackService {
         action: 'sync',
         marketplaceRoot: this.marketplaceRoot,
         stateDir: this.stateDir,
-        runner: this.#codexRunner,
+        runner: this.#codexRunner ?? (input.requireReadback ? createProcessCodexRunner() : undefined),
       });
       this.store.setPackageCarrierSynced(pkg.package_id, res.synced);
       synced.push(res);

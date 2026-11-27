@@ -39,6 +39,54 @@ export interface SyncPackageToCodexOptions {
   readonly env?: NodeJS.ProcessEnv;
 }
 
+/** Read the configured carrier without registering or installing anything. */
+export async function codexPluginPresenceProblem(options: {
+  manifest: OplPackageManifestV2;
+  marketplaceRoot: string;
+  runner: CodexCarrierRunner;
+  env?: NodeJS.ProcessEnv;
+}): Promise<string | null> {
+  const { manifest, marketplaceRoot, runner } = options;
+  const name = resolveCodexPluginName(manifest);
+  const pluginId = `${name}@${OPL_LOCAL_MARKETPLACE_NAME}`;
+  const listing = await runner.listPlugins({ marketplaceKinds: ['local'] }, options.env);
+  const paths = getCodexMarketplacePaths(marketplaceRoot);
+  const absolute = (file: string) => fs.existsSync(file) ? fs.realpathSync(file) : path.resolve(file);
+  // Codex can report the manifest file instead of the configured directory.
+  const sources = [paths.marketplace_root, paths.agents_marketplace_json, paths.root_marketplace_json].map(absolute);
+  const relevantErrors = listing.marketplaceLoadErrors.filter((error) => {
+    if (!error || typeof error !== 'object' || !('marketplacePath' in error) || typeof error.marketplacePath !== 'string') {
+      return true;
+    }
+    return sources.includes(absolute(error.marketplacePath));
+  });
+  if (relevantErrors.length > 0) {
+    throw new PackError('PACK_CODEX_SYNC_FAILED', 'Codex plugin/list could not read the configured marketplace.', {
+      errors: relevantErrors,
+    });
+  }
+  const candidates = listing.marketplaces.filter((mp) =>
+    mp.path ? sources.includes(absolute(mp.path)) : mp.name === OPL_LOCAL_MARKETPLACE_NAME,
+  ).flatMap((mp) => mp.plugins);
+  const plugin = candidates.find((entry) => entry.id === pluginId) ?? candidates.find((entry) => entry.name === name);
+  if (!plugin?.installed || !plugin.enabled) {
+    return `Codex plugin/list does not show '${pluginId}' installed and enabled.`;
+  }
+  for (const version of [plugin.version, plugin.localVersion]) {
+    if (version && version !== manifest.identity.version) {
+      return `Codex plugin/list version mismatch for '${pluginId}': expected ${manifest.identity.version}, got ${version}.`;
+    }
+  }
+  const projected = path.join(paths.plugins_dir, name);
+  if (!fs.existsSync(path.join(projected, '.codex-plugin', 'plugin.json'))) {
+    return `Codex plugin '${pluginId}' has no local marketplace projection.`;
+  }
+  if (plugin.source.type === 'local' && (!fs.existsSync(plugin.source.path) || absolute(plugin.source.path) !== absolute(projected))) {
+    return `Codex plugin/list path mismatch for '${pluginId}'.`;
+  }
+  return null;
+}
+
 export async function syncPackageToCodex(
   options: SyncPackageToCodexOptions,
 ): Promise<CodexSyncProjectionResult> {
@@ -112,63 +160,10 @@ export async function syncPackageToCodex(
       );
     }
 
-    const listResp = await options.runner.listPlugins(
-      { marketplaceKinds: ['local'] },
-      options.env,
-    );
-    if (listResp.marketplaceLoadErrors.length > 0) {
-      throw new PackError('PACK_CODEX_SYNC_FAILED', 'Codex plugin/list reported marketplace load errors.', {
-        errors: listResp.marketplaceLoadErrors,
-      });
-    }
-
-    const realMarketplaceRoot = fs.existsSync(marketplaceRoot)
-      ? fs.realpathSync(marketplaceRoot)
-      : path.resolve(marketplaceRoot);
-    const scopedPlugins = listResp.marketplaces
-      .filter((mp) => {
-        if (mp.name === OPL_LOCAL_MARKETPLACE_NAME) return true;
-        if (!mp.path) return false;
-        const mpReal = fs.existsSync(mp.path) ? fs.realpathSync(mp.path) : path.resolve(mp.path);
-        return mpReal === realMarketplaceRoot;
-      })
-      .flatMap((mp) => mp.plugins);
-    const matched =
-      scopedPlugins.find((entry) => entry.id === pluginId)
-      ?? scopedPlugins.find((entry) => entry.name === pluginName);
-
-    if (!matched || !matched.installed || !matched.enabled) {
-      throw new PackError(
-        'PACK_CODEX_SYNC_FAILED',
-        `Codex plugin/list readback parity failed for '${pluginId}'.`,
-        { matched: matched ?? null },
-      );
-    }
-    const reportedVersion = matched.version ?? matched.localVersion;
-    if (reportedVersion && reportedVersion !== options.manifest.identity.version) {
-      throw new PackError(
-        'PACK_CODEX_SYNC_FAILED',
-        `Codex plugin/list version mismatch for '${pluginId}': expected ${options.manifest.identity.version}, got ${reportedVersion}.`,
-      );
-    }
-    if (matched.localVersion && matched.localVersion !== options.manifest.identity.version) {
-      throw new PackError(
-        'PACK_CODEX_SYNC_FAILED',
-        `Codex plugin/list localVersion mismatch for '${pluginId}': expected ${options.manifest.identity.version}, got ${matched.localVersion}.`,
-      );
-    }
-    if (matched.source.type === 'local') {
-      const realPluginDir = fs.realpathSync(projected.plugin_dir);
-      const realReported = fs.existsSync(matched.source.path)
-        ? fs.realpathSync(matched.source.path)
-        : path.resolve(matched.source.path);
-      if (realReported !== realPluginDir) {
-        throw new PackError(
-          'PACK_CODEX_SYNC_FAILED',
-          `Codex plugin/list path mismatch for '${pluginId}': expected ${realPluginDir}, got ${realReported}.`,
-        );
-      }
-    }
+    const problem = await codexPluginPresenceProblem({
+      manifest: options.manifest, marketplaceRoot, runner: options.runner, env: options.env,
+    });
+    if (problem) throw new PackError('PACK_CODEX_SYNC_FAILED', problem);
     verifiedByReadback = true;
   }
 
