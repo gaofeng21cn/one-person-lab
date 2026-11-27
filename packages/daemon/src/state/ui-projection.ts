@@ -14,8 +14,8 @@ function projectSettingsForm(form: Form) {
     title: form.title,
     data_ref: form.data_ref,
     sort_order: form.sort_order,
-    actions: [{
-      id: form.submit_action_ref,
+    actions: form.actions?.length ? form.actions : [{
+      id: `${form.id}.submit`,
       action_ref: form.submit_action_ref,
       label: { 'en-US': 'Save', 'zh-CN': '保存' },
     }],

@@ -219,6 +219,7 @@ export const DeclarativeSettingsFormSchema = z.strictObject({
   title: I18nTextSchema,
   data_ref: z.string().trim().min(1).max(256),
   submit_action_ref: z.string().trim().min(1).max(256),
+  actions: z.array(DeclarativeActionSchema).optional(),
   search_keywords: z.array(z.string().trim().min(1).max(64)).optional(),
   sort_order: z.number().int().optional(),
 });

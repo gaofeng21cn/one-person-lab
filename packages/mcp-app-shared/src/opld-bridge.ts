@@ -481,7 +481,13 @@ export function buildCatalogFromAppState(
           data_ref: form.data_ref,
           entry_kind: pkgViews.length === 0 ? 'product_entry' : 'settings_form',
           sort_order: form.sort_order,
-          commands: [
+          commands: form.actions?.length ? form.actions.map(action => ({
+            command_id: action.id,
+            action_ref: action.action_ref,
+            label_i18n: action.label,
+            confirmation_required: action.confirm === true,
+            effect_timing: action.effect_timing,
+          })) : [
             {
               command_id: `${form.id}.submit`,
               action_ref: form.submit_action_ref,

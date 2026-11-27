@@ -1117,6 +1117,27 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
           ? v.id
           : `view-${idx + 1}`,
     );
+    const cmdIds = new Set(
+      Array.isArray(v.command_ids)
+        ? v.command_ids.filter((c): c is string => typeof c === 'string')
+        : [],
+    );
+    const matchedCmds = rawCommands.filter(
+      (c) => typeof c.command_id === 'string' && cmdIds.has(c.command_id),
+    );
+
+    const actions = matchedCmds.map((c, cIdx) => ({
+      id: toScopedId(
+        typeof c.command_id === 'string' ? c.command_id : `action-${cIdx + 1}`,
+      ),
+      label: normI18n(c.label_i18n ?? c.label, String(c.command_id ?? 'Run')),
+      action_ref:
+        typeof c.action_ref === 'string' && c.action_ref.trim()
+          ? c.action_ref.trim()
+          : `${id}#${String(c.command_id ?? cIdx)}`,
+      confirm: Boolean(c.confirmation_required),
+      effect_timing: 'immediate' as const,
+    }));
     if (v.view_type === 'settings_form') {
       settingsForms.push({
         id: viewId,
@@ -1129,7 +1150,8 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
         submit_action_ref:
           typeof v.submit_action_ref === 'string' && v.submit_action_ref.trim()
             ? v.submit_action_ref.trim()
-            : `${id}.${viewId}#submit`,
+            : actions[0]?.action_ref ?? `${id}.${viewId}#submit`,
+        ...(actions.length ? { actions } : {}),
       });
       continue;
     }
@@ -1147,15 +1169,6 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
     if (navReferencedViewIds.has(viewId) && slot === 'settings.section') {
       slot = 'workbench.panel';
     }
-
-    const cmdIds = new Set(
-      Array.isArray(v.command_ids)
-        ? v.command_ids.filter((c): c is string => typeof c === 'string')
-        : [],
-    );
-    const matchedCmds = rawCommands.filter(
-      (c) => typeof c.command_id === 'string' && cmdIds.has(c.command_id),
-    );
 
     views.push({
       id: viewId,
@@ -1182,22 +1195,7 @@ export function migrateV1Package(options: MigrateV1Options): MigrateV1Result {
             ),
           }
         : {}),
-      ...(matchedCmds.length > 0
-        ? {
-            actions: matchedCmds.map((c, cIdx) => ({
-              id: toScopedId(
-                typeof c.command_id === 'string' ? c.command_id : `action-${cIdx + 1}`,
-              ),
-              label: normI18n(c.label_i18n ?? c.label, String(c.command_id ?? 'Run')),
-              action_ref:
-                typeof c.action_ref === 'string' && c.action_ref.trim()
-                  ? c.action_ref.trim()
-                  : `${id}#${String(c.command_id ?? cIdx)}`,
-              confirm: Boolean(c.confirmation_required),
-              effect_timing: 'immediate' as const,
-            })),
-          }
-        : {}),
+      ...(actions.length ? { actions } : {}),
     });
   }
 
