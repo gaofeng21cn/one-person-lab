@@ -1,6 +1,7 @@
-"""Locate the existing Package inputs in Catalog or a legacy Framework checkout."""
+"""Locate official Catalog Package inputs and source roots."""
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -10,6 +11,7 @@ from .common import ReleaseError, safe_path
 
 CATALOG_REPOSITORY = 'gaofeng21cn/opl-catalog'
 CATEGORIES = ('agents', 'applications', 'extensions', 'channels', 'dependencies')
+
 
 def package_source_roots(manifest, allowlist):
     declared = manifest.get('source_root')
@@ -32,21 +34,44 @@ def catalog_root_from(args):
 
 
 class PackageProjection:
-    def __init__(self, framework, catalog=None):
-        self.catalog = catalog
-        self.root = catalog or framework
-        self.packages = catalog / 'packages' if catalog else framework / 'contracts/opl-framework/packages'
-        self.allowlists = catalog / 'allowlists' if catalog else framework / 'contracts/opl-framework/package-payload-allowlists'
+    def __init__(self, framework, catalog):
+        if not catalog:
+            raise ReleaseError('v2 Package publication requires the official Catalog')
+        self.framework = Path(framework)
+        self.catalog = Path(catalog)
+        self.root = self.catalog
+        self.packages = self.catalog / 'packages'
+        self.allowlists = self.catalog / 'allowlists'
 
     def manifest_paths(self):
-        directories = [self.packages / category for category in CATEGORIES] if self.catalog else [self.packages]
-        return sorted(path for directory in directories for path in directory.glob('*.json'))
+        return sorted(
+            path
+            for category in CATEGORIES
+            for path in (self.packages / category).glob('*.json')
+        )
+
+    def admitted_package_specs(self):
+        specs = []
+        for path in self.manifest_paths():
+            manifest = json.loads(path.read_text())
+            if manifest.get('publication_channel_admission') in ('retired', 'development_only'):
+                continue
+            carrier = (manifest.get('codex_surface') or {}).get('configured_codex_plugin_carrier') or {}
+            publication_ref = carrier.get('publication_ref')
+            if not isinstance(publication_ref, str) or not publication_ref:
+                continue
+            specs.append({
+                'package_id': manifest['package_id'],
+                'visibility': manifest.get('visibility', 'public'),
+                'manifest_path': path,
+                'manifest': manifest,
+                'publication_ref': publication_ref,
+            })
+        return specs
 
     def manifest(self, package_id):
         if not re.fullmatch(r'[a-z0-9][a-z0-9.-]*', package_id):
             raise ReleaseError('Invalid Package id')
-        if not self.catalog:
-            return self.packages / f'{package_id}.json'
         matches = [path for path in self.manifest_paths() if path.name == f'{package_id}.json']
         if len(matches) != 1:
             raise ReleaseError(f'Catalog must declare one Package manifest for {package_id}')
@@ -55,15 +80,16 @@ class PackageProjection:
     def allowlist(self, package_id):
         return self.allowlists / f'{package_id}.json'
 
-    def payload(self, manifest):
-        return safe_path(self.packages, manifest['codex_surface']['plugin_payload_manifest_url'])
-
     def v2_payload(self, manifest):
-        return safe_path(self.packages, manifest['v2_release']['payload_manifest_ref'])
+        facet = manifest.get('v2_release')
+        if not isinstance(facet, dict) or not facet.get('payload_manifest_ref'):
+            raise ReleaseError('Package manifest must declare v2_release metadata')
+        return safe_path(self.packages, facet['payload_manifest_ref'])
 
     def changed_files(self, package_id):
-        files = [self.manifest(package_id), self.allowlist(package_id),
-                 *sorted((self.packages / 'payloads').glob(f'{package_id}-*.json'))]
-        if self.catalog:
-            files.append(self.catalog / 'catalog-index.json')
-        return files
+        return [
+            self.manifest(package_id),
+            self.allowlist(package_id),
+            *sorted((self.packages / 'payloads').glob(f'{package_id}-*.json')),
+            self.catalog / 'catalog-index.json',
+        ]

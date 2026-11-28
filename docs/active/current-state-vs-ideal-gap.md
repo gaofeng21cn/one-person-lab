@@ -6,4 +6,4 @@
 
 | owner | 当前具体断点 | 可验证完成条件 |
 | --- | --- | --- |
-| Framework、发布平台 owner（`opl-release`） | macOS Sparkle 工具链与跨产品日跑调度/回读控制面已迁入 `gaofeng21cn/opl-release` 并从 `one-person-lab` 移除；仅剩过渡期 Package 发布链（`daily-package-channel*.yml`、`publish-package.yml`、`scripts/package-daily-release.py`、`scripts/package_release/` 等及对 `opl-flow` 的反向调用）暂驻 `one-person-lab`。 | 在 Wave 3 全部活跃包迁完 `opl.package.v2` 并切至 `opl-release/reusable-publish-package-v2.yml@v1` 后，从 `one-person-lab` 删除上述过渡期 Package 发布脚本、工作流与 `PACKAGE_PUBLISHER_TOOLING_COMMIT` 钉子。 |
+| — | 当前无未关闭的跨仓或发布收敛断点（全量 Catalog Package 均已迁至 `opl.package.v2`，pre-v2 工具钉子与旧版回退路径已从 `one-person-lab` 移除）。 | — |

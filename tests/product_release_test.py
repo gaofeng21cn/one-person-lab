@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
-from package_release.owner import _carrier_source_paths, _ordered_content_digest, merge_release_changes, prepare_owner, refresh_locks, wait_for_checks
+from package_release.owner import _ordered_content_digest, merge_release_changes, prepare_owner, wait_for_checks
 from package_release.common import ReleaseError
 from package_release import daily_control
 spec = importlib.util.spec_from_file_location('package_daily_release', ROOT / 'scripts/package-daily-release.py')
@@ -21,42 +21,33 @@ spec.loader.exec_module(package)
 
 
 class PackagePublisherCheckoutTests(unittest.TestCase):
-    def test_carrier_resolver_comes_from_selected_framework_checkout(self):
-        with tempfile.TemporaryDirectory() as temp:
-            framework = Path(temp) / 'framework'
-            resolver = framework / 'scripts/package-carrier-source-paths.mjs'
-            resolver.parent.mkdir(parents=True)
-            resolver.write_text(
-                'export function packageCarrierSourcePaths({ sourceCommit }) {\n'
-                '  return new Map([["skills/example/SKILL.md", `owner/${sourceCommit}/SKILL.md`]]);\n'
-                '}\n'
-            )
-            commit = 'a' * 40
-            self.assertEqual(
-                _carrier_source_paths(Path(temp), {
-                    'carrier_projection_ref': 'contracts/carrier_projection.json',
-                }, commit, framework),
-                {'skills/example/SKILL.md': f'owner/{commit}/SKILL.md'},
-            )
-
-    def test_daily_workflow_uses_exact_legacy_tooling_without_weakening_main_authority(self):
+    def test_verify_publisher_checkout_requires_canonical_main_and_catalog(self):
         controller = 'a' * 40
-        tooling = 'b' * 40
-        with patch.dict(os.environ, GITHUB_REPOSITORY='gaofeng21cn/one-person-lab',
-                        GITHUB_REF='refs/heads/main', GITHUB_SHA=controller):
-            with patch.object(package, 'git', side_effect=['', '', controller]):
-                with patch.object(package, 'run', side_effect=[subprocess.CompletedProcess([], 0),
-                                                               subprocess.CompletedProcess([], 0)]) as ancestry:
-                    package.verify_publisher_checkout(Path('/fixture'), tooling, tooling, Path('/catalog'))
-                    self.assertEqual([call.args[0][-2:] for call in ancestry.call_args_list],
-                                     [[tooling, controller], [controller, 'origin/main']])
-            with patch.object(package, 'git', side_effect=['', '', controller]):
-                with patch.object(package, 'run', return_value=subprocess.CompletedProcess([], 1)):
-                    with self.assertRaisesRegex(ReleaseError, 'canonical Framework history'):
-                        package.verify_publisher_checkout(Path('/fixture'), tooling, tooling, Path('/catalog'))
         with patch.object(package, 'git', side_effect=['', '', controller]):
+            package.verify_publisher_checkout(Path('/fixture'), controller, Path('/catalog'))
+        with patch.object(package, 'git', side_effect=['', '', 'b' * 40]):
             with self.assertRaisesRegex(ReleaseError, 'fresh canonical main'):
-                package.verify_publisher_checkout(Path('/fixture'), tooling, None, Path('/catalog'))
+                package.verify_publisher_checkout(Path('/fixture'), controller, Path('/catalog'))
+        with patch.object(package, 'git', side_effect=['']):
+            with self.assertRaisesRegex(ReleaseError, 'official Catalog'):
+                package.verify_publisher_checkout(Path('/fixture'), controller, None)
+
+    def test_daily_workflow_and_scripts_retire_pre_v2_pins_and_flow_clone(self):
+        daily_yml = (ROOT / '.github/workflows/daily-package-channel.yml').read_text()
+        for forbidden in (
+            'PACKAGE_PUBLISHER_TOOLING_COMMIT',
+            'e73718a2a',
+            '.package-publisher',
+            'opl-flow',
+            '--publisher-tooling-commit',
+            '--flow-root',
+        ):
+            self.assertNotIn(forbidden, daily_yml, f'Retired pre-v2 reference remains in daily workflow: {forbidden}')
+        self.assertFalse((ROOT / 'scripts/package-carrier-source-paths.mjs').exists())
+        publish_yml = (ROOT / '.github/workflows/publish-package.yml').read_text()
+        self.assertIn('opl.release-receipt.v1', publish_yml)
+        self.assertIn('opl-release-receipt-${{ inputs.package_id }}-oci-${{ github.run_id }}', publish_yml)
+        self.assertNotIn('contracts/opl-framework/packages', publish_yml)
 
 
 class PackageDailyControlTests(unittest.TestCase):
@@ -308,7 +299,7 @@ class ProductReleaseTests(unittest.TestCase):
             prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
                           apply=False, payload_path=payload, v2_controller=ROOT)
 
-    def test_legacy_owner_still_plans_from_nested_carrier(self):
+    def test_prepare_owner_fails_closed_without_v2_descriptor(self):
         projection, allowlist, payload = self.package_selection()
         carrier = self.root / allowlist['source_root']
         carrier.mkdir(parents=True)
@@ -316,10 +307,9 @@ class ProductReleaseTests(unittest.TestCase):
         (carrier / 'opl-package.json').write_text(json.dumps(descriptor))
         (self.root / 'opl-package.json').write_text(json.dumps(descriptor))
         self.commit()
-        result = prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
-                               apply=False, payload_path=payload)
-        self.assertEqual(result['status'], 'needs_release')
-        self.assertEqual(result['version'], '1.2.4')
+        with self.assertRaisesRegex(ReleaseError, 'opl.package.v2'):
+            prepare_owner(self.root, projection, allowlist, ROOT, 'gaofeng21cn/fixture',
+                          apply=False, payload_path=payload, v2_controller=ROOT)
 
     def test_self_publication_waits_for_source_checks_without_waiting_for_its_controller(self):
         source = {'name': 'source', 'check_suite': {'id': 10}, 'status': 'completed', 'conclusion': 'success'}
@@ -453,28 +443,6 @@ class ProductReleaseTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 _ordered_content_digest(['a/b.txt', './a/b.txt'], lambda _: b'x')
 
-    def test_legacy_content_digest_preserves_declared_path_order(self):
-        with tempfile.TemporaryDirectory() as package_tmp:
-            package_root = Path(package_tmp)
-            paths = ['./b.txt', 'a.txt']
-            for name, content in {'b.txt': b'b', 'a.txt': b'a'}.items():
-                (package_root / name).write_bytes(content)
-            manifest = {
-                'surface_kind': 'opl_capability_package_manifest.v2',
-                'package_id': 'fixture',
-                'version': '0.1.0',
-                'content_lock': {'paths': paths, 'digest': 'stale'},
-            }
-            (package_root / 'opl-package.json').write_text(json.dumps(manifest))
-            projection = {'package_id': 'fixture', 'publication_source': {'owner_package_manifest_ref': 'opl-package.json'}}
-            allowlist = {'package_id': 'fixture', 'plugin_id': 'fixture', 'source_root': '.'}
-
-            refresh_locks(package_root, projection, allowlist, Path('/unused'))
-
-            actual = json.loads((package_root / 'opl-package.json').read_text())['content_lock']['digest']
-            # Fixture digest from the legacy Framework Python encoder.
-            self.assertEqual(actual, 'sha256:d43a765c28ccbcd60bee4f0602ca11e5945162edd79de8e8ac07a0e7fc267e06')
-
     def test_framework_release_paths_exclude_cross_repo_orchestration_and_dead_v1(self):
         config = json.loads((ROOT / 'product-release.json').read_text())
         release_paths = config['release_paths']
@@ -484,6 +452,7 @@ class ProductReleaseTests(unittest.TestCase):
             '.github/workflows/daily-product-channel.yml',
             '.github/workflows/reusable-macos-sparkle-release.yml',
             'contracts/opl-framework/product-release-owners.json',
+            'scripts/package-carrier-source-paths.mjs',
             'scripts/product-daily-release.py',
             'scripts/package_release/product_status.py',
         ):

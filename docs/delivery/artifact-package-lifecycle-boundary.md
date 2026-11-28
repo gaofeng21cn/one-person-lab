@@ -96,10 +96,9 @@ Package 只发布自己的 immutable version 与 owner channel；Framework、App
 Homebrew 分别消费自己声明的 artifact。消费者可以在安装或运行时自由组合
 不同版本的 Package，不需要等待其他 Package 同步，也不生成组合 currentness。
 
-Framework v2 从官方 Catalog 在线安装时，下载软件中心所展示的编号版本。已有
-`v2_release` 时使用它的版本与归档摘要，尚未迁完的遗留条目按过渡方案读取 Catalog 版本。
-目标态下，`v2_release` 必须在不可变 OCI publication 与 manifest readback 成功后才能进入 Catalog，
-缺失选定 manifest 时必须 fail closed，不把 v2 选择静默降级为 v1；当前存在的临时 404 回退消除工作记于[当前差距](../active/current-state-vs-ideal-gap.md)。
+Framework v2 从官方 Catalog 在线安装时，下载软件中心所展示的编号版本，始终基于 `v2_release` 读取版本与归档摘要，不再保留 v1 过渡回退。
+目标态已落地：`v2_release` 必须在不可变 OCI publication 与 manifest readback 成功后才能进入 Catalog，
+缺失或损坏的选定 manifest 必须 fail closed，不把 v2 选择降级为 v1；当前已清零的收敛清单见[当前差距](../active/current-state-vs-ideal-gap.md)。
 精确发布安装继续核对指定版本与摘要。Full 离线安装将冻结 seed 作为匹配的公开字节加速源，不屏蔽 `authorized_only` 私有源与在线目录更新。
 
 系统 Codex App 只承载用户直接使用的交互式插件。descriptor 声明
@@ -112,7 +111,7 @@ Codex 原生插件管理器安装、更新和卸载；Framework 聚合两个作�
 
 官方软件目录 `gaofeng21cn/opl-catalog` 保存 Package 投影、不可变版本的 payload manifest 和 carrier allowlist。Catalog 索引发布当前目录条目。历史入口可通过精确 Git revision 与不可变发布产物追溯。测试验证当前 descriptor 与不可变 payload 的身份绑定、同版本写入拒绝和 seed 摘要匹配。
 
-薄载体可以在 Catalog 的 carrier allowlist 中声明 `carrier_projection_ref`，由发布准备读取准确提交中的 owner 载体合同。日跑从固定的发布工具 checkout 加载载体路径解析器。载体的安装路径和提交中的文件路径可以不同。准备和校验均使用同一提交中的原始 Git blob，OCI 元数据记下这些文件在源码归档中的真实路径。
+所有已准入 Package 均声明 `opl.package.v2` 并由当前 Framework v2 构建器统一校验和打包，不再依赖旧提交上的载体路径解析器。
 
 Flow managed policy 由安装的 owner descriptor 指定来源，Framework 解释 `opl_flow_workflow_policy.v4` 的 required、experience baseline 和 optional 能力平面。
 
@@ -142,11 +141,11 @@ App Cask 消费 App 的发布结果，两者独立推进。
 
 ### 跨产品与日常发布边界
 
-跨产品日常编排（`control-daily-releases.yml`）、纯只读全景看板（`observe-daily-releases.yml`）、macOS Sparkle 复用打包链（`reusable-macos-sparkle-release.yml`）及标准回执契约（`opl.release-receipt.v1`）均由横向发布平台 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 持有。`one-person-lab` 仅保留自身的 `product-release.json`、`publish-framework.yml` 以及过渡期的日常 Package 发布工作流（直至活跃 Catalog Package 全部迁至 `opl.package.v2`）。
+跨产品日常编排（`control-daily-releases.yml`）、纯只读全景看板（`observe-daily-releases.yml`）、macOS Sparkle 复用打包链（`reusable-macos-sparkle-release.yml`）及标准回执契约（`opl.release-receipt.v1`）均由横向发布平台 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 持有。`one-person-lab` 仅保留自身的 `product-release.json`、`publish-framework.yml`，以及因其绑定 `one-person-lab-packages/*` GHCR 命名空间所有权而保留的 `opl.package.v2` OCI Package 发布通道（`daily-package-channel.yml`、`daily-package-channel-publication.yml` 与 `publish-package.yml`）。
 
 每个产品仓库保留各自的版本、构建、签名、公证、干净设备验收与发布决定；`opl-release` 通过协议探针（OCI / GitHub Release / Sparkle Appcast）与标准 `opl.release-receipt.v1` 产物只读汇总全家族状态，不持有任何产品私有的发布特判逻辑。
 
-Framework v2 主线当前仍保留过渡期的每日 Package 工作流（`daily-package-channel.yml`、`daily-package-channel-publication.yml` 与 `publish-package.yml`）。仍按现有 Catalog Payload 合同交付的 Package 由固定 Framework 提交提供生成与发布工具；采用 `opl.package.v2` 描述符的 Package 由当前工作流构建。待活跃 Catalog Package 全部完成 `opl.package.v2` 迁移后，该 Package 过渡链亦整体移交 `opl-release` 并从 Framework 删除。
+全部活跃 Catalog Package 均已迁至 `opl.package.v2`：日跑工作流直接基于当前 Framework `main` 构建与发布（已清除 pre-v2 固定工具提交及对 `opl-flow` 的反向调用），`publish-package.yml` 对公开 Package 同步产并上传标准 `opl.release-receipt.v1` 产物。
 
 ## 软件包的发布入口
 
@@ -194,10 +193,7 @@ macOS 内部 build counter 保持递增。已有新版本也重新对齐已声�
 Framework 动态准入和 owner 配置选择发布对象，新 Package 无需重复配置安装范围。
 未声明 owner 配置、未知可见性和无权读取分别记录，不解释成缺版本或缺产物。
 
-Framework 随后复用 Flow 的 `package_release.py prepare --catalog-root <checkout>` 生成投影和目录索引，Catalog CI 通过后合入。现有 OCI 发布器消费该快照。每日计划绑定工作流源码、Framework 工具 commit、Catalog 投影 commit、owner 源码、版本、前序 digest 和稳定发布请求 ID。发布器在进入自动环境前从 GitHub 回读同一主线任务及 artifact，逐字段
-校验；手动发布继续使用原受保护环境。私有包仍从私有 owner 的固定 Framework wrapper
-执行并使用原有私有签名环境，公共调度只读状态与派发，不取得私有签名密钥。
-发布回执和签名证明同时记录 Framework、Catalog 和 owner 的准确提交。已固定到旧 Framework 投影的调用可以沿原入口回读。
+Framework 随后使用 `v2_projection.prepare_v2_projection` 生成 `opl-catalog` v2 投影和目录索引，Catalog CI 通过后合入。现有 `publish-package.yml` 消费该不可变 Catalog 快照。每日计划绑定工作流源码、Framework 工具 commit、Catalog 投影 commit、owner 源码、版本、前序 digest 和稳定发布请求 ID。发布器在进入自动环境前从 GitHub 回读同一主线任务及 artifact，逐字段校验，并对公开 Package 生成并上传标准 `opl.release-receipt.v1`；手动发布继续使用原受保护环境。私有包仍从私有 owner 的固定 Framework wrapper 执行并使用原有私有签名环境，公共调度只读状态与派发，不取得私有签名密钥。发布回执和签名证明同时记录 Framework、Catalog 和 owner 的准确提交。
 
 稳定请求 ID 由 Package、版本和源码提交组成，跨日回读相同身份的在途和成功运行，避免
 重复排队。已存在的准备分支按完整文件树核对；相同内容沿用原提交和 CI，不同内容保留并报告冲突。

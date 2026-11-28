@@ -34,8 +34,6 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-  # Catalog Package publication still uses the publisher exercised by run 45738204734.
-  PACKAGE_PUBLISHER_TOOLING_COMMIT: e73718a2a2ef760cb1fddd57d8b922960f9d9762
 
 jobs:
   detect-package-channel-change:
@@ -60,22 +58,11 @@ jobs:
           OPL_RELEASE_CONTROL_RUN_ID: ${{ inputs.opl_release_control_run_id }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: python3 -B -m scripts.package_release.daily_control
-      - name: Checkout compatible Package publisher tooling
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.PACKAGE_PUBLISHER_TOOLING_COMMIT }}
-          path: .package-publisher
-          fetch-depth: 0
-          persist-credentials: false
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '26'
           cache: npm
-          cache-dependency-path: .package-publisher/package-lock.json
-      - name: Install dependencies
-        working-directory: .package-publisher
-        run: npm ci --ignore-scripts
       - name: Install Framework v2 publisher dependencies
         run: npm ci --ignore-scripts
       - name: Create scoped publication identity
@@ -101,14 +88,11 @@ jobs:
           SELECTED_PACKAGE: ${{ inputs.package_id }}
         run: |
           set -euo pipefail
-          gh repo clone gaofeng21cn/opl-flow "$RUNNER_TEMP/opl-flow" -- --depth=1 --quiet
           gh repo clone gaofeng21cn/opl-catalog "$RUNNER_TEMP/opl-catalog" -- --depth=1 --quiet
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-daily-release.py \
-            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
-            --publisher-tooling-commit "$PACKAGE_PUBLISHER_TOOLING_COMMIT" \
-            --flow-root "$RUNNER_TEMP/opl-flow" \
+            --framework-root "$GITHUB_WORKSPACE" \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output "$RUNNER_TEMP/opl-package-preparation.json" \
             --apply "${args[@]}"
@@ -131,7 +115,7 @@ jobs:
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/sync-private-package-publishers.py \
-            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
+            --framework-root "$GITHUB_WORKSPACE" \
             --controller-source-commit "$GITHUB_SHA" \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --preparation "$RUNNER_TEMP/opl-package-preparation.json" "${args[@]}"
@@ -144,7 +128,7 @@ jobs:
           args=()
           if [ -n "$SELECTED_PACKAGE" ]; then args+=(--package-id "$SELECTED_PACKAGE"); fi
           python3 scripts/package-channel-detection.py \
-            --framework-root "$GITHUB_WORKSPACE/.package-publisher" \
+            --framework-root "$GITHUB_WORKSPACE" \
             --controller-source-commit "$GITHUB_SHA" \
             --catalog-root "$RUNNER_TEMP/opl-catalog" \
             --output-root dist/opl-daily-packages \

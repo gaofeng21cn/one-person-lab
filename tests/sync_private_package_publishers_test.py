@@ -23,39 +23,45 @@ spec.loader.exec_module(publisher)
 
 
 class PrivatePackagePublisherTests(unittest.TestCase):
-    def test_v2_and_legacy_private_publishers_have_distinct_pins(self):
+    def test_v2_private_publishers_require_v2_and_pin_controller(self):
         with tempfile.TemporaryDirectory() as temporary:
             catalog = Path(temporary)
             repo = 'https://github.com/example/owner.git'
-            for package_id in ('legacy', 'modern'):
+            for package_id in ('missing-v2', 'modern'):
                 manifest = {'package_id': package_id, 'source_repo': repo, 'visibility': 'authorized_only'}
                 if package_id == 'modern':
                     manifest['v2_release'] = {'version': '1.0.0'}
                 write(catalog / 'packages' / 'agents' / f'{package_id}.json', manifest)
 
-            legacy_commit = 'b' * 40
+            head_commit = 'b' * 40
             controller_commit = 'c' * 40
-            with patch.object(publisher, 'git', return_value=legacy_commit), \
+            with patch.object(publisher, 'git', return_value=head_commit), \
                     patch.object(publisher, 'gh', side_effect=ReleaseError('HTTP 404')), \
                     patch.object(publisher, 'sync_publisher', return_value='unchanged') as sync_publisher:
                 results = publisher.sync(catalog, catalog=catalog, controller_source_commit=controller_commit)
-                self.assertEqual([row['status'] for row in results], ['unchanged', 'unchanged'])
                 self.assertEqual(
-                    {args[0]['package_id']: args[1] for args, _ in sync_publisher.call_args_list},
-                    {'legacy': legacy_commit, 'modern': controller_commit},
+                    [(row['package_id'], row['status']) for row in results],
+                    [('missing-v2', 'blocked'), ('modern', 'unchanged')],
+                )
+                sync_publisher.assert_called_once_with(
+                    {'package_id': 'modern', 'source_repo': repo, 'visibility': 'authorized_only', 'v2_release': {'version': '1.0.0'}},
+                    controller_commit,
+                    catalog=True,
                 )
                 sync_publisher.reset_mock()
                 results = publisher.sync(catalog, catalog=catalog)
-                self.assertEqual([row['status'] for row in results], ['unchanged', 'blocked'])
-                self.assertEqual(sync_publisher.call_count, 1)
+                self.assertEqual(
+                    [(row['package_id'], row['status']) for row in results],
+                    [('missing-v2', 'blocked'), ('modern', 'unchanged')],
+                )
+                self.assertEqual(sync_publisher.call_args.args[1], head_commit)
 
     def test_first_v2_pin_uses_valid_main_descriptor_at_root_or_declared_subdirectory(self):
         controller = 'c' * 40
-        legacy = 'b' * 40
-        for source_root, version, expected in (
-                ('.', '1.2.4', controller),
-                ('plugins/fixture', '1.2.4', controller),
-                ('plugins/fixture', '1.2.4-beta.1', legacy)):
+        for source_root, version, expected_status in (
+                ('.', '1.2.4', 'synchronized'),
+                ('plugins/fixture', '1.2.4', 'synchronized'),
+                ('plugins/fixture', '1.2.4-beta.1', 'blocked')):
             with self.subTest(source_root=source_root, version=version), tempfile.TemporaryDirectory() as temporary:
                 catalog = Path(temporary)
                 manifest = {'package_id': 'sample', 'visibility': 'authorized_only',
@@ -73,13 +79,15 @@ class PrivatePackagePublisherTests(unittest.TestCase):
                 }
                 response = {'type': 'file', 'encoding': 'base64',
                             'content': base64.b64encode(json.dumps(descriptor).encode()).decode()}
-                with patch.object(publisher, 'git', return_value=legacy), \
-                        patch.object(publisher, 'gh', return_value=response) as api, \
+                with patch.object(publisher, 'gh', return_value=response) as api, \
                         patch.object(publisher, 'sync_publisher', return_value='synchronized') as sync:
                     result = publisher.sync(catalog, catalog=catalog, controller_source_commit=controller)
                 api.assert_called_once_with(f'repos/example/owner/contents/{Path(source_root) / "opl-package.json"}?ref=main')
-                sync.assert_called_once_with(manifest, expected, catalog=True)
-                self.assertEqual(result, [{'package_id': 'sample', 'status': 'synchronized'}])
+                if expected_status == 'synchronized':
+                    sync.assert_called_once_with(manifest, controller, catalog=True)
+                else:
+                    sync.assert_not_called()
+                self.assertEqual([(row['package_id'], row['status']) for row in result], [('sample', expected_status)])
 
     def test_failed_pin_keeps_healthy_packages_eligible_for_detection(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -99,6 +107,7 @@ class PrivatePackagePublisherTests(unittest.TestCase):
                     'package_id': package_id,
                     'source_repo': f'https://github.com/example/{package_id}.git',
                     'visibility': visibility,
+                    'v2_release': {'version': '1.0.0'},
                 })
 
             writes = []
