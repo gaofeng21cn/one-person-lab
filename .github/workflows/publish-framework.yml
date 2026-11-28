@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ needs.admission.outputs.environment }}
     permissions:
-      contents: read
+      contents: write
       packages: write
       id-token: write
     steps:
@@ -160,3 +160,25 @@ jobs:
           fi
           oras tag "$image@$digest" latest-stable
           node scripts/oci-publication-preflight.mjs --ref "$image:latest-stable" "${args[@]}" --verify-only --expected-digest "$digest" --anonymous
+      - name: Attach prebuilt Framework tarball to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -er .version dist/framework-artifact/framework-artifact.json)"
+          archive="dist/framework-artifact/one-person-lab-framework-${version}.tar.gz"
+          test -f "$archive"
+          checksum_file="${archive}.sha256"
+          shasum -a 256 "$archive" | awk -v name="one-person-lab-framework-${version}.tar.gz" '{print $1 "  " name}' > "$checksum_file"
+          tag="framework-v${version}"
+          digest="$(oras resolve "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/one-person-lab-framework:${version}")"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "$archive" "$checksum_file" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" "$archive" "$checksum_file" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "OPL Framework v${version}" \
+              --notes "Prebuilt OPL Framework v${version} runtime archive (mirror of ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/one-person-lab-framework@${digest})."
+          fi

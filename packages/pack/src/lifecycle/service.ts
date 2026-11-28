@@ -37,7 +37,6 @@ import {
   resolveNpmTarball,
   type RegistryFetch,
 } from '../distribution/registry-client.ts';
-import { migrateV1Package, type MigrateV1Result } from '../migrate/migrate-v1.ts';
 import type { OplPackageManifestV2 } from '../manifest/schema.ts';
 import { isWithinDirectory } from '../manifest/validate.ts';
 import type {
@@ -1200,14 +1199,6 @@ export class PackService {
       builtAt: input.builtAt,
       gitCommit: input.gitCommit,
     });
-  }
-
-  migrateV1(input: {
-    readonly repoDir: string;
-    readonly apply?: boolean;
-    readonly clean?: boolean;
-  }): MigrateV1Result {
-    return migrateV1Package(input);
   }
 
   operationStatus(input: {

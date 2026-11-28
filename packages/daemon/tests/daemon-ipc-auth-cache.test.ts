@@ -83,7 +83,6 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
       'pack.update',
       'pack.updateAll',
       'pack.uninstall',
-      'pack.migrateV1',
       'runway.humanGate.resolve',
     ]) {
       await assert.rejects(
@@ -125,6 +124,10 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
     await assert.rejects(
       () => appClient.call('runway.task.get', { task_id: 'task_missing' }),
       (err: Error & { code?: number }) => err.code === -32004 && /TASK_NOT_FOUND/.test(err.message),
+    );
+    await assert.rejects(
+      () => appClient.call('pack.migrateV1', {}),
+      (err: Error & { code?: number }) => err.code === -32601,
     );
     assert.equal(mapErrorToCliExitCode(new RunwayError('TASK_PAUSED_BY_HUMAN', 'paused')), 4);
     assert.equal(mapErrorToCliExitCode(new RunwayError('INVALID_STAGE_STATE', 'bad state')), 2);
