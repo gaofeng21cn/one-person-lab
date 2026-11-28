@@ -92,30 +92,16 @@ App／Studio 的“设置 → 资料与连接 → 资料库”读取 `app_state.
 
 ## 接入与召回
 
-首次接入由有权维护者确认原文、归属、授权、适用任务与接受版本，并建立来源 registry 和工作区绑定。绑定之后，`knowledge register` 可在其中登记一个已存在的 Markdown 正文；它不会新建 registry、来源或授权，也不复制正文。同一个 registry 可以被多个明确获授权的工作区引用，无需复制正文或接受记录。已有 Obsidian 和工作目录内的 Markdown 采用相同 schema；是否位于工作区内不影响 scope。
+首次接入由有权维护者确认原文、归属、授权、适用任务与接受版本，并建立来源 registry 和工作区绑定。同一个 registry 可以被多个明确获授权的工作区引用，无需复制正文或接受记录。已有 Obsidian 和工作目录内的 Markdown 采用相同 schema；是否位于工作区内不影响 scope。
 
-已有业务项目目录通过 `workspace adopt`、`workspace init` 或 `workspace ensure` 的 `--project-id <id> --project-root <absolute-existing-path>` 登记；typed API 对应 `projectRoot`，App action 对应 `project_root`。该目录须是工作区内已存在的真实子目录，不能是工作区自身、符号链接或普通文件。Framework 维护 `workspace_index`，拒绝同一 ID 指向不同 root、同一 root 绑定不同 ID，以及覆盖非 OPL 项目元数据。同一 ID 未提供 root 时复用已登记位置；新项目未提供 root 时采用既有默认项目集合目录。登记建立控制信息，不移动或复制业务正文。
+已有业务项目目录通过 `opl workspace init`（结合 `--workspace <path> --project-id <id> --project-root <absolute-existing-path>`）在 `opld` / `WorkspaceService` 中登记；typed API 对应 `projectRoot`，App action 对应 `project_root`。该目录须是工作区内已存在的真实子目录，不能是工作区自身、符号链接或普通文件。Framework 维护 `workspace_index`，拒绝同一 ID 指向不同 root、同一 root 绑定不同 ID，以及覆盖非 OPL 项目元数据。登记建立控制信息，不移动或复制业务正文。
 
 项目 root 与知识来源 root 是两件事：项目在工作区内获得稳定执行身份，个人库原文仍可位于工作区外并通过来源绑定使用。知识需求的 `workspace` 来源模式包含 root 等于工作区或位于其内部的来源；外部个人库使用 `external`，产品包内正文使用 `product`。来源模式不替代 scope 或访问授权。
 
-| 命令 | 输入 | 输出与边界 |
-| --- | --- | --- |
-| `knowledge list` / `knowledge inspect` | 产品包路径；inspect 另带知识 ID | 产品 catalog 元数据，不返回私有全文 |
-| `knowledge sources` | 工作区、domain、可选项目与知识 ID | 当前获授权且字节与接受版本一致的来源条目、定位引用及可写标记；不返回正文 |
-| `knowledge search` | 同一范围，另带 query 与可选结果／摘录长度限制 | 由授权来源正文产生的字面匹配候选与短摘录；语义相关性由调用者判断 |
-| `knowledge discover` | 绑定来源、query 与摘录限制 | 发现候选；`candidate:true`、`accepted:false`，不进入召回或派生上下文，逐项审阅后才能登记 |
-| `knowledge recall` | 包、domain、stage、可选 action 与工作区／项目 | 已选择知识身份、正文哈希、选择理由与缺口 |
-| `knowledge prepare` | 与 recall 相同的范围，另带新的 output 路径 | 私有快照的 binding；不覆盖已有 binding |
-| `knowledge read-context` | binding 路径 | 核对快照身份及当前来源访问后返回冻结正文 |
-| `knowledge read-source` | 工作区、domain、知识 ID、可选项目 | 返回当前获授权且已接受的原文及哈希 |
-| `knowledge resolve-target` | 工作区、domain、正文绝对路径、可选项目 | 判断是否已注册及其身份、接受正文哈希与 `registry_sha256`；保留已注册但失效、退役或撤权的识别，防止普通 writer 绕过生命周期 |
-| `knowledge inspect-source` | 工作区、domain、知识 ID、可选项目 | 返回待审阅原文字节、当前与接受版本哈希；不接受或激活修订 |
-| `knowledge revalidate --for-action` | binding 路径 | 复核当前访问、关键知识版本及新增适用的必要或关键知识，不产生业务行动授权 |
-| `knowledge verify-dependencies` | 工作区、domain、依赖 JSON、可选项目 | 核对派生摘要所依赖知识的版本、有效性与访问范围 |
-
-直接入口与托管 StageRun 共用同一快照存储和校验。命令通过 [`opl workspace`](../../packages/daemon/src/cli/main.ts) 提供：
+Framework v2 统一由 [`packages/workspace/src/`](../../packages/workspace/src/service.ts) 与 `opl workspace` / `opld` 本地 RPC 承载工作区初始化、来源查询、冻结快照与审阅写回（原 v1 `knowledge *` / `workspace adopt` 子命令已收敛）：
 
 ```text
+opl workspace init|list|inspect ... --json
 opl workspace sources list --workspace <workspace> --json
 opl workspace snapshot --workspace <workspace> --stage-run <stage-run-id> [--source <source-id>] --json
 opl workspace writeback propose|commit ... --json

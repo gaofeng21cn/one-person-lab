@@ -145,7 +145,7 @@ App Cask 消费 App 的发布结果，两者独立推进。
 
 每个产品仓库保留各自的版本、构建、签名、公证、干净设备验收与发布决定；`opl-release` 通过协议探针（OCI / GitHub Release / Sparkle Appcast）与标准 `opl.release-receipt.v1` 产物只读汇总全家族状态，不持有任何产品私有的发布特判逻辑。
 
-全部活跃 Catalog Package 均已迁至 `opl.package.v2`：日跑工作流直接基于当前 Framework `main` 构建与发布（已清除 pre-v2 固定工具提交及对 `opl-flow` 的反向调用），`publish-package.yml` 对公开 Package 同步产并上传标准 `opl.release-receipt.v1` 产物。
+全部活跃 Catalog Package 均已迁至 `opl.package.v2`：日跑工作流直接基于当前 Framework `main` 构建与发布（已清除 pre-v2 固定工具提交及对 `opl-flow` 的反向调用），`publish-package.yml` 对公开 Package 同步产出并上传标准 `opl.release-receipt.v1` 产物。
 
 ## 软件包的发布入口
 

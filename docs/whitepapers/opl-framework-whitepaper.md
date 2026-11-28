@@ -6,7 +6,7 @@
 
 发布日期：2026-08-15
 
-最近修订：2026-11-24
+最近修订：2026-11-28
 
 适用对象：希望理解 OPL Framework 为什么这样设计、它如何支撑可靠的 AI 专业工作，以及这套架构为什么能够长期演进的用户、合作者和技术决策者。
 
@@ -22,30 +22,27 @@ OPL Framework 关注的是专业智能体如何持续变好：每一部分都能
 
 因此，Framework 把运行底座理解为一个可组合的能力系统。规则、发现、工作空间、阶段、执行、证据、呈现、评估和连接，都以清晰的能力域和责任面参与同一条专业工作线。它们彼此协作，也各自守护事实与判断。
 
-## 为什么让能力动态装配
+## 用统一守护进程与清楚的生命周期支撑演进
 
-OPL Framework 不把所有能力固化在同一条运行链里，而是让每项能力通过明确关系进入组合，在清楚的生命周期中启动和退出，并能被检查、替换和重新组合。
+OPL Framework 不把能力之间的协作埋在隐式全局状态里，而是收敛为一条清晰的运行与治理边界：本机由单写入者守护进程 `opld` 与本地 JSON-RPC 承接 `Pack`、`Workspace`、`Connect`、`Runway` 与 `Ledger` 五项核心运行服务，并将持久化状态统一落入本地 SQLite（`opl.db`）；而在应用侧，进程内的界面与插件装配由 Studio 的 DSH/Cordis 应用宿主独立承担。CLI、Studio 与 Python SDK 共享同一组 `opld` 接口，让能力可以独立升级、验证与回退，同时不引入第二份状态真相。
 
 这带来五个直接结果。
 
-第一，**改变一个能力，不必先理解整个系统**。每项能力只需要理解自己的责任和明确依赖，升级执行、发现或观测能力时，改动可以停留在合理边界内。
+第一，**改变一个能力，不必牵动整个系统**。每项能力只围绕清楚的合同与明确依赖工作；更新打包工具、连接适配器、工作区协议或界面插件时，改动都能停留在各自边界内。
 
-第二，**测试可以聚焦到单项能力**。每项能力可以独立装载、进入受控环境、面对缺失依赖并证明退出后没有遗留影响；完整组合再验证各项能力是否协作正确。
+第二，**测试与校验聚焦到真实入口**。每项能力可以独立装配、面对缺失依赖并在受控沙箱中证明退出后无残留影响；关键打包和授权动作还能强制核对受信任宿主，防止未受信任调用方越权写入。
 
-第三，**故障可以被解释**。系统能够回答实际装载了什么、哪项能力由谁提供、哪个版本参与了本次工作，以及不兼容发生在哪里。
+第三，**故障与版本来源可以被解释**。系统能够回答实际装载了哪组能力包、由哪个已校验制品提供、运行卡在哪一个 Stage 或 Attempt，以及问题归属运行层还是领域层。
 
-第四，**升级和回退有了稳定对象**。一次工作可以绑定到明确的能力组合。新能力可以先在受控组合中验证，出现问题时也能回到上一组已知配置，而不必依赖难以复现的全局状态。
+第四，**升级和回退建立在不可变制品上**。工作流与能力包使用不可变 OCI 制品与摘要绑定；先验证再晋升目录投影，不通过隐式源码漂移或降级兼容层掩盖差异。
 
-第五，**持续改进有了真实的操作单位**。候选生成、独立评估、受控替换和效果比较可以围绕一项能力进行，不必每次修改整个智能体运行底座。
+第五，**持续改进有了可比较的单位**。候选方案、独立评估与受控采用可以围绕清晰边界展开，不必每次重建整个运行底座。
 
-运行底座提供组合秩序，专业智能体与负责人提供领域判断。运行层记录能力如何协作，领域层决定成果是否成立；这种分工让两种专业性各得其所。
+运行底座提供组合与持久化秩序，专业智能体与领域负责人提供专业判断。运行层记录能力如何协作，领域层决定成果是否成立；这种分工让两种专业性各得其所。
 
-## 四层生态中的可组合底座
+## 四层生态中的运行底座与正交分工
 
-用户面对的是 `OPL Base`、`OPL App`、`OPL Packages` 和 `OPL Cloud`。Framework 是 Base 的核心，
-负责可靠推进工作；Packages 提供可以安装和升级的专业能力；App 提供本地工作台；Cloud 将同一条
-工作线延伸到在线空间、托管资源与协作服务。四层产品各有分工，用户始终使用同一种任务、成果、
-证据和责任语言。
+用户面对的是 `OPL Base`、`OPL App`、`OPL Packages` 和 `OPL Cloud`。Framework 是 Base 的核心，负责本机运行底座与标准本地协议；[`gaofeng21cn/opl-catalog`](https://github.com/gaofeng21cn/opl-catalog) 作为只读发现目录承接官方投影；[`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 承接跨产品横向发布控制面与标准发布回执。App 提供桌面、WebUI 与容器工作台，Cloud 将同一条工作线延伸到在线空间、托管资源与协作服务。四层与三仓正交分工，用户始终使用同一种任务、成果、证据和责任语言。
 
 从建立工作边界到持续运营，品牌能力帮助读者理解一项专业工作的完整旅程。它们是能力地图，不是固定安装清单。
 
@@ -68,11 +65,7 @@ OPL Framework 不把所有能力固化在同一条运行链里，而是让每项
 
 ## OPL Connect：一次连接，按能力授权
 
-外部服务接入最容易出现的误区，是让每个 Agent 或 Mini App 自己保存一份 API Key 或 OAuth Token。
-OPL Connect 采用更清楚的三层边界：Relay、Gateway、OPL Link 等 provider owner 保存凭据、刷新和
-账号生命周期；Connect 只保存连接的 opaque 引用与安全修订号；已安装的 Package 再按 capability 请求
-逐项 grant。用户在 App 的“资料与连接”中批准或撤销 grant，Host 每次调用都重新核对 Package 身份、
-连接修订和 capability，然后由 provider 在自己的边界内执行。
+外部服务接入最容易出现的误区，是让每个 Agent 或 Mini App 自己保存一份 API Key 或 OAuth Token。OPL Connect 采用更清楚的三层边界：Relay、Gateway 等 provider owner 持有凭据、刷新和账号生命周期（OPL Link 移动伴侣服务亦由 Studio `opl-host-core` 独占托管，Connect 专注 Gateway 伴侣授权兑换与 capability 颁发）；Connect 只保存连接的 opaque 引用与安全修订号；已安装的 `opl.package.v2` 能力包按 capability 请求逐项 grant。用户在 App 的 `设置 → 资料与连接` 中批准或撤销 grant，本机守护进程在每次调用前重新核对受信任宿主、Package 身份、连接修订和 capability，再交由 provider 在各自边界内执行。
 
 因此，同一个 Relay 邮箱可以安全地被多个已安装能力复用，而每个能力拥有独立的授权范围。搜索、读取
 和本地待审草稿可以作为低风险入口，邮件发送等外部写操作仍遵循 Relay 自己的业务确认。调用记录只保留
@@ -93,44 +86,33 @@ OPL 因此把产品方法、用户与团队知识、长期主题知识、具体�
 
 来源、摘要与运行证据各有用途。正文是日常维护入口，摘要帮助选择相关上下文，快照解释当时用了什么。源文变化、过期或撤回后，派生摘要需要相应更新；已有快照也不能延续被撤回的权限。Framework 提供一致的版本与运行机制，专业智能体和用户保留内容判断与接受权。具体规则由[知识来源与记忆政策](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/policies/knowledge-source-and-memory-policy.md)维护。
 
-## 能力独立升级，体验始终一致
+OPL Framework 的内部能力围绕统一的本机守护进程 `opld` 组织，使 CLI、Studio 工作台与 Python SDK 共用一致的数据模型与运行边界。基于 `opl.package.v2`（`opl-package.json`）与不可变 OCI 制品契约，能力包可以先完成制品构建、签名与回读校验再晋升目录投影；已彻底退役历史过渡层与降级回退，使发现、安装与运行真相始终对齐。
 
-动态装配的价值，不是让用户管理更多零件，而是让系统可以局部升级、准确定位问题并可靠回退。
-OPL Packages 让专业能力按需要安装和更新，运行底座让各项能力在清楚的生命周期中协作，经过验证的
-产品组合则把这些内部选择收敛为简单、稳定的使用体验。
+当执行、连接、观察或评估能力获得更好的实现时，OPL 可以按制品摘要更新相应部分；`opl_base` 在界面中提供只读版本投影，Full 离线安装包内的运行时 seed 仅作为匹配 commit 的公开字节加速器，不会屏蔽在线目录或私有授权更新。内部演进的自由，由此不会转化为用户的配置与维护负担。
 
-当执行、连接、观察或评估能力获得更好的实现时，OPL 可以只替换相应部分。用户已有的工作位置、
-阶段、文件、证据和操作方式继续有效；出现问题时，系统也能说明发生变化的是哪项能力，并回到上一
-个可靠组合。内部升级的自由，因此不会转化为用户的学习和维护负担。
+## 受控边界，保持体验清楚
 
-## 受控组合，保持体验清楚
+OPL Framework 保留能力包独立发布与安装的自由，同时保持运行时本身的精简与单一入口。
 
-OPL Framework 在内部保留能力组合的自由，在产品中提供少量经过完整验证的组合形态。
+无论是独立无头执行、桌面工作台集成还是 Foundry 评估实验，系统都通过同一个本地 `opld` 守护进程和 Codex 原生执行载体工作，不再由不同领域派生多套平行 Runtime Host。专业研究、医学科普、基金申请、书籍写作与资本配置均作为标准 `opl.package.v2` 能力包进入生态，依靠清晰的能力声明、绑定身份与独立验收推进工作。
 
-Framework 的受控组合分别服务于 headless 运行、App 集成和 Foundry 开发。研究、基金与视觉交付由安装的专业 Package 提供能力，不自动成为另一组 Framework Host profile。每种组合都需要选择明确能力、绑定实际身份并接受相应验证。
-
-用户只需选择“我要完成什么工作”。稳定的能力域降低维护成本，受控配置降低使用成本；二者结合，让系统内部快速演进，产品体验仍然稳定、清楚、可预测。
+用户只需选择“我要完成什么工作”。稳定的核心服务与清楚的责任边界，让系统内部得以持续演进，同时产品体验始终直接、可预测。
 
 ## Framework 与 App：运行能力和产品体验各司其职
 
-OPL Framework 负责组织和运行能力，确保任务可以可靠启动、持续、恢复和收口。One Person Lab App
-负责把这些能力变成连贯的窗口、导航、任务视图、文件工作面、进度和操作入口。
+OPL Framework 负责组织和运行能力，确保任务可以可靠启动、持续、恢复和收口。One Person Lab App（以 OPL Studio 为统一 Desktop / WebUI / Docker 宿主实现）负责把这些能力变成连贯的窗口、导航、任务视图、文件工作面、进度和操作入口。
 
-两者采用一致的可组合设计，但承担不同责任：Framework 保证能力真实可用，App 保证用户看到的是
-一套稳定产品。运行底座和界面因此可以独立演进，同时共享同一份任务、状态和操作事实。
+两者采用清晰的服务解耦，承担各自责任：Framework 保证本机能力、工作空间与持久运行真实可用，App 保证用户看到一套统一、安静的产品体验。运行底座和界面因此可以独立演进，同时共享同一份任务、状态和操作事实。
 
-Framework Host 负责通用运行、来源平权的 Package 能力发现与更新规划，以及面向 App 的统一状态、动作与受控声明式设置/界面投影；Studio 的 DSH/Cordis Application Host 负责自己的极薄底座、profile、插件、原生 Codex 和交付 transport。两者通过公开合同协作，各自保留清楚范围，使不同来源的能力都能沿统一目录、受控设置分区和独立错误隔离边界进入工作台，而不建立第二套插件 ABI 或状态副本。具体分工由 [Framework 架构](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary)、[App adapter contract](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json) 与 [OPL App 插件界面与设置标准](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md) 维护。
+Framework `opld` 通过受信任的本地 JSON-RPC 承接 `app.state.get`、`app.action.execute` 与 `app.contribution.read`，提供只读软件目录聚合、安装/更新规划与声明式设置/动作投影；Studio 的 DSH/Cordis Application Host 则负责自身极薄应用壳、官方 UI 原语、插件生命周期、原生 Codex 会话与交付通道。两者严格按公开合同协作，不建立第二套插件 ABI，也不复制运行状态或凭证库。具体分工由 [Framework 架构](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#host-scope-boundary)、[App adapter contract](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-shell-adapter.json) 与 [OPL App 插件界面与设置标准](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md) 维护。
 
 Mini App 延续这条边界：Framework 从已安装 Package 的能力声明中发现入口，提供当前任务上下文、进度与产物投影、共享视图及当前可用操作；Studio 提供宿主协议、主题与视口上下文；Package 的领域负责方提供业务数据、操作和质量结论。共享声明式视图、专用 MCP App 和专业应用复用同一工作身份与运行事实。视图按需调用已有操作，长任务继续使用现有阶段与执行链，业务状态和连接授权仍由原有负责方维护。
 
 ## 界面持续演进，产品体验保持连续
 
-One Person Lab App 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，
-App 负责定义升级时的身份、数据保留、能力和更新路径，让用户能够从已有工作继续。
+One Person Lab App 对外提供一套统一的任务、能力、文件、状态和操作体验。界面设计可以持续改进，App 负责定义升级时的身份、数据保留、能力和更新路径，让用户能够从已有工作继续。
 
-首次安装、存量升级、运行基座更新与兼容插件的独立演进分别需要自己的验收证据。
-Framework 源码与聚合状态不能替代安装后的运行验收；支持路径和当前证据由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json)
-和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护。
+首次安装、存量升级、运行基座更新与兼容插件的独立演进分别需要自己的验收证据。Framework 源码与聚合状态不能替代安装后的运行验收；支持路径和当前证据由 [App 发布合同](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/contracts/app-release-channel.json) 和 [App 当前状态](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/status.md) 维护。
 
 ## 自进化：围绕能力持续改进
 
@@ -146,7 +128,7 @@ Framework 源码与聚合状态不能替代安装后的运行验收；支持路�
 
 可组合层负责运行能力之间的协作，各类事实则由真正的拥有者维护。
 
-领域智能体决定专业成果是否合格；Workspace 和文件系统保存实际材料与产物；持久运行环境保存长期执行历史；Ledger 保存证据与事件；App 持有桌面产品和发布事实；能力包负责人维护来源、版本与能力声明。Framework 把这些事实连接起来，让每项判断都能回到正确的责任方。
+领域智能体决定专业成果是否合格；Workspace 和文件系统保存实际材料与产物；OPL Runway 基于本地 SQLite (`opl.db`) 保存长期执行、调度与恢复历史；Ledger 保存证据与事件；App 持有桌面/WebUI 产品和发布事实；能力包负责人维护来源、版本与能力声明；`opl-catalog` 与 `opl-release` 各自持有只读目录索引与横向发布回执。Framework 把这些事实连接起来，让每项判断都能回到正确的责任方。
 
 这种分工让新的提供者、连接器、观察器或执行器能够进入组合，同时保持事实归属稳定。创新可以发生在局部，信任则贯穿整个系统。
 
@@ -185,6 +167,11 @@ OPL Framework 的目标，是成为一套结构清楚、持续进化的专业能
 
 - [One Person Lab 家族白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-whitepaper.html)
 - [OPL App 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
+- [OPL Agent Apps 与 MiniApp 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-miniapp-whitepaper.html)
+- [OPL Cloud 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-cloud-whitepaper.html)
+- [OPL Flow 白皮书](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html)
 - [One Person Lab](https://github.com/gaofeng21cn/one-person-lab)
 - [One Person Lab App](https://github.com/gaofeng21cn/one-person-lab-app)
+- [OPL Catalog](https://github.com/gaofeng21cn/opl-catalog)
+- [OPL Release](https://github.com/gaofeng21cn/opl-release)
 - [OPL Cloud](https://github.com/gaofeng21cn/one-person-lab-cloud)

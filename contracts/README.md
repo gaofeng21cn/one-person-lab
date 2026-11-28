@@ -11,7 +11,7 @@ State: `active_support`
 | 要查的内容 | 入口 |
 | --- | --- |
 | Package Manifest v2 Schema（Zod SSOT 生成） | [opl-package.v2.schema.json](./opl-package.v2.schema.json) |
-| 白皮书构建输入与注册表 | [OPL Profile](./whitepaper_profile.json)、[Framework Profile](./framework-whitepaper_profile.json)、[Public Whitepaper Registry](./opl-framework/public-whitepaper-registry.json) |
+| 白皮书构建输入与注册表 | [OPL Profile](./whitepaper_profile.json)、[Framework Profile](./framework-whitepaper_profile.json)、[MiniApp Profile](./miniapp-whitepaper_profile.json)、[OCC Profile](./occ-whitepaper_profile.json)、[Public Whitepaper Registry](./opl-framework/public-whitepaper-registry.json) |
 | 发布签名公钥与依赖来源配置 | [Dependency Release Sources](./opl-framework/dependency-release-sources.json)、[Signing Keys](./opl-framework/keys/) |
 
 ## 维护入口

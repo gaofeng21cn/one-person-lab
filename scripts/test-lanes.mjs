@@ -58,6 +58,7 @@ const extensionTests = expandTestFiles(['extensions/*/tests/*.test.mjs']);
 const rootScriptTests = expandTestFiles(['tests/release-note-writer.test.mjs', 'tests/package-publication-authority.test.mjs', 'tests/flow-capability-compiler.test.mjs', 'tests/private-package-source-access.test.mjs']);
 const dependencyResolutionTests = expandTestFiles(['tests/dependency-release-resolution.test.ts']);
 const builtTests = expandTestFiles(['tests/built/*.test.mjs']);
+const whitepaperTests = expandTestFiles(['tests/whitepaper/*.test.ts']);
 const e2eSelfTests = expandTestFiles(['tests/e2e/*.self.test.mjs', 'tests/e2e/stubs/*.self.test.mjs']);
 
 const lanes = {
@@ -76,7 +77,7 @@ const lanes = {
     nodeTest(v2PackageTests, { phase: 'unit' }),
     nodeTest(v2PerformanceTests, { phase: 'performance' }),
     nodeTest([...extensionTests, ...rootScriptTests, ...e2eSelfTests], { phase: 'extensions', stripTypes: false }),
-    nodeTest(dependencyResolutionTests, { phase: 'extensions' }),
+    nodeTest([...dependencyResolutionTests, ...whitepaperTests], { phase: 'extensions' }),
   ],
   artifact: [
     { kind: 'npm', phase: 'build', args: ['run', 'build'] },
@@ -178,6 +179,7 @@ function assertCoverage() {
     ...expandTestFiles(['packages/daemon/tests/performance/*.test.ts']),
     ...expandTestFiles(['extensions/*/tests/*.test.mjs']),
     ...expandTestFiles(['tests/*.test.mjs']),
+    ...expandTestFiles(['tests/whitepaper/*.test.ts']),
     ...expandTestFiles(['tests/built/*.test.mjs']),
   ]);
   const covered = new Set(

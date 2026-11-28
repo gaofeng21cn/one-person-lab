@@ -13,14 +13,14 @@ One Person Lab 白皮书面向用户、合作者和技术决策者，呈现 OPL 
 
 ## OPL Framework
 
-让专业能力可以动态装配、独立验证和持续演进，使 OPL Base 在长期运行中依然保持清楚的责任、版本和恢复路径。
+通过单写入者本地守护进程 `opld`、标准化 `opl.package.v2` 能力包契约与只读发现投影，让专业能力可独立验证、升级与组合，并在长期运行中保留清楚的责任、版本与恢复路径。
 
 - [在线阅读](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-framework-whitepaper.html)
 - [PDF](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-framework-whitepaper.pdf)
 
 ## One Person Lab App
 
-以极薄稳定底座承载来源平权的软件与插件生态，把目标、材料、进度、成果、审阅与下一步组织成一套持续演进的专业工作台。
+以 OPL Studio 为统一极薄工作台底座承载桌面、WebUI 与容器载体，通过零认知负担的软件中心与 OPL Link / 微信远程等连续体验，让用户围绕目标、材料、进度、审阅与下一步推进工作。
 
 - [在线阅读](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.html)
 - [PDF](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-app-whitepaper.pdf)
@@ -41,7 +41,7 @@ OPL Cloud 是 OPL 正在建设并持续交付的云端产品层。它把同一�
 
 ## OPL Flow
 
-从个人使用 AI，到组织 AI 持续工作。通过一致的任务接收、自动化投递与可恢复执行，将人的目标、智能体能力和执行资源连接成持续工作的体系。
+从个人使用 AI，到跨载体组织 AI 持续工作。基于统一任务账本与多端协同路由，将人的目标、Codex / AntiGravity / OPL DSH 等执行载体连接为可交接、可恢复的持续工作流。
 
 - [在线阅读](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.html)
 - [PDF](https://gaofeng21cn.github.io/one-person-lab/latest/whitepapers/opl-flow-whitepaper.pdf)

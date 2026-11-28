@@ -2,13 +2,13 @@
 
 > 让智能体直接完成工作，让人在需要判断与协作时自然进入
 
-<!-- Owner: `OPL Framework`; Purpose: `public_agent_native_app_whitepaper_body_source`; State: `design_source`; Machine boundary: Human-readable design principles. Normative development policy belongs to docs/policies/agent-native-app-policy.md and shared interaction behavior to docs/mcp-apps/SPEC.md; implementation and publication facts remain with their respective owners. -->
+<!-- Owner: `OPL Framework`; Purpose: `public_agent_native_app_whitepaper_body_source`; State: `active_public_source`; Machine boundary: Human-readable design principles. Normative development policy belongs to docs/policies/agent-native-app-policy.md and shared interaction behavior to docs/mcp-apps/SPEC.md; implementation and publication facts remain with their respective owners. -->
 
 发布日期：2026-11-09
 
-最近修订：2026-11-24
+最近修订：2026-11-28
 
-文档状态：设计标准稿。本文确立产品理念与开发方向；各应用的实现、安装验收和公开发布状态由其负责方分别维护。
+文档状态：公开标准稿。本文确立 Agent 原生应用与 MiniApp 的产品理念与架构边界；各应用的具体实现、安装验收和公开发布状态由其负责方分别维护。
 
 适用对象：希望开发、使用或集成 Agent 原生应用的用户、开发者与技术决策者。
 
@@ -46,27 +46,27 @@ OPL Agent Apps 按工作需要选择呈现方式。共享视图与专用 MCP App
 
 选择界面的依据，是它能否让用户更准确、更省力地完成当前工作。纯自动化能力可以只提供机器入口；没有需要人处理的信息时，无需额外展示页面。已有成熟专业界面的应用，也可以保留自己的工作面，由 Agent 定位对象并在操作后读取结果。
 
-共享视图按内容能力选择组件，例如进度、产物、审阅或活动记录。新的领域能力只需声明已有组件可以理解的数据，即可获得基本协作体验。只有交互确实具有独特性时，才增加专用界面。同样地，当能力需要向 OPL App 贡献持久配置或常驻工作面时，也遵循从低耦合到高定制的三级接入秩序：常规开关与参数通过声明式设置表单落入既有设置分区（不私建顶层菜单，并标明生效时机与回读真实状态）；运行状态、资料空间等高频工作面通过共享界面原语与独立错误隔离边界融入主工作台；复杂领域交互则由沙箱 MCP App 承载。详细边界见 [OPL App 插件界面与设置标准](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md)。这样既避免每个 Agent 重写列表、设置页和确认框，也允许专业工作保持必要的表达能力。
+共享视图按内容能力选择组件，例如进度、产物、审阅或活动记录。新的领域能力只需声明已有组件可以理解的数据，即可获得基本协作体验。只有交互确实具有独特性时，才增加专用界面。同样地，当能力需要向 OPL App 贡献持久配置或常驻工作面时，也严格遵循 **Package (`opl.package.v2`)、Carrier 与 Executor 三角色分离** 及从低耦合到高定制的三级接入秩序：常规开关与参数通过 `app-contribution-adapter.json` 与 `opld` 贡献接口（`app.contribution.read` / `app.action.execute`）落入既有设置分区（如 `设置 → 资料与连接` 或 `能力配置`，不私建顶层菜单，并标明生效时机与回读真实状态）；高频工作面通过 Studio 官方共享原语库 `@gaofeng21cn/opl-plugin-ui-kit`、设计 token 规范与独立错误隔离边界融入主工作台；复杂领域交互则由沙箱 MCP App（`opl-mcp-apps`）承载。详细边界见 [OPL App 插件界面与设置标准](https://github.com/gaofeng21cn/one-person-lab-app/blob/main/docs/product/gui/plugin-ui-and-settings-standard.md)。这样既避免每个 Agent 重写列表、设置页和确认框，也允许专业工作保持必要的表达能力。
 
 ## 复用标准，保持自由组合
 
 MiniMax Code MiniApp 展示了一个有价值的方向：Agent 负责推进工作，人通过专业工作台完成审阅、编辑与确认，双方复用业务服务。其插件清单、运行上下文和客户端桥接属于 MiniMax 宿主的实现约定。OPL 借鉴这一协作方式，并以自己的既有产品边界承接。[MiniMax Code MiniApps 官方项目](https://github.com/MiniMax-AI/MiniMax-Code-MiniApps)
 
-OPL 的会话内界面采用标准 MCP Apps，使工具结果与交互资源能够通过支持该规范的宿主协作。Package 继续作为安装单元；Framework 负责能力发现、工作运行与共享投影；Studio 通过 DSH、Cordis 和官方 MCP Apps SDK 提供宿主适配；领域 Package 维护业务能力与专业判断。[MCP Apps 官方文档](https://modelcontextprotocol.io/docs/extensions/apps)
+OPL 的会话内界面采用标准 MCP Apps，使工具结果与交互资源能够通过支持该规范的宿主协作。`opl.package.v2`（`opl-package.json`）作为统一能力包契约；Framework `opld` 通过本地 JSON-RPC 负责能力发现、工作运行与共享投影；Studio 通过 DSH/Cordis 应用宿主、官方界面原语和官方 MCP Apps SDK 提供宿主适配；领域 Package 维护业务能力与专业判断。[MCP Apps 官方文档](https://modelcontextprotocol.io/docs/extensions/apps)
 
 因此，OPL Agent Apps 定义整体开发与协作方式，MiniApp 提供其中需要的交互界面。它们沿用现有 Package、MCP、插件生命周期与权限机制，开发者可以直接复用既有安装身份、通用通信协议和能力发现入口。
 
 ### 统一目录与安装管理
 
-当 Agent、扩展与 MiniApp 数量增加时，用户需要一个零认知负担的统一软件入口。OPL App 的“软件中心”与主对话并列，日常提供“软件、更新、安装记录”三个清晰分区（软件源从管理入口进入）；资料库与外部账号授权则统一收口在“设置 → 资料与连接”，避免在多个入口重复维护配置表单。Framework 的 **OPL Package Directory** 汇总软件身份、来源与真实安装状态，Studio 和其他宿主使用同一份投影。
+当 Agent、扩展与 MiniApp 数量增加时，用户需要一个零认知负担的统一软件入口。OPL App 的一级 **“软件中心”** 与主对话并列，日常提供“软件、更新、安装记录”等清晰分区（软件源从管理入口进入）；资料库与外部账号授权收口在 **“设置 → 资料与连接”**，工具及能力开关收口在 **“设置 → 能力与指令 → 能力配置”**，避免在多个入口重复维护同类表单。Framework 的 **OPL Package Directory** 基于只读官方目录 `opl-catalog`、本地 `opld` 状态和原生载体回读汇总软件身份与真实安装状态，Studio 使用同一份投影。
 
-软件中心默认打开 **全部软件** 视图，按用户意图（智能体、应用、效率扩展、连接通道）组织目录，同时提供 **全部软件 / OPL 软件 / 其他来源 / 运行组件** 四视角切换。OPL 官方软件、社区与第三方扩展以及本机工具在发现、安装、启停、自动更新、安装记录与异常反馈上适用一致规则；维护来源仅作信任标识与筛选维度，底层打包格式与安装器细节退居软件详情，依赖性的运行组件独立分层呈现，安装前明示所需目录、账号与运行权限。同一软件的公开或私有来源、不同渠道与多个安装位置聚合在同一身份下，内部技术角色不成为用户必须理解的分类。
+软件中心默认打开 **全部软件** 视图，按用户意图（智能体、应用、效率扩展、连接通道）组织目录，同时提供 **全部软件 / OPL 软件 / 其他来源 / 运行组件** 四视角切换；运行基础镜像 `opl_base` 以只读版本投影呈现在设置“更新与版本”视图。OPL 官方软件、社区与第三方扩展以及本机工具在发现、安装、启停、自动更新、安装记录与异常反馈上适用一致规则；维护来源仅作信任标识与筛选维度，底层打包格式与安装器细节退居详情，安装前明示所需目录、账号与运行权限。同一软件的公开或私有来源由同一身份聚合展示，内部技术角色不成为用户必须理解的分类。
 
 独立的云端、移动端和设备端产品保留自己的安装部署与版本生命周期。OPL App 可以协助部署、检查环境或查看远端状态；同一产品的本机 connector 若有独立 Package 身份，则只管理该本机部分。
 
 独立软件进入可安装目录，需要稳定身份、清单、可调用入口、发布来源、安装方式和安装后回读。概念仓库与产品内部开发依赖按其实际归属管理。列表展示正式名称、说明、已装版本、可用版本与当前操作；ID、路径和精确构建信息放在详情。成熟度由软件实际情况声明，开发接入单独标识；版本差异与可更新状态分别判断，未完成检查时保留未知。
 
-分发复用现有平台：[OPL Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab) 承载公开原生应用与 CLI，Package 使用公开或授权的正式 OCI 制品。它们是一个产品目录的不同交付渠道，无需另建一个与 Homebrew 竞争的包管理器。开发 checkout 只通过显式开发模式接入，同一软件可以保留多份安装，但在一个环境中只有一份激活实例。获授权的私有软件与公开软件共用安装、更新、修复和卸载入口，读取与操作时重新检查实际权限。Homebrew、Codex 及其他原生安装器各自执行生命周期操作，Framework 汇总结果；软件代码沿平台路径安装，开发源码与用户资料分别保留，操作绑定选定的安装实例。完整规则见 [Package Directory 与统一安装管理](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/package-directory.md)及[软件源接口](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/software-sources.md)。
+分发复用成熟渠道与统一平台：OPL Package 基于 `opl.package.v2` 经 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 的发布控制面生成公开或授权私有 OCI 制品，并由 Codex 原生载体承载插件安装与更新；[OPL Homebrew tap](https://github.com/gaofeng21cn/homebrew-one-person-lab) 专注 macOS 原生客户端与独立命令行工具分发（不再将 Homebrew Tap 或多安装实例切换纳入软件中心产品面）。开发 checkout 仅通过显式开发模式（如 `opl pack link`）接入，获授权的私有软件与公开软件共用安装、更新、修复与卸载入口，每次操作前均重新核验实际权限。完整规则见 [Package Directory 与统一安装管理](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/package-directory.md)及[软件源接口](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/specs/software-sources.md)。
 
 宿主能力不同，体验也应有清楚的降级路径。支持 MCP Apps 的宿主呈现交互界面；其他调用方仍能获得结构化结果，并在适用时使用由负责方提供的专业应用或浏览器入口。业务执行不能依赖某个页面恰好保持打开。
 
@@ -112,7 +112,7 @@ Persona 可以帮助整理跨领域背景和来源摘要，但各应用可以通
 
 共同机制应集中复用。能力发现、上下文传递、连接授权、知识来源、长任务观察、产物引用、主题与语言适配，都有现有负责方。领域开发者把精力放在输入与结果的语义、专业判断、真实业务操作和必要交互上。
 
-OPL Framework 就是 Agent 与 MiniApp 共用的 SDK 和运行基座，维护通用实现、合同与标准。标准智能体、其他 Agent 和 App 通过安装的 Framework 及其公开模块、命令行与服务接口复用这些能力；各领域仓继续维护自己的业务逻辑。源码维护位置与实际安装位置可以不同，宿主沿各自的安装和升级路径选择可用基座。成熟第三方能力优先直接复用：应用宿主使用 DSH/Cordis，会话使用 Codex，协作 UI 使用官方 MCP Apps SDK，持久任务编排由 Runway 基于本地 SQLite 承载，知识正文使用 Obsidian/Markdown。OPL 只封装共用身份、授权、版本和回读所需接口；新增公共模块须有真实消费者和已证明的官方能力缺口。具体边界见 [Agent/MiniApp SDK](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture/agent-miniapp-sdk.md)。
+OPL Framework 就是 Agent 与 MiniApp 共用的 SDK 和运行基座，维护通用实现、合同与标准。标准智能体、其他 Agent 和 App 通过本机 `opld` JSON-RPC 与标准命令行接口（`opl pack`、`opl workspace`、`opl connect`、`opl runway`、`opl ledger`）复用这些能力；各领域仓继续维护自己的业务逻辑。成熟第三方与官方设施优先直接复用：应用宿主与插件组合使用 Studio DSH/Cordis，界面组件复用 `@gaofeng21cn/opl-plugin-ui-kit` 与受规范的 CSS tokens，会话与推理执行使用 Codex，会话内协作 UI 使用官方 MCP Apps SDK，持久任务编排由 Runway 基于本地 SQLite (`opl.db`) 承载，知识正文使用 Obsidian/Markdown。OPL 只封装共用身份、授权、版本和回读所需接口；新增公共模块须有真实消费者和已证明的官方能力缺口。具体边界见 [Agent/MiniApp SDK](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture/agent-miniapp-sdk.md)。
 
 共用机制也保留数据的原有归属。私人运行状态由相应运行负责方管理，知识来源的授权与绑定留在私有控制范围，Obsidian 或普通资料目录中的正文仍由用户维护，邮件、照片和其他领域数据继续由原业务负责方保存。基座连接这些来源并记录必要的运行依据；具体分工见[共用基座的物理归属](https://github.com/gaofeng21cn/one-person-lab/blob/main/docs/architecture.md#共用基座的物理归属)。
 
