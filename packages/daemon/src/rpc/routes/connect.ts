@@ -1,4 +1,5 @@
 import type { CapabilityInput } from '@opl/connect';
+import { clearCachedCloudSoftwareEntitlements } from '@opl/pack';
 import { DaemonRpcError } from '../../errors.ts';
 import type { RpcHandler } from '../../server/socket-server.ts';
 import type { DaemonRuntime } from '../../state/runtime.ts';
@@ -26,7 +27,11 @@ export function registerConnectRoutes(handlers: Map<string, RpcHandler>, runtime
     handlers.set(method, async (params, conn) => {
       requireTrustedHost(conn, method);
       try {
-        return await callGatewayAccount(method, params, runtime.paths.state_dir);
+        const res = await callGatewayAccount(method, params, runtime.paths.state_dir);
+        if (method === 'connect.gateway.disconnect') {
+          clearCachedCloudSoftwareEntitlements(runtime.db);
+        }
+        return res;
       } finally {
         // Failed refresh or disconnect can still update the visible account status.
         if (method !== 'connect.gateway.status') runtime.appStateCache.invalidate();

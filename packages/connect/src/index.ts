@@ -138,11 +138,13 @@ export {
   completeOplGatewaySetup,
   disconnectOplGatewayAccount,
   loginOplGatewayAccount,
+  readGatewayAccountUserId,
   readOplGatewayAccount,
   refreshOplGatewayAccount,
   repairOplGatewayAccount,
   useOplGatewayForModelAccess,
   withGatewayStateDirectory,
+  withOplGatewayAccessToken,
 } from './gateway/account.ts';
 
 export { configureGatewayCodexProvider, readLocalCodexAccessState, resolveCodexHome, withClientCodexHome } from './gateway/codex-binding.ts';

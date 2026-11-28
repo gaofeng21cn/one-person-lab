@@ -322,15 +322,27 @@ export async function refreshOplGatewayAccount() {
   });
 }
 
-export async function authorizeOplLinkCompanion(request: unknown, credentialFile: string) {
-  return writeCompanionAuthorization(request, credentialFile, device => withGatewayAccountLock(async () => {
+export async function withOplGatewayAccessToken<T>(
+  fn: (accessToken: string, account: GatewayAccountState) => Promise<T>,
+): Promise<T> {
+  return withGatewayAccountLock(async () => {
     const account = readGatewayAccountState();
     if (!account || account.status === 'reauth_required' || account.status === 'disconnect_pending') {
       throw gatewayError('reauth_required', 'Sign in to your OPL account in the App first.');
     }
     const rotated = await rotateSession();
-    return exchangeCompanionCredentials(device, rotated.session.access_token);
-  }));
+    return fn(rotated.session.access_token, account);
+  });
+}
+
+export function readGatewayAccountUserId(): string | null {
+  return readGatewayAccountState()?.account_user_id ?? null;
+}
+
+export async function authorizeOplLinkCompanion(request: unknown, credentialFile: string) {
+  return writeCompanionAuthorization(request, credentialFile, (device) =>
+    withOplGatewayAccessToken((accessToken) => exchangeCompanionCredentials(device, accessToken)),
+  );
 }
 
 export async function repairOplGatewayAccount(groupId?: string) {

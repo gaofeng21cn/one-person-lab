@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import { isRecord, type SqliteDb } from '@opl/core';
 import { PackError } from '../errors.ts';
 import { KebabIdSchema } from '../manifest/schema.ts';
@@ -13,7 +15,7 @@ import {
 } from './official-package-catalog.ts';
 import { resolvePrivatePackageAuthHeader } from './private-package-source-provider.ts';
 import { readConfiguredPrivatePackageHandle } from './private-package-source-store.ts';
-import { stageOfficialPackageSource } from './stage-official-source.ts';
+import { stageOfficialPackageArchive, stageOfficialPackageSource } from './stage-official-source.ts';
 
 function resolveAuthorizedHeader(
   entry: OfficialPackageCatalogEntry,
@@ -38,11 +40,30 @@ function resolveAuthorizedHeader(
   return authHeader;
 }
 
+function hasConfiguredFallbackAuth(
+  entry: OfficialPackageCatalogEntry,
+  options: { readonly db?: SqliteDb; readonly resolveAuthHeader?: (sourceId: string) => string | null },
+): boolean {
+  const sourceId = officialPackagePrivateSourceId(entry);
+  if (!sourceId) return false;
+  if (options.resolveAuthHeader) return Boolean(options.resolveAuthHeader(sourceId));
+  return Boolean(options.db && resolvePrivatePackageAuthHeader(readConfiguredPrivatePackageHandle(options.db, sourceId)));
+}
+
+export type CloudEntitledArchiveDownloader = (input: {
+  readonly packageId: string;
+  readonly expectedDigest?: string;
+  readonly cacheRoot: string;
+  readonly operation?: Parameters<typeof stageOfficialPackageSource>[4];
+}) => Promise<string | null>;
+
 export function createOfficialPackageResolver(
   options: OfficialPackageCatalogOptions & {
     db?: SqliteDb;
     cacheRoot?: string;
     resolveAuthHeader?: (sourceId: string) => string | null;
+    hasCloudSession?: () => boolean;
+    downloadEntitledArchive?: CloudEntitledArchiveDownloader;
   } = {},
 ) {
   const runtimeRoot = officialPackageRuntimeRoot(options);
@@ -51,7 +72,19 @@ export function createOfficialPackageResolver(
     if (!KebabIdSchema.safeParse(packageId).success) throw new PackError('INVALID_INPUT', 'Invalid Package identity.');
     const selected = await (catalog ??= readOfficialCatalogSelection({ ...options, runtimeRoot, signal: operation?.signal }));
     const entry = selected.entries.get(packageId);
-    if (!entry) throw new PackError('PACK_NOT_FOUND', 'Official catalog has no Package ' + packageId + '.');
+    if (!entry) {
+      if (selected.online && options.downloadEntitledArchive) {
+        const archivePath = await options.downloadEntitledArchive({
+          packageId,
+          cacheRoot: options.cacheRoot ?? path.join(os.tmpdir(), 'opl-cloud-downloads'),
+          operation,
+        });
+        if (archivePath) {
+          return stageOfficialPackageArchive(archivePath, { kind: 'oci', package_id: packageId }, null, operation);
+        }
+      }
+      throw new PackError('PACK_NOT_FOUND', 'Official catalog has no Package ' + packageId + '.');
+    }
     const allowAuthorizedOnly = entry.visibility === 'authorized_only';
     const stageOptions = { cacheRoot: options.cacheRoot, ...operation };
     const seed = selected.seed.get(packageId);
@@ -77,9 +110,46 @@ export function createOfficialPackageResolver(
     if (!selected.online) {
       throw new PackError('PACK_DOWNLOAD_FAILED', 'The selected Package requires the online catalog.');
     }
-    const authHeader = resolveAuthorizedHeader(entry, packageId, options);
+    const cloudAvailable = allowAuthorizedOnly && Boolean(
+      options.downloadEntitledArchive && (options.hasCloudSession ? options.hasCloudSession() : true),
+    );
+    const hasFallback = allowAuthorizedOnly && hasConfiguredFallbackAuth(entry, options);
+    if (allowAuthorizedOnly && !cloudAvailable && !hasFallback) {
+      resolveAuthorizedHeader(entry, packageId, options);
+    }
     const source = officialPackageInstallSource(entry, null, { allowAuthorizedOnly });
     const release = await readOfficialV2Source(entry, options.fetchImpl, operation?.signal);
+    if (cloudAvailable && options.downloadEntitledArchive) {
+      let cloudError: unknown = null;
+      try {
+        const archivePath = await options.downloadEntitledArchive({
+          packageId,
+          expectedDigest: release?.archiveDigest,
+          cacheRoot: options.cacheRoot ?? path.join(os.tmpdir(), 'opl-cloud-downloads'),
+          operation,
+        });
+        if (archivePath) {
+          return stageOfficialPackageArchive(
+            archivePath,
+            { ...source, expected_digest: release?.archiveDigest },
+            release,
+            operation,
+          );
+        }
+      } catch (error) {
+        operation?.signal?.throwIfAborted();
+        cloudError = error;
+      }
+      if (cloudError) {
+        if (cloudError instanceof PackError && cloudError.code === 'PACK_LOCK_MISMATCH') {
+          throw cloudError;
+        }
+        if (!hasFallback) {
+          throw cloudError;
+        }
+      }
+    }
+    const authHeader = resolveAuthorizedHeader(entry, packageId, options);
     return stageOfficialPackageSource(
       { ...source, expected_digest: release?.archiveDigest },
       release, options.fetchImpl, authHeader, stageOptions,

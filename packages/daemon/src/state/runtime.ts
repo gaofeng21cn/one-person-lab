@@ -33,7 +33,6 @@ import {
 import { LedgerStore, verifyTaskLineage } from '@opl/ledger';
 import {
   createPackService,
-  createOfficialPackageResolver,
   readOfficialPackageCatalog,
   officialPackageSelectedVersion,
   createProcessCodexRunner,
@@ -68,6 +67,7 @@ import {
 } from '@opl/workspace';
 import { ContributionDispatcher } from '../contributions/dispatcher.ts';
 import { DaemonRpcError } from '../errors.ts';
+import { createDaemonOfficialPackageResolver, readCachedCloudPackageOverlay } from '../rpc/cloud-software-source.ts';
 import { runCliEntrypoint, runEsmEntrypoint, runModuleOrCommandEntrypoint } from '../utils/subprocess-esm.ts';
 import { AppStateCache } from './app-state-cache.ts';
 import { initializeAppPackagePreferences, isAppPackageEnabled } from './app-package-preferences.ts';
@@ -181,14 +181,16 @@ export class DaemonRuntime {
     // Omit codexRunner on PackService so link/install/update/uninstall/toggle perform
     // deterministic filesystem projection without invoking external `codex plugin add`.
     const officialUpdateSource = {
-      resolveOfficialUpdate: (id: string, operation: Parameters<ReturnType<typeof createOfficialPackageResolver>>[1]) => createOfficialPackageResolver({
+      resolveOfficialUpdate: (id: string, operation: Parameters<ReturnType<typeof createDaemonOfficialPackageResolver>>[1]) => createDaemonOfficialPackageResolver({
         db: this.db,
         cacheRoot: path.join(this.paths.state_dir, 'cache', 'downloads'),
+        stateDir: this.paths.state_dir,
       })(id, operation),
       resolveOfficialUpdateVersion: async (id: string) => {
         const catalog = await readOfficialPackageCatalog({ db: this.db });
         const entry = catalog.get(id);
-        return entry ? officialPackageSelectedVersion(entry) : null;
+        if (entry) return officialPackageSelectedVersion(entry);
+        return readCachedCloudPackageOverlay(this.db, this.paths.state_dir)?.packages.get(id)?.selected_version ?? null;
       },
     };
     this.packService = createPackService({
