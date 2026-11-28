@@ -6,7 +6,6 @@ import {
   listPrivatePackageSources,
   ensurePackage,
   ExactPackageReleaseSchema,
-  migrateV1Package,
   readPackageManifestFromDir,
   verifyReleaseLock,
   type InstallSourceSpec,
@@ -373,14 +372,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'pack.operation.cancel requires op_id.');
     }
     return runtime.packService.cancelOperation(opId);
-  });
-
-  handlers.set('pack.migrateV1', (params, conn) => {
-    requireTrustedHost(conn, 'pack.migrateV1');
-    const repoDir = pickString(params, 'repo_dir', 'repoDir', 'dir') ?? '.';
-    const apply = pickBoolean(params, 'apply') ?? false;
-    const clean = pickBoolean(params, 'clean') ?? false;
-    return migrateV1Package({ repoDir, apply, clean });
   });
 
   const handleCodexSync: RpcHandler = async (params, conn) => {
