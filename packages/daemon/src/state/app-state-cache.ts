@@ -5,7 +5,6 @@ import {
   readOplGatewayAccount,
   resolveCodexHome,
   withGatewayStateDirectory,
-  type ChannelProviderHost,
   type ConnectService,
 } from '@opl/connect';
 import type { SqliteDb } from '@opl/core';
@@ -109,6 +108,20 @@ type SoftwareSourcesSnapshot = ReturnType<typeof projectSoftwareSources>;
 type GatewayAccountSnapshot = ReturnType<typeof readOplGatewayAccount>;
 type ConnectionAuthSnapshot = ReturnType<typeof projectConnectionAuthorization>;
 
+export interface TransportBindingsCompatibilityProjection {
+  readonly surface_kind: 'opl_app_transport_bindings_projection.v1';
+  readonly status: 'unavailable';
+  readonly reason: 'studio_owned_channel_runtime';
+  readonly bindings: readonly never[];
+}
+
+const STUDIO_OWNED_TRANSPORT_BINDINGS: TransportBindingsCompatibilityProjection = Object.freeze({
+  surface_kind: 'opl_app_transport_bindings_projection.v1',
+  status: 'unavailable',
+  reason: 'studio_owned_channel_runtime',
+  bindings: [],
+});
+
 export interface AppStateSnapshot {
   readonly profile: 'fast' | 'full';
   readonly revision: number;
@@ -133,7 +146,7 @@ export interface AppStateSnapshot {
     readonly core?: { readonly codex: ReturnType<typeof projectCodexRuntime> };
     readonly managed_update?: { readonly components: readonly Record<string, unknown>[] };
     readonly application_management?: ReturnType<typeof projectApplicationManagement>;
-    readonly transport_bindings?: ReturnType<ChannelProviderHost['getStateProjection']>['transport_bindings'];
+    readonly transport_bindings?: TransportBindingsCompatibilityProjection;
     readonly services?: { readonly runway: ReturnType<ScheduleRunner['getHealth']> };
     readonly operator: { readonly workbench: ReturnType<typeof buildRunwayWorkbench> };
     readonly agent_packages: ReturnType<typeof projectPackageDirectory> & { readonly sources?: SoftwareSourcesSnapshot };
@@ -179,7 +192,6 @@ export class AppStateCache {
   readonly #connectService: ConnectService;
   readonly #version: string;
   readonly #workspaceService: WorkspaceService;
-  readonly #channelHost: ChannelProviderHost;
   readonly #scheduleRunner: ScheduleRunner;
   #storageInventory?: { readAt: number; projection: ReturnType<typeof readStorageLifecycle> };
   #codexRuntimeCache?: { readAt: number; projection: ReturnType<typeof projectCodexRuntime> };
@@ -217,7 +229,6 @@ export class AppStateCache {
     readonly connectService: ConnectService;
     readonly version: string;
     readonly workspaceService: WorkspaceService;
-    readonly channelHost: ChannelProviderHost;
     readonly scheduleRunner: ScheduleRunner;
     readonly onCatalogChanged?: () => void;
   }) {
@@ -227,7 +238,6 @@ export class AppStateCache {
     this.#connectService = options.connectService;
     this.#version = options.version;
     this.#workspaceService = options.workspaceService;
-    this.#channelHost = options.channelHost;
     this.#scheduleRunner = options.scheduleRunner;
     this.#catalog = new OfficialSoftwareCatalog(() => {
       this.invalidate();
@@ -372,7 +382,6 @@ export class AppStateCache {
     );
 
     const knowledgeSources = snapshot.knowledge_sources;
-    const transportBindings = this.#channelHost.getStateProjection().transport_bindings;
     if (!this.#storageInventory || Date.now() - this.#storageInventory.readAt >= 30_000) {
       this.#storageInventory = { readAt: Date.now(), projection: readStorageLifecycle(this.#packService) };
     }
@@ -389,7 +398,7 @@ export class AppStateCache {
           available_actions: [],
         }] },
         application_management: projectApplicationManagement(knowledgeSources, snapshot.connections, codexModelPolicy),
-        transport_bindings: transportBindings,
+        transport_bindings: STUDIO_OWNED_TRANSPORT_BINDINGS,
         services: { runway },
         agent_packages: { ...agentPackages, sources },
         paths: { ...snapshot.app_state.paths, workspace_root: workspaceRoot, workspace_root_path: workspaceRoot.selected_path },

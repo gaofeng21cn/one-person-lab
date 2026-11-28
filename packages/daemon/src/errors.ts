@@ -1,5 +1,5 @@
 import { KernelError, toErrorMessage } from '@opl/core';
-import { ChannelError, ConnectError } from '@opl/connect';
+import { ConnectError } from '@opl/connect';
 import { LedgerError } from '@opl/ledger';
 import { PackError } from '@opl/pack';
 import { RunwayError } from '@opl/runway';
@@ -124,30 +124,6 @@ export function toJsonRpcError(error: unknown): JsonRpcErrorPayload {
       data: {
         code: error.code,
         ...error.details,
-      },
-    };
-  }
-
-  if (error instanceof ChannelError) {
-    const rpcCode =
-      error.code === 'CHANNEL_INVALID_INPUT'
-        ? -32602
-        : error.code === 'CHANNEL_PROVIDER_UNAVAILABLE'
-            || error.code === 'CHANNEL_ACCESS_UNDECLARED'
-            || error.code === 'COMPANION_BLOB_UNAVAILABLE'
-          ? -32004
-          : error.code === 'CHANNEL_CONFIRMATION_REQUIRED'
-              || error.code === 'CHANNEL_IDENTITY_MISMATCH'
-              || error.code === 'CHANNEL_AUTH_ERROR'
-              || error.code === 'CHANNEL_DIGEST_MISMATCH'
-            ? -32003
-            : -32000;
-    return {
-      code: rpcCode,
-      message: `${error.code}: ${error.message}`,
-      data: {
-        code: error.code,
-        ...(error.reason ? { reason: error.reason } : {}),
       },
     };
   }

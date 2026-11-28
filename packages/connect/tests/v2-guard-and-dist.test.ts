@@ -108,7 +108,7 @@ test('compiled dist/ ESM entrypoints resolve cleanly for @opl/connect', async ()
   const mod = (await import('@opl/connect')) as Record<string, unknown>;
   assert.equal(typeof mod.createConnectService, 'function');
   assert.equal(typeof mod.EncryptedFileSecretVault, 'function');
-  assert.equal(typeof mod.ChannelProviderHost, 'function');
+  assert.equal(mod.ChannelProviderHost, undefined);
 });
 
 test('v2:guard rejects script imports of workspace package internals', t => {

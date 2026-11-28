@@ -334,7 +334,6 @@ const NAMESPACE_SUBCOMMANDS: Readonly<Record<string, readonly { name: string; us
     { name: 'check', usage: 'check <connectionId>' },
     { name: 'remove', usage: 'remove <connectionId> [--purge-secret]' },
     { name: 'grants', usage: 'grants <list|approve|deny|revoke> ...' },
-    { name: 'channels', usage: 'channels <list|action> ...' },
   ],
   runway: [
     { name: 'start', usage: 'start --workspace <wsId> [--agent <id>] --title <t> --goal <g>' },
@@ -1047,35 +1046,6 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
             return 0;
           }
           throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect grants action '${action}'.`);
-        }
-        if (sub === 'channels') {
-          const action = rest[0] ?? 'list';
-          if (action === 'list') {
-            emitOutput(await rpc('connect.channels.list', {}), parsed);
-            return 0;
-          }
-          if (action === 'action') {
-            const pkgId = rest[1];
-            const ref = rest[2];
-            if (!pkgId || !ref) {
-              throw new DaemonRpcError(
-                -32602,
-                'INVALID_INPUT',
-                'opl connect channels action requires <packageId> <ref>.',
-              );
-            }
-            const input = (parseJsonFlag(parsed, '--input') as Record<string, unknown> | undefined) ?? {};
-            emitOutput(
-              await rpc('connect.channels.action', {
-                package_id: pkgId,
-                ref,
-                input,
-              }),
-              parsed,
-            );
-            return 0;
-          }
-          throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Unknown connect channels action '${action}'.`);
         }
         break;
       }

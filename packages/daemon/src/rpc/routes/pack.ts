@@ -162,7 +162,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       } finally {
         if (!dryRun) {
           runtime.syncDeclaredProviders();
-          await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
           runtime.appStateCache.invalidate();
         }
       }
@@ -209,7 +208,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     }
     const res = await runtime.packService.unlink({ packageId, clientContext: ctx });
     runtime.syncDeclaredProviders();
-    await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
     runtime.appStateCache.invalidate();
     return res;
   });
@@ -226,7 +224,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
         clientContext: ctx,
       });
       runtime.syncDeclaredProviders();
-      await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
       runtime.appStateCache.invalidate();
       return res;
     }
@@ -253,7 +250,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     }
     const res = await runtime.packService.uninstall({ packageId, clientContext: ctx });
     runtime.syncDeclaredProviders();
-    await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
     runtime.appStateCache.invalidate();
     return res;
   });
@@ -276,7 +272,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
         onStarted: operation => reportStarted({ operation_id: operation.op_id, status: 'running' }),
       }).finally(async () => {
         runtime.syncDeclaredProviders();
-        await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
         runtime.appStateCache.invalidate();
       });
       return pickBoolean(params, 'background') ? Promise.race([started, completion]) : completion;
@@ -289,7 +284,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       clientContext: ctx,
     });
     runtime.syncDeclaredProviders();
-    await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
     runtime.appStateCache.invalidate();
     return {
       ...res,
@@ -343,7 +337,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       clientContext: ctx,
     });
     runtime.syncDeclaredProviders();
-    await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
     runtime.appStateCache.invalidate();
     return res;
   });
@@ -357,7 +350,6 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     }
     const res = await runtime.packService.toggle({ packageId, enabled, clientContext: ctx });
     runtime.syncDeclaredProviders();
-    await runtime.channelHost.reconcileWithInstalledPackages().catch(() => {});
     runtime.appStateCache.invalidate();
     return {
       ...res,

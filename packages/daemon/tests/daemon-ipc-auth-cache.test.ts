@@ -3,8 +3,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
-import { isProcessAlive, openSqliteStore } from '@opl/core';
-import { ChannelError, type ChannelThreadCallback, type ChannelTurnTerminalEvent } from '@opl/connect';
+import { isProcessAlive } from '@opl/core';
 import { RunwayError } from '@opl/runway';
 import { runDaemonForeground, startDaemonServer } from '../src/daemon.ts';
 import { mapErrorToCliExitCode } from '../src/errors.ts';
@@ -130,86 +129,6 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
     assert.equal(mapErrorToCliExitCode(new RunwayError('TASK_PAUSED_BY_HUMAN', 'paused')), 4);
     assert.equal(mapErrorToCliExitCode(new RunwayError('INVALID_STAGE_STATE', 'bad state')), 2);
 
-    // Verify ChannelProviderHost fail-closed without workspace + real Runway/stub execution with workspace
-    let channelCallback!: ChannelThreadCallback;
-    await srv.runtime.channelHost.attach({
-      provider_id: 'test-channel',
-      start(input) {
-        channelCallback = input.callback;
-        return { dispose() {} };
-      },
-    });
-    const thread = await channelCallback.startThread({
-      provider_id: 'test-channel',
-      account_id: 'acct-1',
-      channel_session_id: 'sess-1',
-    });
-
-    // Fail-closed when no workspace is initialized
-    await assert.rejects(
-      () =>
-        channelCallback.startTurn({
-          ...thread,
-          text: 'fail without workspace',
-        }),
-      (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_PROVIDER_UNAVAILABLE',
-    );
-
-    // Initialize workspace -> startTurn creates real Runway task & executes stub codex
-    const ws = (await appClient.call('workspace.init', {
-      root_path: sb.workspaceDir,
-      name: 'Channel Turn WS',
-    })) as { workspace_id: string };
-
-    let terminalEvent: ChannelTurnTerminalEvent | null = null;
-    const turn = await channelCallback.startTurn({
-      ...thread,
-      text: 'hello channel',
-    });
-    const sub = channelCallback.subscribeTurn(turn, {
-      onTerminal(ev) {
-        terminalEvent = ev;
-      },
-    });
-    for (let i = 0; i < 100 && !terminalEvent; i++) {
-      await new Promise((r) => setTimeout(r, 20));
-    }
-    await sub.dispose();
-
-    assert.ok(terminalEvent, 'Channel turn must reach terminal event');
-    const completedTerminal = terminalEvent as Extract<ChannelTurnTerminalEvent, { status: 'completed' }>;
-    assert.equal(completedTerminal.status, 'completed');
-    assert.ok(completedTerminal.response_text.trim().length > 0);
-    assert.doesNotMatch(completedTerminal.response_text, /^Accepted channel turn/i);
-
-    const chanProj = (await appClient.call('connect.channels.list', {})) as {
-      transport_bindings: {
-        status: string;
-        bindings: Array<{ provider_id: string; canonical_thread_id: string }>;
-      };
-    };
-    assert.equal(chanProj.transport_bindings.status, 'available');
-    assert.equal(
-      chanProj.transport_bindings.bindings.some(
-        (b) => b.provider_id === 'test-channel' && b.canonical_thread_id === thread.canonical_thread_id,
-      ),
-      true,
-    );
-
-    const persistedBinding = srv.runtime.channelBindingStore.getBindingByThread(thread);
-    assert.equal(persistedBinding?.workspace_id, ws.workspace_id);
-    assert.ok(persistedBinding?.last_task_id);
-    const channelTask = (await appClient.call('runway.task.get', {
-      task_id: persistedBinding!.last_task_id!,
-    })) as {
-      status: string;
-      stage_runs: Array<{ status: string }>;
-      attempts: Array<{ status: string }>;
-    };
-    assert.equal(channelTask.status, 'completed');
-    assert.equal(channelTask.stage_runs[0]?.status, 'completed');
-    assert.equal(channelTask.attempts[0]?.status, 'succeeded');
-
     // EPIPE-safe broadcast when a subscribed socket drops abruptly before mutation
     const transient = await connectTestRpc(sb.sessionPath, 'opl_cli', '2.0');
     await transient.close();
@@ -245,87 +164,19 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
     assert.equal(isProcessAlive(sleeper.pid!), true);
   });
 
-  it('persists ChannelProviderHost bindings across opld restart, fails closed when no healthy executor exists, and exits 1 on foreground lock contention', async () => {
-    // 1. Cross-restart ChannelProviderHost SQLite binding persistence
+  it('exits 1 on foreground lock contention and exposes retired studio-owned transport_bindings compatibility projection', async () => {
     const sb = trackSandbox();
-    const srv1 = await sb.startInProcess();
-    const rpc1 = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
-    await rpc1.call('workspace.init', { root_path: sb.workspaceDir, name: 'Persist Chan WS' });
-
-    let cb1!: ChannelThreadCallback;
-    await srv1.runtime.channelHost.attach({
-      provider_id: 'persist-chan',
-      start(input) {
-        cb1 = input.callback;
-        return { dispose() {} };
-      },
-    });
-    const identity = {
-      provider_id: 'persist-chan',
-      account_id: 'acct-restart',
-      channel_session_id: 'sess-restart',
-    };
-    const thread1 = await cb1.startThread(identity);
-    let done1: ChannelTurnTerminalEvent | null = null;
-    const turn1 = await cb1.startTurn({ ...thread1, text: 'turn before restart' });
-    const sub1 = cb1.subscribeTurn(turn1, {
-      onTerminal(ev) {
-        done1 = ev;
-      },
-    });
-    for (let i = 0; i < 100 && !done1; i++) {
-      await new Promise((r) => setTimeout(r, 20));
-    }
-    await sub1.dispose();
-    assert.equal(done1?.status, 'completed');
-
-    await rpc1.close();
-    await srv1.shutdown();
-
-    // Restart DaemonRuntime on the same stateDir
-    const srv2 = await startDaemonServer({ stateDir: sb.stateDir });
+    const srv = await sb.startInProcess();
+    const rpc = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
     try {
-      const rpc2 = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
-      // Before provider attach, store already has binding in SQLite while projection reports producer_absent
-      assert.equal(
-        srv2.runtime.channelBindingStore.listBindings().some((b) => b.canonical_thread_id === thread1.canonical_thread_id),
-        true,
-      );
-      const preAttachList = (await rpc2.call('connect.channels.list', {})) as {
-        transport_bindings: { status: string; unavailable_reason?: string };
-      };
-      assert.equal(preAttachList.transport_bindings.status, 'unavailable');
-      assert.equal(preAttachList.transport_bindings.unavailable_reason, 'producer_absent');
-
-      // Attach provider without calling startThread again -> connect.channels.list immediately projects persisted binding
-      let cb2!: ChannelThreadCallback;
-      await srv2.runtime.channelHost.attach({
-        provider_id: 'persist-chan',
-        start(input) {
-          cb2 = input.callback;
-          return { dispose() {} };
-        },
-      });
-      const postAttachList = (await rpc2.call('connect.channels.list', {})) as {
-        transport_bindings: {
-          status: string;
-          bindings: Array<{ provider_id: string; canonical_thread_id: string }>;
+      const appState = (await rpc.call('app.state.get', { profile: 'fast' })) as {
+        app_state: {
+          transport_bindings?: { surface_kind: string; status: string; bindings: unknown[] };
         };
       };
-      assert.equal(postAttachList.transport_bindings.status, 'available');
-      assert.equal(
-        postAttachList.transport_bindings.bindings.some(
-          (b) => b.provider_id === 'persist-chan' && b.canonical_thread_id === thread1.canonical_thread_id,
-        ),
-        true,
-      );
-      await cb2.resumeThread(thread1);
-      await assert.rejects(
-        () => cb2.resumeThread({ canonical_thread_host: 'opld', canonical_thread_id: 'thread_nonexistent' }),
-        (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_IDENTITY_MISMATCH',
-      );
-      const threadAfterRestart = await cb2.startThread(identity);
-      assert.deepEqual(threadAfterRestart, thread1);
+      assert.equal(appState.app_state.transport_bindings?.surface_kind, 'opl_app_transport_bindings_projection.v1');
+      assert.equal(appState.app_state.transport_bindings?.status, 'unavailable');
+      assert.deepEqual(appState.app_state.transport_bindings?.bindings, []);
 
       // A quiet long-running daemon still owns the lock.
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -347,180 +198,13 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
       assert.equal(dupRoot.code, 1);
       assert.match(`${dupRoot.stderr}\n${dupRoot.stdout}`, /LOCK_CONTENTION:/);
 
-      const health = (await rpc2.call('daemon.health', {})) as { ok: boolean };
+      const health = (await rpc.call('daemon.health', {})) as { ok: boolean };
       assert.equal(health.ok, true);
       const sess = JSON.parse(fs.readFileSync(sb.sessionPath, 'utf8')) as { pid: number };
       assert.equal(sess.pid, process.pid);
-
-      await rpc2.close();
     } finally {
-      await srv2.shutdown();
-    }
-
-    // Verify SQLite row directly in opl.db
-    const checkDb = openSqliteStore(sb.dbPath, { readOnly: true });
-    try {
-      const row = checkDb
-        .prepare('SELECT canonical_thread_id, last_resumed_at, last_task_id FROM channel_thread_bindings WHERE provider_id = ?')
-        .get('persist-chan') as { canonical_thread_id: string; last_resumed_at: string | null; last_task_id: string | null } | undefined;
-      assert.equal(row?.canonical_thread_id, thread1.canonical_thread_id);
-      assert.ok(row?.last_resumed_at);
-      assert.ok(row?.last_task_id);
-    } finally {
-      checkDb.close();
-    }
-  });
-
-  it('fails closed on channel startTurn when no healthy executor is available', async () => {
-    const sbNoExec = trackSandbox({
-      OPL_CODEX_BIN: '/nonexistent/missing-codex-bin',
-      OPL_AGY_BIN: '/nonexistent/missing-agy-bin',
-    });
-    const srvNoExec = await sbNoExec.startInProcess();
-    const rpcNoExec = await connectTestRpc(sbNoExec.sessionPath, 'opl_app', '2.0');
-    await rpcNoExec.call('workspace.init', { root_path: sbNoExec.workspaceDir, name: 'NoExec WS' });
-    let cbNoExec!: ChannelThreadCallback;
-    await srvNoExec.runtime.channelHost.attach({
-      provider_id: 'noexec-chan',
-      start(input) {
-        cbNoExec = input.callback;
-        return { dispose() {} };
-      },
-    });
-    const noExecThread = await cbNoExec.startThread({
-      provider_id: 'noexec-chan',
-      account_id: 'acct-1',
-      channel_session_id: 'sess-1',
-    });
-    const health = await srvNoExec.runtime.executorRegistry.healthCheckAll();
-    assert.equal(Object.values(health).some((h) => h.available), false);
-    await assert.rejects(
-      () => cbNoExec.startTurn({ ...noExecThread, text: 'should fail closed' }),
-      (err: unknown) => err instanceof ChannelError && err.code === 'CHANNEL_PROVIDER_UNAVAILABLE',
-    );
-    await rpcNoExec.close();
-  });
-
-  it('isolates synchronous onTerminal throws across live and already-completed channel observers', async () => {
-    const sb = trackSandbox({ OPL_STUB_CODEX_DELAY_MS: '60' });
-    const srv = await sb.startInProcess();
-    const rpc = await connectTestRpc(sb.sessionPath, 'opl_app', '2.0');
-    await rpc.call('workspace.init', { root_path: sb.workspaceDir, name: 'Observer Isolation WS' });
-
-    let cb!: ChannelThreadCallback;
-    await srv.runtime.channelHost.attach({
-      provider_id: 'obs-iso-chan',
-      start(input) {
-        cb = input.callback;
-        return { dispose() {} };
-      },
-    });
-    const thread = await cb.startThread({
-      provider_id: 'obs-iso-chan',
-      account_id: 'acct-obs',
-      channel_session_id: 'sess-obs',
-    });
-
-    const uncaught: unknown[] = [];
-    const unhandled: unknown[] = [];
-    const onUncaught = (err: unknown) => uncaught.push(err);
-    const onUnhandled = (err: unknown) => unhandled.push(err);
-    process.on('uncaughtException', onUncaught);
-    process.on('unhandledRejection', onUnhandled);
-
-    try {
-      const turn = await cb.startTurn({ ...thread, text: 'observer throw isolation' });
-      let liveHealthyEvent: ChannelTurnTerminalEvent | null = null;
-      const liveBadSub = cb.subscribeTurn(turn, {
-        onTerminal() {
-          throw new Error('sync live observer throw');
-        },
-      });
-      const liveGoodSub = cb.subscribeTurn(turn, {
-        onTerminal(ev) {
-          liveHealthyEvent = ev;
-        },
-      });
-
-      for (let i = 0; i < 120 && !liveHealthyEvent; i++) {
-        await new Promise((r) => setTimeout(r, 25));
-      }
-      assert.equal(liveHealthyEvent?.status, 'completed');
-      await liveBadSub.dispose();
-      await liveGoodSub.dispose();
-
-      // Already-completed subscribeTurn path
-      let cachedHealthyEvent: ChannelTurnTerminalEvent | null = null;
-      const cachedBadSub = cb.subscribeTurn(turn, {
-        onTerminal() {
-          throw new Error('sync cached observer throw');
-        },
-      });
-      const cachedGoodSub = cb.subscribeTurn(turn, {
-        onTerminal(ev) {
-          cachedHealthyEvent = ev;
-        },
-      });
-
-      for (let i = 0; i < 80 && !cachedHealthyEvent; i++) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
-      assert.equal(cachedHealthyEvent?.status, 'completed');
-      await cachedBadSub.dispose();
-      await cachedGoodSub.dispose();
-
-      // Allow a couple ticks for any deferred unhandledRejection / uncaughtException
-      await new Promise((r) => setTimeout(r, 50));
-      assert.equal(uncaught.length, 0);
-      assert.equal(unhandled.length, 0);
-
-      // Verify auto-pruning without dispose() on both live completion & alreadyDone subscribeTurn
-      const liveTurn = await cb.startTurn({ ...thread, text: 'auto prune live' });
-      let liveDone: ChannelTurnTerminalEvent | null = null;
-      const liveSubNoDispose = cb.subscribeTurn(liveTurn, {
-        onTerminal(ev) {
-          liveDone = ev;
-        },
-      });
-      assert.equal(srv.runtime.getChannelTurnObserverCount(liveTurn.canonical_turn_id), 1);
-      for (let i = 0; i < 120 && !liveDone; i++) {
-        await new Promise((r) => setTimeout(r, 25));
-      }
-      assert.equal(liveDone?.status, 'completed');
-      assert.equal(srv.runtime.getChannelTurnObserverCount(liveTurn.canonical_turn_id), 0);
-      // Calling dispose() later remains idempotent
-      await liveSubNoDispose.dispose();
-      assert.equal(srv.runtime.getChannelTurnObserverCount(liveTurn.canonical_turn_id), 0);
-
-      // Already-completed without dispose() auto-prunes in setImmediate
-      let cachedDoneNoDispose: ChannelTurnTerminalEvent | null = null;
-      const cachedSubNoDispose = cb.subscribeTurn(liveTurn, {
-        onTerminal(ev) {
-          cachedDoneNoDispose = ev;
-        },
-      });
-      for (let i = 0; i < 80 && !cachedDoneNoDispose; i++) {
-        await new Promise((r) => setTimeout(r, 20));
-      }
-      assert.equal(cachedDoneNoDispose?.status, 'completed');
-      assert.equal(srv.runtime.getChannelTurnObserverCount(liveTurn.canonical_turn_id), 0);
-      await cachedSubNoDispose.dispose();
-
-      // Immediate dispose() before setImmediate cancels delivery and prunes cleanly
-      let cancelledCalled = false;
-      const cancelledSub = cb.subscribeTurn(liveTurn, {
-        onTerminal() {
-          cancelledCalled = true;
-        },
-      });
-      await cancelledSub.dispose();
-      assert.equal(srv.runtime.getChannelTurnObserverCount(liveTurn.canonical_turn_id), 0);
-      await new Promise((r) => setTimeout(r, 30));
-      assert.equal(cancelledCalled, false);
-    } finally {
-      process.off('uncaughtException', onUncaught);
-      process.off('unhandledRejection', onUnhandled);
       await rpc.close();
+      await srv.shutdown();
     }
   });
 });

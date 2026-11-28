@@ -1913,7 +1913,7 @@ with OplClient(session_file=${JSON.stringify(sb.sessionPath)}, client_kind="sdk_
     );
   });
 
-  it("T3-20 [F1 x F3 x F4 x F5 x F6 x F10]: migrated opl-channel-weixin (sync_enabled=false) hosted in opld -> connect.channels.action -> Runway task", async () => {
+  it("T3-20 [F1 x F3 x F4 x F5 x F6 x F10]: migrated opl-channel-weixin (sync_enabled=false) hosted in opld -> contribution.read -> Runway task (retired connect.channels RPC)", async () => {
     const sb = ctx.makeSandbox();
     await sb.startDaemon();
 
@@ -1941,61 +1941,30 @@ with OplClient(session_file=${JSON.stringify(sb.sessionPath)}, client_kind="sdk_
     );
     assert.ok(wxPkg && wxPkg.enabled === true, "Core dynamic loader must surface opl-channel-weixin in opld");
     assert.equal(wxPkg.carrier_synced ?? wxPkg.codex_synced, false);
+    assert.equal(fastState.app_state?.transport_bindings?.surface_kind, "opl_app_transport_bindings_projection.v1");
+    assert.equal(fastState.app_state?.transport_bindings?.status, "unavailable");
 
-    const channelsProj = await appRpc.call("connect.channels.list", {});
-    assert.equal(channelsProj.surface_kind, "opl_connect_channel_provider_host_projection.v1");
-
-    const activeProvider = (channelsProj.providers || []).find(
-      (p) => p.package_id === "opl-channel-weixin" && p.status === "active"
+    await assertRpcError(
+      () => appRpc.call("connect.channels.list", {}),
+      -32601,
+      /method not found|unknown/i
     );
 
-    if (activeProvider) {
-      const actionRes = await appRpc.call("connect.channels.action", {
-        package_id: "opl-channel-weixin",
-        ref: "weixin.connect",
-        confirmed: true,
-        input: { workspace_id: wsId, message: "Inbound weixin trigger" },
-      });
-      assert.equal(actionRes.ok, true);
-      const createdTask = await appRpc.call("runway.task.create", {
-        workspace_id: wsId,
-        agent_id: "mas",
-        title: "Channel Dispatch Task",
-        goal_prompt: `Handle channel payload: ${JSON.stringify(actionRes.result ?? actionRes)}`,
-      });
-      const taskId = ctx.trackTask(sb, extractTaskId(createdTask));
-      const db = ctx.openDb(sb.dbPath, { readOnly: true });
-      assert.ok(getTask(db, taskId), "Expected Runway task persisted from channel flow");
-      db.close();
-    } else {
-      // Wave 1A runtime before M3/M5 channel module attachment: fail-closed CHANNEL_PROVIDER_UNAVAILABLE
-      await assertRpcError(
-        () =>
-          appRpc.call("connect.channels.action", {
-            package_id: "opl-channel-weixin",
-            ref: "weixin.connect",
-            confirmed: true,
-            input: { workspace_id: wsId },
-          }),
-        -32004,
-        /CHANNEL_PROVIDER_UNAVAILABLE/
-      );
-      const contribRead = await appRpc.call("app.contribution.read", {
-        package_id: "opl-channel-weixin",
-        ref: "weixin.access.state",
-        input: { workspace_id: wsId },
-      });
-      assert.ok(contribRead && typeof contribRead === "object");
-      const createdTask = await appRpc.call("runway.task.create", {
-        workspace_id: wsId,
-        agent_id: "mas",
-        title: "Channel Fallback Task",
-        goal_prompt: "Create Runway task for channel workspace",
-      });
-      const taskId = ctx.trackTask(sb, extractTaskId(createdTask));
-      const db = ctx.openDb(sb.dbPath, { readOnly: true });
-      assert.ok(getTask(db, taskId));
-      db.close();
-    }
+    const contribRead = await appRpc.call("app.contribution.read", {
+      package_id: "opl-channel-weixin",
+      ref: "weixin.access.state",
+      input: { workspace_id: wsId },
+    });
+    assert.ok(contribRead && typeof contribRead === "object");
+    const createdTask = await appRpc.call("runway.task.create", {
+      workspace_id: wsId,
+      agent_id: "mas",
+      title: "Channel Fallback Task",
+      goal_prompt: "Create Runway task for channel workspace",
+    });
+    const taskId = ctx.trackTask(sb, extractTaskId(createdTask));
+    const db = ctx.openDb(sb.dbPath, { readOnly: true });
+    assert.ok(getTask(db, taskId));
+    db.close();
   });
 });

@@ -342,20 +342,4 @@ export function registerConnectRoutes(handlers: Map<string, RpcHandler>, runtime
       runtime.appStateCache.invalidate();
     }
   });
-
-  handlers.set('connect.channels.list', () => runtime.channelHost.getStateProjection());
-
-  handlers.set('connect.channels.action', async (params, conn) => {
-    requireTrustedHost(conn, 'connect.channels.action');
-    const packageId = pickString(params, 'package_id', 'packageId') ?? '';
-    const ref = pickString(params, 'ref', 'action_ref', 'actionRef') ?? '';
-    const input = pickRecord(params, 'input') ?? {};
-    const confirmed = pickBoolean(params, 'confirmed');
-    return runtime.executeChannelAction({
-      package_id: packageId,
-      ref,
-      input,
-      confirmed,
-    });
-  });
 }
