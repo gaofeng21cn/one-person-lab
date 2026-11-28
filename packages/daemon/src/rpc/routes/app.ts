@@ -15,6 +15,8 @@ import { activateAppCodexRuntime, codexInstallAction, executeCodexInstall, readC
 import { connectionActions, executeConnectionAction } from '../connection-actions.ts';
 import { requireClientContext, requireTrustedHost } from '../context.ts';
 import { executeGatewayAction, gatewayAccountActions } from '../gateway-actions.ts';
+import { readCloudSoftwareSourceSnapshot, refreshCloudSoftwareEntitlements } from '../cloud-software-source.ts';
+import { clearCachedCloudSoftwareEntitlements } from '@opl/pack';
 import { executeKnowledgeSourceAction, knowledgeSourceActions } from '../knowledge-source-actions.ts';
 import { executeSoftwareSourceAction, softwareSourceActions } from '../software-source-actions.ts';
 
@@ -218,7 +220,11 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       try {
         return await executeSoftwareSourceAction(sourceAction, payload, dryRun, runtime.db,
           () => runtime.appStateCache.invalidate(),
-          () => Promise.resolve(handlers.get('pack.sources.refresh')!(payload, conn)));
+          () => Promise.resolve(handlers.get('pack.sources.refresh')!(payload, conn)),
+          {
+            readCloudSource: () => readCloudSoftwareSourceSnapshot(runtime.db, runtime.paths.state_dir),
+            checkCloudSource: () => refreshCloudSoftwareEntitlements(runtime.db, runtime.paths.state_dir),
+          });
       } finally {
         if (!dryRun && actionId !== 'source_list') runtime.appStateCache.invalidate();
       }
@@ -256,7 +262,11 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
       try {
-        return await executeGatewayAction(gatewayAction, payload, dryRun, runtime.paths.state_dir);
+        const res = await executeGatewayAction(gatewayAction, payload, dryRun, runtime.paths.state_dir);
+        if (gatewayAction.action_id === 'gateway_account_disconnect') {
+          clearCachedCloudSoftwareEntitlements(runtime.db);
+        }
+        return res;
       } finally {
         runtime.appStateCache.invalidate();
       }

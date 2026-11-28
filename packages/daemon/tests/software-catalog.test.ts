@@ -258,3 +258,62 @@ test('authorized private source overlays installability and selected version onl
   assert.equal(authedRow.recommended_action, 'agent_package_install');
   assert.ok(!JSON.stringify(authedRow).includes('internal only description'));
 });
+
+test('Cloud entitlements overlay authorizes listed and unlisted restricted packages and projects denied/expired states', async () => {
+  const listedEntitled = catalogEntry('private-entitled', true);
+  const listedDenied = catalogEntry('private-denied', true);
+  const catalog = new OfficialSoftwareCatalog(() => {}, {
+    runtimeRoot: null,
+    fetchImpl: async () => Response.json({
+      schema_version: 'opl_software_catalog_index.v1',
+      catalog_id: 'public-registry:opl',
+      packages: [
+        { ...listedEntitled, public_summary: { owner_source_repo: listedEntitled.manifest.source_repo, display_name: 'Entitled Pkg' } },
+        { ...listedDenied, public_summary: { owner_source_repo: listedDenied.manifest.source_repo, display_name: 'Denied Pkg' } },
+      ],
+    }),
+  });
+  await catalog.refresh();
+  const snapshot = catalog.read();
+  const baseProjection = projectPackageDirectory([], { enabled: new Map(), shortcuts: new Map() }, snapshot, {
+    getInstallSource: () => null,
+  });
+
+  const overlaid = applyAuthorizedPrivatePackageOverlay(
+    baseProjection,
+    snapshot,
+    new Set(),
+    [],
+    { getInstallSource: () => null },
+    undefined,
+    {
+      status: 'authorized',
+      packages: new Map([
+        ['private-entitled', { package_id: 'private-entitled', enabled: true, selected_version: '2.1.0' }],
+        ['unlisted-pro', { package_id: 'unlisted-pro', enabled: true, selected_version: '0.8.0', display_name: 'Unlisted Pro', description: 'Restricted addon' }],
+      ]),
+    },
+  );
+  const byId = new Map(overlaid.directory.entries.map(item => [String(item.package_id), item as Record<string, any>]));
+  assert.equal(byId.get('private-entitled')?.installability.installable, true);
+  assert.equal(byId.get('private-entitled')?.package_access.provider_id, 'opl_cloud');
+  assert.equal(byId.get('unlisted-pro')?.installability.installable, true);
+  assert.equal(byId.get('unlisted-pro')?.package_access.provider_id, 'opl_cloud');
+  assert.equal(byId.get('unlisted-pro')?.selected_version, '0.8.0');
+  assert.equal(byId.get('private-denied')?.installability.installable, false);
+  assert.equal(byId.get('private-denied')?.package_access.status, 'forbidden');
+  assert.equal(byId.get('private-denied')?.installability.reason, 'package_not_entitled');
+
+  const expiredOverlay = applyAuthorizedPrivatePackageOverlay(
+    baseProjection,
+    snapshot,
+    new Set(),
+    [],
+    { getInstallSource: () => null },
+    undefined,
+    { status: 'expired', packages: new Map() },
+  );
+  const expiredRow = expiredOverlay.directory.entries[0] as Record<string, any>;
+  assert.equal(expiredRow.package_access.status, 'expired');
+  assert.equal(expiredRow.installability.reason, 'gateway_session_expired');
+});

@@ -134,7 +134,7 @@ export {
   type PackageDownloadPlan,
 } from './distribution/download-plan.ts';
 
-export { stageOfficialPackageSource } from './distribution/stage-official-source.ts';
+export { stageOfficialPackageArchive, stageOfficialPackageSource } from './distribution/stage-official-source.ts';
 
 export {
   acceptsCurlChunkRange,
@@ -245,7 +245,21 @@ export {
   type OfficialPackageCatalogEntry,
   type OfficialPackageCatalogOptions,
 } from './distribution/official-package-catalog.ts';
-export { createOfficialPackageResolver } from './distribution/official-package-source.ts';
+export { createOfficialPackageResolver, type CloudEntitledArchiveDownloader } from './distribution/official-package-source.ts';
+export {
+  OPL_CLOUD_DEFAULT_ORIGIN,
+  OPL_CLOUD_SOFTWARE_SOURCE_ID,
+  clearCachedCloudSoftwareEntitlements,
+  downloadCloudEntitledPackageArchive,
+  fetchCloudSoftwareEntitlements,
+  initializeCloudEntitlementCache,
+  readCachedCloudSoftwareEntitlements,
+  resolveOplCloudOrigin,
+  writeCachedCloudSoftwareEntitlements,
+  type CloudEntitledPackage,
+  type CloudSoftwareEntitlementsResult,
+  type CloudSoftwareEntitlementsStatus,
+} from './distribution/cloud-software-entitlements.ts';
 export { preparePrivatePackageSourceCredential, probePrivatePackageSourceIdentity, resolvePrivatePackageAuthHeader } from './distribution/private-package-source-provider.ts';
 export { ensurePackage, type ResolvedPackageForInstall } from './lifecycle/ensure-package.ts';
 
