@@ -91,9 +91,12 @@ test('CodexExecutorAdapter executes exec, resume, app-server --stdio, and recove
     },
   });
 
+  assert.deepEqual(adapter.capabilities.models, []);
+
   const health = await adapter.healthCheck();
   assert.equal(health.available, true);
   assert.equal(health.version, 'codex-cli 0.172.0-stub');
+  assert.deepEqual(health.models, ['codex-stub-model']);
 
   // 1. Streaming exec --json
   const events: ExecutorEvent[] = [];

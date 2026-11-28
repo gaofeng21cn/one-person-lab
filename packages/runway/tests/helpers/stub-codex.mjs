@@ -47,6 +47,18 @@ if (args[0] === '--version') {
   process.exit(0);
 }
 
+if (args[0] === 'debug' && args[1] === 'models' && args.includes('--bundled')) {
+  process.stdout.write(
+    `${JSON.stringify({
+      models: [
+        { slug: 'codex-stub-model', visibility: 'list' },
+        { slug: 'codex-hidden-model', visibility: 'hide' },
+      ],
+    })}\n`,
+  );
+  process.exit(0);
+}
+
 if (args[0] === 'app-server' && args.includes('--stdio')) {
   appendLog({ kind: 'app-server', argv: args, cwd: process.cwd(), pid: process.pid });
   const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });

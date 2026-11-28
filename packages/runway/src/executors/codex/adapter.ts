@@ -34,6 +34,33 @@ export interface CodexExecutorAdapterOptions {
   readonly defaultTransport?: 'exec' | 'app-server';
 }
 
+function probeBundledCodexModels(binaryPath: string, env: NodeJS.ProcessEnv): string[] {
+  const probe = spawnSync(binaryPath, ['debug', 'models', '--bundled'], {
+    encoding: 'utf8',
+    timeout: 5_000,
+    env,
+  });
+  if (probe.status !== 0 || probe.error || !probe.stdout) return [];
+  try {
+    const parsed = JSON.parse(probe.stdout) as { models?: unknown };
+    if (!Array.isArray(parsed.models)) return [];
+    const models: string[] = [];
+    for (const item of parsed.models) {
+      if (!isRecord(item) || item.visibility !== 'list') continue;
+      const id =
+        typeof item.slug === 'string' && item.slug.trim()
+          ? item.slug.trim()
+          : typeof item.id === 'string' && item.id.trim()
+            ? item.id.trim()
+            : '';
+      if (id) models.push(id);
+    }
+    return models;
+  } catch {
+    return [];
+  }
+}
+
 export class CodexExecutorAdapter implements ExecutorAdapter {
   readonly #options: CodexExecutorAdapterOptions;
 
@@ -45,11 +72,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
     supports_reconcile_after_restart: true,
     supports_mcp_tools: true,
     supports_sandbox_modes: ['read-only', 'workspace-write', 'danger-full-access'],
-    models: [
-      { id: 'gpt-5-codex', label: 'GPT-5 Codex', default: true },
-      { id: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
-      { id: 'o3', label: 'OpenAI o3' },
-    ],
+    models: [],
   };
 
   constructor(options: CodexExecutorAdapterOptions = {}) {
@@ -73,10 +96,11 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
     if (!bin) {
       return { available: false, reason: 'codex_binary_not_found' };
     }
+    const env = this.#getEnv();
     const r = spawnSync(bin.path, ['--version'], {
       encoding: 'utf8',
       timeout: 5_000,
-      env: this.#getEnv(),
+      env,
     });
     if (r.status !== 0 || r.error) {
       return {
@@ -87,7 +111,7 @@ export class CodexExecutorAdapter implements ExecutorAdapter {
     return {
       available: true,
       version: r.stdout.trim(),
-      models: this.capabilities.models.map((m) => m.id),
+      models: probeBundledCodexModels(bin.path, env),
     };
   }
 

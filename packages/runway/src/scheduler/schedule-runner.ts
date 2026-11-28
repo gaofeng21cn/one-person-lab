@@ -17,7 +17,9 @@ export class ScheduleRunner {
   readonly #onCancelTask?: (taskId: string, reason: string) => Promise<void> | void;
   readonly #onTaskLaunched?: (taskId: string, scheduleId: string) => Promise<void> | void;
   #timer: NodeJS.Timeout | null = null;
+  #armed = false;
   #ticking = false;
+  #inScheduledTick = false;
   #tickFailed = false;
 
   constructor(options: ScheduleRunnerOptions) {
@@ -29,6 +31,10 @@ export class ScheduleRunner {
   }
 
   get running(): boolean {
+    return this.#armed;
+  }
+
+  get hasActiveTimer(): boolean {
     return this.#timer !== null;
   }
 
@@ -73,28 +79,80 @@ export class ScheduleRunner {
     }
 
     this.#tickFailed = callbackErrors.length > 0;
-    if (this.#tickFailed && !this.#timer) {
+    if (this.#tickFailed && !this.#inScheduledTick) {
       throw callbackErrors[0];
     }
     return outcomes;
   }
 
-  start(): void {
-    if (this.#timer) return;
-    this.#timer = setInterval(() => {
-      if (this.#ticking) return;
+  #clearTimer(): void {
+    if (this.#timer) {
+      clearTimeout(this.#timer);
+      this.#timer = null;
+    }
+  }
+
+  #armNextTimer(): void {
+    this.#clearTimer();
+    if (!this.#armed) return;
+
+    let active;
+    try {
+      active = this.#store.listSchedules().filter((s) => s.enabled === 1 || s.buffered_pending > 0);
+    } catch {
+      return;
+    }
+    if (active.length === 0) return;
+
+    const nowMs = this.#now().getTime();
+    const maxWaitMs = Math.max(this.#tickIntervalMs, 60_000);
+    let delayMs = maxWaitMs;
+    for (const schedule of active) {
+      if (schedule.buffered_pending > 0) {
+        delayMs = Math.min(delayMs, this.#tickIntervalMs);
+        continue;
+      }
+      const dueMs = Date.parse(schedule.next_run_at);
+      if (!Number.isFinite(dueMs)) {
+        delayMs = Math.min(delayMs, this.#tickIntervalMs);
+        continue;
+      }
+      delayMs = Math.min(delayMs, Math.max(this.#tickIntervalMs, dueMs - nowMs));
+    }
+
+    this.#timer = setTimeout(() => {
+      this.#timer = null;
+      if (!this.#armed || this.#ticking) return;
       this.#ticking = true;
-      void this.tickOnce().catch(() => { this.#tickFailed = true; }).finally(() => {
-        this.#ticking = false;
-      });
-    }, this.#tickIntervalMs);
+      this.#inScheduledTick = true;
+      void this.tickOnce()
+        .catch(() => {
+          this.#tickFailed = true;
+        })
+        .finally(() => {
+          this.#inScheduledTick = false;
+          this.#ticking = false;
+          if (this.#armed) {
+            this.#armNextTimer();
+          }
+        });
+    }, delayMs);
     this.#timer.unref?.();
   }
 
+  wake(): void {
+    if (!this.#armed || this.#ticking) return;
+    this.#armNextTimer();
+  }
+
+  start(): void {
+    if (this.#armed) return;
+    this.#armed = true;
+    this.#armNextTimer();
+  }
+
   stop(): void {
-    if (this.#timer) {
-      clearInterval(this.#timer);
-      this.#timer = null;
-    }
+    this.#armed = false;
+    this.#clearTimer();
   }
 }
