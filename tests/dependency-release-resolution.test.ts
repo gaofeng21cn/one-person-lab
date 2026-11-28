@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { compareDependencyVersions, resolveDependencyRelease, resolveDependencyReleases, fetchDependencyArchive, dependencyArchiveCachePath } from '../scripts/dependency-release-resolution.ts';
+import { compareDependencyVersions, readDependencyReleasePolicy, resolveDependencyRelease, resolveDependencyReleases, fetchDependencyArchive, dependencyArchiveCachePath } from '../scripts/dependency-release-resolution.ts';
 
 test('public CLI writes the frozen dependency receipt once', (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dependency-cli-'));
@@ -32,8 +32,8 @@ test('public CLI writes the frozen dependency receipt once', (t) => {
 
 test('verified archive cache reuses bytes across discovery and installation while metadata stays fresh', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'opl-dependency-cache-'));
-  const url = 'https://example.test/temporal.tgz';
-  let bytes = Buffer.from('official temporal archive');
+  const url = 'https://example.test/sample-tool.tgz';
+  let bytes = Buffer.from('official sample archive');
   let metadataRequests = 0, archiveRequests = 0;
   const sha = () => createHash('sha256').update(bytes).digest('hex');
   const options = {
@@ -49,12 +49,13 @@ test('verified archive cache reuses bytes across discovery and installation whil
     },
   };
   try {
-    const first = await resolveDependencyRelease('temporal', options);
+    assert.equal(readDependencyReleasePolicy().sources['temporal-cli'], undefined);
+    const first = await resolveDependencyRelease('sample-tool', options);
     assert.equal(archiveRequests, 1);
-    assert.equal((await resolveDependencyRelease('temporal', options)).archive_sha256, first.archive_sha256);
+    assert.equal((await resolveDependencyRelease('sample-tool', options)).archive_sha256, first.archive_sha256);
     assert.equal(metadataRequests, 2);
     assert.equal(archiveRequests, 1);
-    const output = path.join(root, 'install/temporal.tgz');
+    const output = path.join(root, 'install/sample-tool.tgz');
     await fetchDependencyArchive(url, sha(), output, options);
     assert.deepEqual(fs.readFileSync(output), bytes);
     assert.equal(archiveRequests, 1, 'installer consumes the resolver download');
@@ -62,9 +63,9 @@ test('verified archive cache reuses bytes across discovery and installation whil
     await fetchDependencyArchive(url, sha(), output, options);
     assert.equal(archiveRequests, 2);
     bytes = Buffer.from('changed official bytes at the same URL');
-    assert.equal((await resolveDependencyRelease('temporal', options)).archive_sha256, sha());
+    assert.equal((await resolveDependencyRelease('sample-tool', options)).archive_sha256, sha());
     assert.equal(archiveRequests, 3, 'fresh official identity invalidates old bytes');
-    await assert.rejects(() => resolveDependencyRelease('temporal', { ...options, fetch: async () => new Response('', { status: 503 }) }), /503/);
+    await assert.rejects(() => resolveDependencyRelease('sample-tool', { ...options, fetch: async () => new Response('', { status: 503 }) }), /503/);
     const previousOutput = fs.readFileSync(output);
     await assert.rejects(() => fetchDependencyArchive(url, 'a'.repeat(64), output, options), /SHA-256/);
     assert.deepEqual(fs.readFileSync(output), previousOutput, 'failed download leaves the previous output intact');
