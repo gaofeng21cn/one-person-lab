@@ -52,7 +52,7 @@ OPL Link companion server 只由 Studio 的 `opl-host-core` 托管。Framework �
 
 ## 退役的产品面
 
-Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback、旧工作流 `provider_*` 控制、`opld` 内置 `ChannelProviderHost`（`packages/connect/src/channels/*` 与 `connect.channels.*`，通道能力统一归 Studio DSH 插件宿主）以及 0 实现的 `opl_software_installation.v1` 协议均不属于 v2 保留产品面；`dependency-release-sources.json` 中的 `temporal-cli` 暂作 Wave 2A 跨仓清理 `one-person-lab-app` Full 流水线前的只读兼容条目，将在 Wave 2A 联动拆除并写入 `v2:guard` 红线。
+Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback、旧工作流 `provider_*` 控制、`opld` 内置 `ChannelProviderHost`（`packages/connect/src/channels/*` 与 `connect.channels.*`，通道能力统一归 Studio DSH 插件宿主）、`dependency-release-sources.json` 中的 `temporal-cli` 依赖源（已于 Wave 2A 联动拆除并写入 `v2:guard` `temporal-dependency-source-present` 红线）以及 0 实现的 `opl_software_installation.v1` 协议均不属于 v2 保留产品面。
 
 `app_state.transport_bindings` 在 `AppStateCache` 中仅保留 `opl_app_transport_bindings_projection.v1` 只读空投影以兼容既有桥接合同；通道实际绑定事实由 Studio 侧宿主插件维护。
 

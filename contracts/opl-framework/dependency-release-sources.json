@@ -8,7 +8,6 @@
     "codex-cli": { "kind": "npm", "package": "@openai/codex", "dist_tag": "latest", "platform_optional_dependency": "@openai/codex-{platform}-{architecture}", "install_metadata": { "format": "npm", "binary": "codex" } },
     "mineru-open-api": { "kind": "npm", "package": "mineru-open-api", "repository": "opendatalab/MinerU-Ecosystem", "source_commit_required": true, "dist_tag": "latest", "install_metadata": { "format": "npm", "binary": "mineru-open-api" } },
     "playwright-mcp": { "kind": "npm", "package": "@playwright/mcp", "dist_tag": "latest", "install_metadata": { "format": "npm", "binary": "mcp-server-playwright" } },
-    "temporal-cli": { "kind": "github-release", "repository": "temporalio/cli", "asset": "temporal_cli_{version}_{platform}_{go_arch}.tar.gz", "install_metadata": { "format": "tar.gz", "binary": "temporal" } },
     "officecli": { "kind": "github-release", "repository": "iOfficeAI/OfficeCLI", "source_commit_required": true, "asset": "officecli-{office_platform}-{architecture}{exe_suffix}", "install_metadata": { "format": "binary", "binary": "officecli", "executable_entry": "officecli" } },
     "bun": { "kind": "github-release", "repository": "oven-sh/bun", "version_prefix": "bun-v", "asset": "bun-{platform}-{rust_arch}.zip", "install_metadata": { "format": "zip", "binary": "bun" } },
     "uv": { "kind": "github-release", "repository": "astral-sh/uv", "asset": "uv-{rust_arch}-{rust_target}.tar.gz", "install_metadata": { "format": "tar.gz", "binary": "uv" } },

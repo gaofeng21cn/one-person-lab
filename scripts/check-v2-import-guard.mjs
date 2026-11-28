@@ -1195,6 +1195,31 @@ function checkStrictM4RepoInvariants(rootDir, violations) {
     });
   }
 
+  const depSourcesPath = path.join(rootDir, 'contracts', 'opl-framework', 'dependency-release-sources.json');
+  if (fs.existsSync(depSourcesPath)) {
+    try {
+      const raw = fs.readFileSync(depSourcesPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (parsed?.sources && typeof parsed.sources === 'object' && 'temporal-cli' in parsed.sources) {
+        violations.push({
+          rule: 'temporal-dependency-source-present',
+          file: 'contracts/opl-framework/dependency-release-sources.json',
+          line: 1,
+          message: 'Forbidden temporal-cli source entry remains in dependency-release-sources.json.',
+        });
+      } else if (/temporal-cli|temporalio\/cli/i.test(raw)) {
+        violations.push({
+          rule: 'temporal-dependency-source-present',
+          file: 'contracts/opl-framework/dependency-release-sources.json',
+          line: 1,
+          message: 'Forbidden Temporal reference remains in dependency-release-sources.json.',
+        });
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+
   for (const sub of ['src', 'packages', 'contracts', 'scripts', 'docs', 'tests']) {
     const absSub = path.join(rootDir, sub);
     if (!fs.existsSync(absSub)) continue;
