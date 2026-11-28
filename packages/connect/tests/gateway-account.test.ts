@@ -9,11 +9,13 @@ import { readLocalCodexAccessState, withClientCodexHome } from '../src/gateway/c
 import {
   disconnectOplGatewayAccount,
   loginOplGatewayAccount,
+  readGatewayAccountUserId,
   readOplGatewayAccount,
   refreshOplGatewayAccount,
   selectOplGatewayManagedGroup,
   useOplGatewayForModelAccess,
   withGatewayStateDirectory,
+  withOplGatewayAccessToken,
 } from '../src/gateway/account.ts';
 
 function json(response: http.ServerResponse, value: unknown, status = 200) {
@@ -186,6 +188,15 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     assert.match(fs.readFileSync(configPath, 'utf8'), /managed-api-secret/);
     assert.doesNotMatch(fs.readFileSync(configPath, 'utf8'), /other-gateway-key/);
 
+    assert.equal(readGatewayAccountUserId(), '42');
+    const yielded = await withOplGatewayAccessToken(async (accessToken, acct) => {
+      assert.match(accessToken, /^access-/);
+      assert.equal(acct.account_user_id, '42');
+      return 'token-yielded';
+    });
+    assert.equal(yielded, 'token-yielded');
+    assert.equal(fs.readFileSync(path.join(gatewayDir, 'account.json'), 'utf8').includes('access-'), false);
+
     const refreshCountBeforeConcurrentRead = refreshCount;
     const refreshed = await Promise.all([refreshOplGatewayAccount(), refreshOplGatewayAccount()]);
     assert.equal(refreshed[0].gateway_account.status, 'connected');
@@ -216,6 +227,9 @@ test('gateway account login, refresh and disconnect keep secrets private and dis
     assert.equal(fs.existsSync(path.join(gatewayDir, 'credentials.json')), false);
     assert.equal(fs.existsSync(configPath), false);
     assert.equal(readOplGatewayAccount().status, 'not_connected');
+    assert.equal(readGatewayAccountUserId(), null);
+    await assert.rejects(withOplGatewayAccessToken(async () => 'never'), (error: unknown) =>
+      error instanceof ConnectError && error.reason_code === 'reauth_required');
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       const envKey = key === 'state' ? 'OPL_STATE_DIR'

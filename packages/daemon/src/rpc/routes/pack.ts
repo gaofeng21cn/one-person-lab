@@ -4,7 +4,6 @@ import { isRecord } from '@opl/core';
 import {
   buildPackage,
   listPrivatePackageSources,
-  createOfficialPackageResolver,
   ensurePackage,
   ExactPackageReleaseSchema,
   migrateV1Package,
@@ -21,7 +20,17 @@ import { toProjectedPackageSummary } from '../../state/app-state-cache.ts';
 import type { DaemonRuntime } from '../../state/runtime.ts';
 import { coerceInstallSourceSpec, pickBoolean, pickString } from '../../utils/normalize.ts';
 import { requireTrustedHost } from '../context.ts';
-import { executeSoftwareSourceAction, projectSoftwareSources, softwareSourceActions } from '../software-source-actions.ts';
+import {
+  createDaemonOfficialPackageResolver,
+  readCloudSoftwareSourceSnapshot,
+  refreshCloudSoftwareEntitlements,
+} from '../cloud-software-source.ts';
+import {
+  buildCloudSoftwareSourceEntry,
+  executeSoftwareSourceAction,
+  projectSoftwareSources,
+  softwareSourceActions,
+} from '../software-source-actions.ts';
 
 export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: DaemonRuntime): void {
   const handlePackList: RpcHandler = async (params) => {
@@ -46,12 +55,14 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
 
   handlers.set('pack.sources.list', (_params, conn) => {
     requireTrustedHost(conn, 'pack.sources.list');
-    return { software_sources: { entries: listPrivatePackageSources(runtime.db) } };
+    const cloudSource = readCloudSoftwareSourceSnapshot(runtime.db, runtime.paths.state_dir);
+    return { software_sources: { entries: [...listPrivatePackageSources(runtime.db), buildCloudSoftwareSourceEntry(cloudSource)] } };
   });
   handlers.set('pack.sources.refresh', async (_params, conn) => {
     requireTrustedHost(conn, 'pack.sources.refresh');
     const catalog = await runtime.appStateCache.refreshCatalog();
-    return { refreshed: catalog.status === 'ready', software_sources: projectSoftwareSources(runtime.db, catalog.status) };
+    const cloudSource = readCloudSoftwareSourceSnapshot(runtime.db, runtime.paths.state_dir);
+    return { refreshed: catalog.status === 'ready', software_sources: projectSoftwareSources(runtime.db, catalog.status, cloudSource) };
   });
   for (const command of ['configure', 'check', 'disconnect'] as const) {
     const method = 'pack.sources.' + command;
@@ -61,6 +72,11 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
       try {
         const execution = await executeSoftwareSourceAction(
           action, { ...params, confirmed: true }, false, runtime.db, () => runtime.appStateCache.invalidate(),
+          undefined,
+          {
+            readCloudSource: () => readCloudSoftwareSourceSnapshot(runtime.db, runtime.paths.state_dir),
+            checkCloudSource: () => refreshCloudSoftwareEntitlements(runtime.db, runtime.paths.state_dir),
+          },
         );
         return {
           ...(isRecord(execution.app_action_execution.result) ? execution.app_action_execution.result : {}),
@@ -122,7 +138,12 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     const repair = pickBoolean(params, 'repair') === true;
     const background = pickBoolean(params, 'background') === true;
-    const resolver = createOfficialPackageResolver({ runtimeRoot, db: runtime.db, cacheRoot: runtime.packService.cacheRoot });
+    const resolver = createDaemonOfficialPackageResolver({
+      runtimeRoot,
+      db: runtime.db,
+      cacheRoot: runtime.packService.cacheRoot,
+      stateDir: runtime.paths.state_dir,
+    });
     const execute = async (operation?: Parameters<PackService['install']>[0]['operation']) => {
       try {
         return await ensurePackage(runtime.packService, {

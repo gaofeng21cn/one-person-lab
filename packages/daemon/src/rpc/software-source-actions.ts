@@ -1,9 +1,15 @@
 import type { SqliteDb } from '@opl/core';
 import {
-  checkPrivatePackageSource, configurePrivatePackageSource, disconnectPrivatePackageSource, listPrivatePackageSources,
+  OPL_CLOUD_SOFTWARE_SOURCE_ID,
+  checkPrivatePackageSource,
+  configurePrivatePackageSource,
+  disconnectPrivatePackageSource,
+  listPrivatePackageSources,
+  resolveOplCloudOrigin,
 } from '@opl/pack';
 import type { SoftwareCatalogSnapshot } from '../state/package-catalog.ts';
 import { DaemonRpcError } from '../errors.ts';
+import type { CloudSourceSnapshot } from './cloud-software-source.ts';
 
 const configure = {
   action_id: 'source_configure', label: 'Connect GitHub account',
@@ -22,29 +28,62 @@ export const softwareSourceActions = [
 
 type SourceAction = typeof softwareSourceActions[number];
 
-export function projectSoftwareSources(db: SqliteDb, catalogStatus: SoftwareCatalogSnapshot['status'] = 'loading') {
-  const entries = listPrivatePackageSources(db).map(source => ({
+export function buildCloudSoftwareSourceEntry(cloudSource?: CloudSourceSnapshot) {
+  const status = cloudSource?.status ?? 'signed_out';
+  const connected = cloudSource?.connected ?? false;
+  return {
+    source_id: OPL_CLOUD_SOFTWARE_SOURCE_ID,
+    provider_id: 'opl_cloud',
+    source_kind: 'cloud_entitlement',
+    display_name: 'OPL Cloud',
+    source_ref: resolveOplCloudOrigin(),
+    visibility: 'authorized_only',
+    catalog_origin: 'opl',
+    origin_basis: 'owner_projection',
+    enabled: true,
+    status,
+    credential_handle_present: connected,
+    verified_at: cloudSource?.checkedAt ?? null,
+    verification_reason: cloudSource?.verificationReason ?? null,
+    account_login: cloudSource?.accountLogin ?? null,
+    checked_at: cloudSource?.checkedAt ?? null,
+    error_message: cloudSource?.verificationReason ?? null,
+    ...(typeof cloudSource?.entitledCount === 'number' ? { entry_count: cloudSource.entitledCount } : {}),
+    catalog_source: { manager: 'opl_packages', marketplace_id: OPL_CLOUD_SOFTWARE_SOURCE_ID, delivery: 'marketplace' },
+    available_actions: softwareSourceActions.filter(action => action.action_id === 'source_check'),
+  } as const;
+}
+
+export function projectSoftwareSources(
+  db: SqliteDb,
+  catalogStatus: SoftwareCatalogSnapshot['status'] = 'loading',
+  cloudSource?: CloudSourceSnapshot,
+) {
+  const githubEntries = listPrivatePackageSources(db).map(source => ({
     ...source,
     origin_basis: 'owner_projection',
     catalog_source: { manager: 'opl_packages', marketplace_id: source.source_id, delivery: 'marketplace' },
     available_actions: softwareSourceActions,
   }));
+  const publicCatalogEntry = {
+    source_id: 'public-registry:opl',
+    provider_id: 'opl_catalog',
+    display_name: 'OPL Software Catalog',
+    enabled: true,
+    credential_handle_present: false,
+    catalog_origin: 'opl',
+    origin_basis: 'owner_projection',
+    status: catalogStatus,
+    catalog_source: { manager: 'opl_packages', marketplace_id: 'public-registry:opl', delivery: 'marketplace' },
+    available_actions: softwareSourceActions.filter(action => action.action_id === 'source_refresh'),
+  };
+  const cloudEntry = buildCloudSoftwareSourceEntry(cloudSource);
+  const allEntries = [...githubEntries, publicCatalogEntry, cloudEntry];
   return {
     surface_kind: 'opl_software_sources_projection.v1',
-    status: entries.some(source => source.enabled && source.credential_handle_present && source.status !== 'authorized')
+    status: allEntries.some(source => source.enabled && source.credential_handle_present && source.status !== 'authorized')
       ? 'attention_required' : 'available',
-    entries: [...entries, {
-      source_id: 'public-registry:opl',
-      provider_id: 'opl_catalog',
-      display_name: 'OPL Software Catalog',
-      enabled: true,
-      credential_handle_present: false,
-      catalog_origin: 'opl',
-      origin_basis: 'owner_projection',
-      status: catalogStatus,
-      catalog_source: { manager: 'opl_packages', marketplace_id: 'public-registry:opl', delivery: 'marketplace' },
-      available_actions: softwareSourceActions.filter(action => action.action_id === 'source_refresh'),
-    }],
+    entries: allEntries,
     authority_boundary: { owner: 'opl_framework', credential_values_exposed: false },
   };
 }
@@ -52,6 +91,10 @@ export function projectSoftwareSources(db: SqliteDb, catalogStatus: SoftwareCata
 export async function executeSoftwareSourceAction(
   action: SourceAction, payload: Record<string, unknown>, dryRun: boolean, db: SqliteDb, onConfigured: () => void,
   refreshCatalog?: () => Promise<unknown>,
+  cloudCallbacks?: {
+    readonly readCloudSource?: () => CloudSourceSnapshot;
+    readonly checkCloudSource?: () => Promise<CloudSourceSnapshot>;
+  },
 ) {
   if (dryRun || Object.keys(payload).some(key => key !== 'confirmed' && !action.payload_fields.includes(key))) {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Unexpected software source action parameters.');
@@ -67,7 +110,7 @@ export async function executeSoftwareSourceAction(
     }
     result = await refreshCatalog();
   } else if (action.action_id === 'source_list') {
-    result = { software_sources: projectSoftwareSources(db) };
+    result = { software_sources: projectSoftwareSources(db, 'loading', cloudCallbacks?.readCloudSource?.()) };
   } else if (typeof sourceId !== 'string') {
     throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'A software source ID is required.');
   } else if (action.action_id === 'source_configure') {
@@ -79,7 +122,16 @@ export async function executeSoftwareSourceAction(
     onConfigured();
     result = { software_source: source.enabled ? await checkPrivatePackageSource(db, sourceId) : source };
   } else if (action.action_id === 'source_check') {
-    result = { software_source: await checkPrivatePackageSource(db, sourceId) };
+    if (sourceId === OPL_CLOUD_SOFTWARE_SOURCE_ID) {
+      if (!cloudCallbacks?.checkCloudSource) {
+        throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'OPL Cloud entitlement verification is unavailable.');
+      }
+      const nextSnapshot = await cloudCallbacks.checkCloudSource();
+      onConfigured();
+      result = { software_source: buildCloudSoftwareSourceEntry(nextSnapshot) };
+    } else {
+      result = { software_source: await checkPrivatePackageSource(db, sourceId) };
+    }
   } else {
     result = { software_source: disconnectPrivatePackageSource(db, sourceId) };
   }

@@ -16,14 +16,17 @@ OPL 软件源是用户认识“我们维护的软件”的统一入口。公开�
 
 | source ID | 类型 | 默认可见性 | 用途 |
 | --- | --- | --- | --- |
-| `public-registry:opl` | [OPL 官方目录](https://github.com/gaofeng21cn/opl-catalog) | `public` | 智能体、应用、扩展、通道和依赖。支持 `source_refresh` 刷新目录索引 |
-| `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
+| `public-registry:opl` | [OPL 官方目录](https://github.com/gaofeng21cn/opl-catalog) | `public` | 智能体、应用、扩展、通道和依赖。支持 `source_refresh` 刷新目录索引，公开软件可零登录匿名安装 |
+| `opl-cloud:default` | OPL Cloud 账号授权 | `authorized_only` | 基于当前 OPL Gateway 登录账号校验受限软件授权并获取短期预签名下载链接（默认推荐） |
+| `github-packages:gaofeng21cn` | GitHub Packages/GHCR（开发者回退） | `authorized_only` | 开发者调试与兼容回退用的私有 Package 来源（例如 OCC），普通用户无需配置 |
 
 Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl pack list --json` 及 `app_state.agent_packages.directory.entries`；OCI/GHCR 仍由各自 owner 维护，App 不另建版本注册表。GitHub 保存开发源码与发布来源，开发 checkout 只通过显式开发覆盖接入，不作为普通安装或更新渠道。Homebrew Tap 原生软件管理与多安装实例切换已退役，不再属于 v2 软件源产品面。
 
 ## 配置私有软件源与公开目录刷新
 
-首次使用私有 Package 时，在软件中心的软件源设置选择 GitHub 命名空间，连接已登录的 GitHub CLI 账户，或在高级设置中选择 Docker 登录或受控环境凭据。也可以使用下列 `opl sources` 命令配置和断开来源。v2 在 CLI、Studio 和 Flow 发布工具之间共用此处的凭据引用。
+普通用户无需配置任何 GitHub 账号或 CLI：公开软件通过 `public-registry:opl` 直接匿名发现、下载与安装；受限软件默认使用已登录的 OPL 账号自动经由 `opl-cloud:default` 校验 OPL Cloud 授权（`opl sources check --source-id opl-cloud:default --json`）并解析短期预签名下载链接，登出 OPL 账号时自动清理本地授权缓存并回退为仅公开软件可安装。
+
+仅开发者或维护者需要回退调试 GitHub Packages 私有源时，可在软件中心的「开发者来源（GitHub Packages）」选择 GitHub 命名空间，连接已登录的 GitHub CLI 账户，或在高级设置中选择 Docker 登录或受控环境凭据。也可以使用下列 `opl sources` 命令配置和断开 `github-packages:*` 来源。v2 在 CLI、Studio 和 Flow 发布工具之间共用此处的凭据引用。
 
 `configure` 启用来源后立即检查 GitHub 账户。此后可用 `check` 再次检查。账户通过验证后，具体 Package 的下载和发布还需要对应的仓库和 GHCR 权限。仅列出软件源时不会联系 GitHub。
 

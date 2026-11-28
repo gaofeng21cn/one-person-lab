@@ -17,6 +17,7 @@ import { projectApplicationManagement, projectCodexRuntime, readStorageLifecycle
 import { codexInstallAction } from '../rpc/codex-runtime.ts';
 import { connectionActions } from '../rpc/connection-actions.ts';
 import { gatewayAccountActions } from '../rpc/gateway-actions.ts';
+import { readCachedCloudPackageOverlay, readCloudSoftwareSourceSnapshot } from '../rpc/cloud-software-source.ts';
 import { projectSoftwareSources, softwareSourceActions } from '../rpc/software-source-actions.ts';
 import { readAppPackagePreferences } from './app-package-preferences.ts';
 import { createCodexPersonalizationReader, type CodexPersonalizationSnapshot } from './codex-personalization.ts';
@@ -321,7 +322,9 @@ export class AppStateCache {
     const codexHome = resolveCodexHome();
     const codexFingerprint = codexAccessFingerprint(codexHome);
     const workspaceRoot = this.#readWorkspaceRootCached();
-    const sources = (this.#softwareSources ??= projectSoftwareSources(this.#db, this.#catalog.read().status));
+    const cloudSource = readCloudSoftwareSourceSnapshot(this.#db, gatewayStateDir);
+    const cloudOverlay = readCachedCloudPackageOverlay(this.#db, gatewayStateDir);
+    const sources = (this.#softwareSources ??= projectSoftwareSources(this.#db, this.#catalog.read().status, cloudSource));
     const codexModelPolicy = this.#readCodexPolicyCached(codexHome, codexFingerprint);
     const account = this.#readGatewayAccountCached(gatewayStateDir, codexFingerprint);
     const authorization = this.#getConnectionAuthorization();
@@ -365,6 +368,7 @@ export class AppStateCache {
       snapshot.packages,
       this.#packService.store,
       projectPackageCurrentness,
+      cloudOverlay,
     );
 
     const knowledgeSources = snapshot.knowledge_sources;
