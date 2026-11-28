@@ -12,14 +12,17 @@ from pathlib import Path
 from unittest import mock
 
 from opl_client import (
+    AppContributionError,
     OplClient,
     OplRpcError,
     ready_envelope,
     resolve_session_path,
     resolve_state_dir,
+    resolve_workspace_root,
     sha256_bytes,
     sha256_file,
     unavailable_envelope,
+    verify_work_item_identity,
 )
 
 
@@ -280,6 +283,29 @@ class ClientLifecycleAndIpcTests(unittest.TestCase):
         self.assertEqual(sha256_file(f), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
         self.assertEqual(ready_envelope(package_id="mas", data={"x": 1})["status"], "ready")
         self.assertEqual(unavailable_envelope(package_id="mas", reason="off")["status"], "unavailable")
+
+        self.assertIsNone(resolve_workspace_root("relative/path"))
+        with mock.patch.dict(os.environ, {"OPL_PROFILE_WORKSPACE": str(self.tmpdir)}, clear=False):
+            self.assertEqual(resolve_workspace_root(), self.tmpdir.resolve())
+
+        identity, wid = verify_work_item_identity(
+            {
+                "work_item_identity": {
+                    "identity_state": "resolved",
+                    "agent_id": "mag",
+                    "domain_id": "med-autogrant",
+                    "domain_work_item_id": "wi-42",
+                }
+            },
+            expected_agent_ids=("mag",),
+            expected_domain_ids=("med-autogrant",),
+        )
+        self.assertEqual(wid, "wi-42")
+        self.assertEqual(identity["agent_id"], "mag")
+        self.assertEqual(verify_work_item_identity({})[1], None)
+        with self.assertRaises(AppContributionError) as bad_ctx:
+            verify_work_item_identity({"work_item_identity": {"identity_state": "pending"}})
+        self.assertEqual(bad_ctx.exception.reason_code, "app_contribution_invalid")
 
 
 if __name__ == "__main__":

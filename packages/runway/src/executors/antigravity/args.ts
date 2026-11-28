@@ -1,8 +1,6 @@
 import path from 'node:path';
 import type { StageExecutionRequest } from '../spi.ts';
 
-export const DEFAULT_AGY_MODEL = 'gemini-4-neon-high';
-
 export function inferEffortFromModelId(
   modelId: string,
   explicitEffort?: StageExecutionRequest['reasoning_effort'],
@@ -26,8 +24,8 @@ export function buildAgyArgs(
   req: StageExecutionRequest,
   options: BuildAgyArgsOptions = {},
 ): string[] {
-  const modelId = req.model_id?.trim() || DEFAULT_AGY_MODEL;
-  const effort = inferEffortFromModelId(modelId, req.reasoning_effort);
+  const modelId = req.model_id?.trim() || '';
+  const effort = req.reasoning_effort ?? (modelId ? inferEffortFromModelId(modelId) : undefined);
   const isReadOnlyReviewer = req.role === 'reviewer' || req.sandbox_mode === 'read-only';
   const mode = isReadOnlyReviewer
     ? 'plan'
@@ -40,13 +38,14 @@ export function buildAgyArgs(
     '--print',
     '--output-format',
     'stream-json',
-    '--model',
-    modelId,
-    '--effort',
-    effort,
-    '--mode',
-    mode,
   ];
+  if (modelId) {
+    args.push('--model', modelId);
+  }
+  if (effort) {
+    args.push('--effort', effort);
+  }
+  args.push('--mode', mode);
 
   if (needsSandbox) {
     args.push('--sandbox');

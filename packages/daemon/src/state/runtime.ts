@@ -224,7 +224,8 @@ export class DaemonRuntime {
     this.runwayStore = new SqliteRunwayStore({
       db: this.db,
       onMutate: () => {
-        this.appStateCache.invalidate();
+        this.appStateCache?.invalidate();
+        this.scheduleRunner?.wake();
       },
       onRunwayChanged: (ev) => {
         emitPush('event.runway.changed', { ...ev });
@@ -362,7 +363,12 @@ export class DaemonRuntime {
           // Keep the last inventory. An explicit pack sync can retry and report the carrier error.
         });
     }
-    await this.runwayRuntime.reconcile();
+    const hasPendingRunwayWork =
+      this.runwayStore.listRunningAttemptsWithContext().length > 0
+      || this.runwayStore.listOrphanedRunningStages().length > 0;
+    if (hasPendingRunwayWork) {
+      await this.runwayRuntime.reconcile();
+    }
     this.runwayRuntime.start();
     this.scheduleRunner.start();
   }

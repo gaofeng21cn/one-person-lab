@@ -97,6 +97,29 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
     const health = (await appClient.call('daemon.health', {})) as Record<string, unknown>;
     assert.equal(health.ok, true);
 
+    // Idle Runway keeps running health projection while holding zero background polling timers
+    assert.equal(srv.runtime.scheduleRunner.running, true);
+    assert.equal(srv.runtime.scheduleRunner.hasActiveTimer, false);
+    assert.equal(srv.runtime.runwayRuntime.leaseManager.hasActiveSweepTimer, false);
+
+    const idleWs = srv.runtime.workspaceService.initWorkspace({
+      root_path: sb.workspaceDir,
+      name: 'Idle Schedule Check',
+    });
+    await appClient.call('runway.schedule.create', {
+      schedule_id: 'sch-idle-check',
+      workspace_id: idleWs.workspace_id,
+      cron_expr: '* * * * *',
+      timezone: 'UTC',
+      next_run_at: '2099-01-01T00:00:00.000Z',
+    });
+    assert.equal(srv.runtime.scheduleRunner.hasActiveTimer, true);
+    await appClient.call('runway.schedule.toggle', {
+      schedule_id: 'sch-idle-check',
+      enabled: false,
+    });
+    assert.equal(srv.runtime.scheduleRunner.hasActiveTimer, false);
+
     // Doctor reports live SQLite PRAGMAs and repairs drifted 0644 -> 0600 permissions (Fix 2f)
     if (process.platform !== 'win32') {
       fs.chmodSync(sb.sockPath, 0o644);

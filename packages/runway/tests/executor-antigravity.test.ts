@@ -77,6 +77,24 @@ test('buildAgyArgs enforces --mode plan --sandbox for reviewer or read-only', ()
   assert.deepEqual(addDirs, ['/tmp/ws', '/tmp/vault']);
   assert.equal(addDirArgs[addDirArgs.indexOf('--mode') + 1], 'plan');
   assert.ok(addDirArgs.includes('--sandbox'));
+
+  // Omitting model_id and reasoning_effort delegates defaults to agy CLI runtime
+  const defaultArgs = buildAgyArgs({
+    attempt_id: 'att-default',
+    task_id: 't1',
+    stage_run_id: 'sr-4',
+    stage_id: 'plan',
+    role: 'producer',
+    workspace_root: '/tmp/ws',
+    sandbox_mode: 'workspace-write',
+    prompt: 'Use CLI defaults',
+    knowledge_snapshot_refs: [],
+    skill_dirs: [],
+    mcp_servers: [],
+  });
+  assert.equal(defaultArgs.includes('--model'), false);
+  assert.equal(defaultArgs.includes('--effort'), false);
+  assert.equal(defaultArgs[defaultArgs.indexOf('--mode') + 1], 'accept-edits');
 });
 
 test('AntigravityExecutorAdapter healthCheck, ephemeral --settings cleanup, stream-json, and spool reconcile()', async (t) => {
@@ -96,6 +114,8 @@ test('AntigravityExecutorAdapter healthCheck, ephemeral --settings cleanup, stre
       OPL_STUB_AGY_CONV_ID: 'ag-conv-neon-77',
     },
   });
+
+  assert.deepEqual(adapter.capabilities.models, []);
 
   const health = await adapter.healthCheck();
   assert.equal(health.available, true);

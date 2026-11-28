@@ -33,20 +33,13 @@ export class AntigravityExecutorAdapter implements ExecutorAdapter {
 
   readonly capabilities: ExecutorCapabilities = {
     executor_id: 'antigravity',
-    display_name: 'Antigravity CLI (Gemini 4 Neon & Multi-Model)',
+    display_name: 'Antigravity CLI',
     supports_streaming: true,
     supports_session_resume: true,
     supports_reconcile_after_restart: true,
     supports_mcp_tools: true,
     supports_sandbox_modes: ['read-only', 'workspace-write', 'danger-full-access'],
-    models: [
-      { id: 'gemini-4-neon-xhigh', label: 'Gemini 4 Neon (XHigh)', default: true },
-      { id: 'gemini-4-neon-high', label: 'Gemini 4 Neon (High)' },
-      { id: 'gemini-4-neon-medium', label: 'Gemini 4 Neon (Medium)' },
-      { id: 'gemini-4-neon-low', label: 'Gemini 4 Neon (Low)' },
-      { id: 'claude-opus-5-5-high', label: 'Claude Opus 5.5 (High)' },
-      { id: 'claude-sonnet-5-5-high', label: 'Claude Sonnet 5.5 (High)' },
-    ],
+    models: [],
   };
 
   constructor(options: AntigravityExecutorAdapterOptions = {}) {
@@ -104,10 +97,7 @@ export class AntigravityExecutorAdapter implements ExecutorAdapter {
     return {
       available: true,
       version: v.stdout.trim(),
-      models:
-        parsedModels.length > 0
-          ? parsedModels.map((item) => item.id)
-          : this.capabilities.models.map((item) => item.id),
+      models: parsedModels.map((item) => item.id),
     };
   }
 

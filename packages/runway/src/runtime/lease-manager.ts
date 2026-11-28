@@ -38,6 +38,8 @@ export class LeaseManager {
   readonly #now: () => Date;
   readonly #active = new Map<string, ActiveAttemptHandle>();
   #sweepTimer: NodeJS.Timeout | null = null;
+  #sweepArmed = false;
+  #onExpired: ((ctx: RunningAttemptContext) => Promise<void>) | null = null;
   #sweeping = false;
 
   constructor(options: LeaseManagerOptions) {
@@ -71,6 +73,10 @@ export class LeaseManager {
 
   listActiveAttemptIds(): string[] {
     return [...this.#active.keys()];
+  }
+
+  get hasActiveSweepTimer(): boolean {
+    return this.#sweepTimer !== null;
   }
 
   register(params: {
@@ -115,6 +121,7 @@ export class LeaseManager {
     handle.heartbeatTimer = timer;
 
     this.#active.set(params.attemptId, handle);
+    this.wakeExpirySweep();
     return handle;
   }
 
@@ -209,10 +216,26 @@ export class LeaseManager {
     return interrupted;
   }
 
-  startExpirySweep(
-    onExpired: (ctx: RunningAttemptContext) => Promise<void>,
-  ): void {
-    this.stopExpirySweep();
+  #clearSweepTimer(): void {
+    if (this.#sweepTimer) {
+      clearInterval(this.#sweepTimer);
+      this.#sweepTimer = null;
+    }
+  }
+
+  wakeExpirySweep(): void {
+    if (!this.#sweepArmed || !this.#onExpired || this.#sweepTimer) return;
+    let hasRunning = this.#active.size > 0;
+    if (!hasRunning) {
+      try {
+        hasRunning = this.#store.listRunningAttemptsWithContext().length > 0;
+      } catch {
+        return;
+      }
+    }
+    if (!hasRunning) return;
+
+    const onExpired = this.#onExpired;
     this.#sweepTimer = setInterval(() => {
       if (this.#sweeping) return;
       this.#sweeping = true;
@@ -225,17 +248,32 @@ export class LeaseManager {
           }
         } finally {
           this.#sweeping = false;
+          try {
+            if (this.#active.size === 0 && this.#store.listRunningAttemptsWithContext().length === 0) {
+              this.#clearSweepTimer();
+            }
+          } catch {
+            // DB may close during shutdown
+          }
         }
       })();
     }, this.#expirySweepIntervalMs);
     this.#sweepTimer.unref?.();
   }
 
+  startExpirySweep(
+    onExpired: (ctx: RunningAttemptContext) => Promise<void>,
+  ): void {
+    this.#clearSweepTimer();
+    this.#onExpired = onExpired;
+    this.#sweepArmed = true;
+    this.wakeExpirySweep();
+  }
+
   stopExpirySweep(): void {
-    if (this.#sweepTimer) {
-      clearInterval(this.#sweepTimer);
-      this.#sweepTimer = null;
-    }
+    this.#sweepArmed = false;
+    this.#onExpired = null;
+    this.#clearSweepTimer();
   }
 
   /**

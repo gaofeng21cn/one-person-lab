@@ -290,3 +290,33 @@ test('Regression (E2E-M4/M6 2e): cancel_other cancels all non-paused active task
   assert.equal(tick2[0]!.created_task_id, null);
   assert.equal(env.store.getTask(createdId).status, 'paused_by_human');
 });
+
+test('ScheduleRunner arms with zero active timers when idle and activates on demand when woken', () => {
+  const env = createRunwayTestEnv();
+  try {
+    const runner = new ScheduleRunner({ store: env.store, tickIntervalMs: 50 });
+    runner.start();
+    assert.equal(runner.running, true);
+    assert.equal(runner.getHealth().status, 'running');
+    assert.equal(runner.hasActiveTimer, false);
+
+    env.store.upsertSchedule({
+      schedule_id: 'sch-ondemand',
+      workspace_id: env.workspaceId,
+      cron_expr: '* * * * *',
+      timezone: 'UTC',
+      payload: { title: 'On Demand', goal_prompt: 'Wake timer' },
+      next_run_at: '2099-01-01T00:00:00.000Z',
+    });
+    runner.wake();
+    assert.equal(runner.hasActiveTimer, true);
+
+    env.store.toggleSchedule('sch-ondemand', false);
+    runner.wake();
+    assert.equal(runner.hasActiveTimer, false);
+    runner.stop();
+    assert.equal(runner.running, false);
+  } finally {
+    env.cleanup();
+  }
+});

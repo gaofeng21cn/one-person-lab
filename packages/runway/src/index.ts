@@ -135,7 +135,6 @@ export {
   type AgyBinarySource,
 } from './executors/antigravity/binary.ts';
 export {
-  DEFAULT_AGY_MODEL,
   buildAgyArgs,
   buildAgyEphemeralSettingsPayload,
   inferEffortFromModelId,
