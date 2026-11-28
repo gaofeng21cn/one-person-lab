@@ -141,7 +141,7 @@ App Cask 消费 App 的发布结果，两者独立推进。
 
 ### 跨产品与日常发布边界
 
-跨产品日常编排（`control-daily-releases.yml`）、纯只读全景看板（`observe-daily-releases.yml`）、macOS Sparkle 复用打包链（`reusable-macos-sparkle-release.yml`）及标准回执契约（`opl.release-receipt.v1`）均由横向发布平台 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 持有。`one-person-lab` 仅保留自身的 `product-release.json`、`publish-framework.yml`，以及因其绑定 `one-person-lab-packages/*` GHCR 命名空间所有权而保留的 `opl.package.v2` OCI Package 发布通道（`daily-package-channel.yml`、`daily-package-channel-publication.yml` 与 `publish-package.yml`）。
+跨产品日常编排（`control-daily-releases.yml`）、纯只读全景看板（`observe-daily-releases.yml`）、macOS Sparkle 复用打包链（`reusable-macos-sparkle-release.yml`）及标准回执契约（`opl.release-receipt.v1`）均由横向发布平台 [`gaofeng21cn/opl-release`](https://github.com/gaofeng21cn/opl-release) 持有。`one-person-lab` 仅保留自身的 `.opl-release.json`（`opl.release.v1`）、`publish-framework.yml`，以及因其绑定 `one-person-lab-packages/*` GHCR 命名空间所有权而保留的 `opl.package.v2` OCI Package 发布通道（`daily-package-channel.yml`、`daily-package-channel-publication.yml` 与 `publish-package.yml`）。
 
 每个产品仓库保留各自的版本、构建、签名、公证、干净设备验收与发布决定；`opl-release` 通过协议探针（OCI / GitHub Release / Sparkle Appcast）与标准 `opl.release-receipt.v1` 产物只读汇总全家族状态，不持有任何产品私有的发布特判逻辑。
 
@@ -173,7 +173,7 @@ annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库
 把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
-`product-release.json` 的 `package` lane 声明中央每日派发入口。Framework 核对 Package Release GitHub App 的数字身份、`opl-release` 主线定时任务的首次运行及历史派发，再进入现有完整扫描。中央派发验收后，将 Framework 仓库变量 `OPL_RELEASE_CENTRAL_DAILY` 设为 `true`，即可跳过本地定时运行。按包指定的手动恢复沿用同一工作流。
+`.opl-release.json` 的 `package` lane 声明中央每日派发入口。接收端通过 `gaofeng21cn/opl-release/.github/actions/verify-dispatch@v1` 核对 Package Release GitHub App 的数字身份、`opl-release` 主线定时任务的首次运行及历史派发，再进入现有完整扫描，并在结束时上传 `opl.release-receipt.v1` 标准回执。中央派发验收后，将 Framework 仓库变量 `OPL_RELEASE_CENTRAL_DAILY` 设为 `true`，即可跳过本地定时运行。按包指定的手动恢复沿用同一工作流。
 
 `publication_channel_admission=retired` 停止该 Package 的新发布、默认注册和安装来源，
 同时保留已有安装的身份、私有访问策略及原生 carrier 管理。退休元数据不形成新的

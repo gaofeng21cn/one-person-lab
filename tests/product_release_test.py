@@ -14,7 +14,6 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from package_release.owner import _ordered_content_digest, merge_release_changes, prepare_owner, wait_for_checks
 from package_release.common import ReleaseError
-from package_release import daily_control
 spec = importlib.util.spec_from_file_location('package_daily_release', ROOT / 'scripts/package-daily-release.py')
 package = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package)
@@ -51,81 +50,19 @@ class PackagePublisherCheckoutTests(unittest.TestCase):
 
 
 class PackageDailyControlTests(unittest.TestCase):
-    def setUp(self):
-        directory = tempfile.TemporaryDirectory()
-        self.addCleanup(directory.cleanup)
-        self.payload = Path(directory.name) / 'event.json'
-        self.payload.write_text(json.dumps({'sender': {'id': 356454848}}))
-        self.env = {
-            'OPL_RELEASE_CONTROL_RUN_ID': '21',
-            'GITHUB_EVENT_NAME': 'workflow_dispatch',
-            'GITHUB_REPOSITORY': 'gaofeng21cn/one-person-lab',
-            'GITHUB_REF': 'refs/heads/main',
-            'GITHUB_RUN_ATTEMPT': '1',
-            'GITHUB_ACTOR_ID': '356454848',
-            'GITHUB_EVENT_PATH': str(self.payload),
-            'GITHUB_RUN_NUMBER': '8',
-        }
-        self.source = {
-            'id': 21,
-            'repository': {'full_name': 'gaofeng21cn/opl-release'},
-            'head_repository': {'full_name': 'gaofeng21cn/opl-release'},
-            'path': '.github/workflows/control-daily-releases.yml',
-            'head_branch': 'main',
-            'event': 'schedule',
-            'run_attempt': 1,
-            'created_at': '2026-11-27T18:43:00Z',
-            'status': 'in_progress',
-            'conclusion': None,
-        }
-        self.receiver = {
-            'run_number': 8,
-            'display_title': 'Daily OPL Package Channel [opl-release:21]',
-            'actor': {'id': 356454848},
-        }
-
-    def github_responses(self, *runs):
-        pages = [{'workflow_runs': [entry]} for entry in runs]
-        return [subprocess.CompletedProcess([], 0, json.dumps(value)) for value in (self.source, pages)]
-
-    def test_admits_exact_schedule_and_ignores_unrelated_markers(self):
-        manual = dict(self.receiver, run_number=5, actor={'id': 5626387})
-        other_control = dict(self.receiver, run_number=6, display_title='Daily OPL Package Channel [opl-release:210]')
-        queued_duplicate = dict(self.receiver, run_number=9)
-        with patch.object(daily_control, 'run', side_effect=self.github_responses(
-                manual, other_control, self.receiver, queued_duplicate)) as api:
-            daily_control.verify_dispatch(self.env)
-        self.assertTrue(api.call_args_list[0].args[0][-1].endswith('/opl-release/actions/runs/21'))
-        self.assertIn('--paginate', api.call_args_list[1].args[0])
-
-    def test_rejects_prior_dispatch_from_same_release_bot(self):
-        prior = dict(self.receiver, run_number=7)
-        with patch.object(daily_control, 'run', side_effect=self.github_responses(self.receiver, prior)):
-            with self.assertRaisesRegex(ReleaseError, 'already dispatched'):
-                daily_control.verify_dispatch(self.env)
-
-    def test_rejects_untrusted_delivery_context_before_api_calls(self):
-        self.payload.write_text(json.dumps({'sender': {'id': 173561466}}))
-        with patch.object(daily_control, 'run') as api:
-            with self.assertRaisesRegex(ReleaseError, 'GitHub App'):
-                daily_control.verify_dispatch(self.env)
-            self.payload.write_text(json.dumps({'sender': {'id': 356454848}}))
-            for key, value in {'GITHUB_ACTOR_ID': '173561466', 'GITHUB_RUN_ATTEMPT': '2',
-                               'GITHUB_REF': 'refs/heads/topic', 'SELECTED_PACKAGE': 'example'}.items():
-                with self.subTest(key=key), self.assertRaises(ReleaseError):
-                    daily_control.verify_dispatch(dict(self.env, **{key: value}))
-            api.assert_not_called()
-
-    def test_rejects_untrusted_controller_execution(self):
-        source = self.source
-        for key, value in {'id': 20, 'event': 'workflow_dispatch', 'head_branch': 'topic',
-                           'run_attempt': 2, 'path': '.github/workflows/other.yml',
-                           'head_repository': {'full_name': 'example/opl-release'}}.items():
-            self.source = dict(source, **{key: value})
-            with self.subTest(key=key), patch.object(daily_control, 'run', side_effect=self.github_responses()) as api:
-                with self.assertRaisesRegex(ReleaseError, 'first attempt'):
-                    daily_control.verify_dispatch(self.env)
-                self.assertEqual(api.call_count, 1)
+    def test_daily_workflow_uses_shared_verify_dispatch_client_id_and_receipt(self):
+        daily_yml = (ROOT / '.github/workflows/daily-package-channel.yml').read_text()
+        self.assertIn('gaofeng21cn/opl-release/.github/actions/verify-dispatch@v1', daily_yml)
+        self.assertIn('opl-release-receipt-opl-framework-package-${{ github.run_id }}', daily_yml)
+        self.assertFalse((ROOT / 'scripts/package_release/daily_control.py').exists())
+        for rel in (
+            '.github/workflows/daily-package-channel.yml',
+            '.github/workflows/daily-package-channel-publication.yml',
+            '.github/workflows/link-source-access.yml',
+        ):
+            text = (ROOT / rel).read_text()
+            self.assertNotIn('app-id:', text, f'Deprecated app-id remains in {rel}')
+            self.assertIn('client-id:', text, f'Expected client-id in {rel}')
 
 
 class ProductReleaseTests(unittest.TestCase):
@@ -444,8 +381,10 @@ class ProductReleaseTests(unittest.TestCase):
                 _ordered_content_digest(['a/b.txt', './a/b.txt'], lambda _: b'x')
 
     def test_framework_release_paths_exclude_cross_repo_orchestration_and_dead_v1(self):
-        config = json.loads((ROOT / 'product-release.json').read_text())
-        release_paths = config['release_paths']
+        self.assertFalse((ROOT / 'product-release.json').exists())
+        config = json.loads((ROOT / '.opl-release.json').read_text())
+        self.assertEqual(config['schema_version'], 'opl.release.v1')
+        release_paths = config['delivery_paths']
         for disallowed in ('src', 'python', 'scripts', 'contracts'):
             self.assertNotIn(disallowed, release_paths)
         for retired in (
@@ -455,6 +394,7 @@ class ProductReleaseTests(unittest.TestCase):
             'scripts/package-carrier-source-paths.mjs',
             'scripts/product-daily-release.py',
             'scripts/package_release/product_status.py',
+            'scripts/package_release/daily_control.py',
         ):
             self.assertFalse((ROOT / retired).exists(), f'Retired cross-repo release file still present: {retired}')
         for rel in release_paths:
@@ -466,7 +406,7 @@ class ProductReleaseTests(unittest.TestCase):
                 entry_root == rel or entry_root.startswith(rel.rstrip('/') + '/')
                 for rel in release_paths
             )
-            self.assertTrue(covered, f'Shipped Framework file pattern not covered by release_paths: {entry}')
+            self.assertTrue(covered, f'Shipped Framework file pattern not covered by delivery_paths: {entry}')
 
         with tempfile.TemporaryDirectory() as repo_tmp:
             repo = Path(repo_tmp)
