@@ -16,14 +16,17 @@ OPL 软件源是用户认识“我们维护的软件”的统一入口。公开�
 
 | source ID | 类型 | 默认可见性 | 用途 |
 | --- | --- | --- | --- |
-| `public-registry:opl` | [OPL 官方目录](https://github.com/gaofeng21cn/opl-catalog) | `public` | 智能体、应用、扩展、通道和依赖。支持 `source_refresh` 刷新目录索引 |
-| `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 获授权用户的私有 Package，例如 OCC |
+| `public-registry:opl` | [OPL 官方目录](https://github.com/gaofeng21cn/opl-catalog) | `public` | 智能体、应用、扩展、通道和依赖（零登录匿名浏览与安装）。支持 `source_refresh` 刷新目录索引 |
+| `opl-cloud:default` | OPL Cloud / OPL Gateway 账号授权 | `authorized_only` | 普通用户通过已登录的 OPL Gateway 账号直接按包粒度获取受限 Package（如 OCC）授权与下载，无需配置 GitHub 账户；支持 `source_check` 刷新云端授权状态 |
+| `github-packages:gaofeng21cn` | GitHub Packages/GHCR | `authorized_only` | 开发者兜底方式：手动连接 GitHub 凭据访问受限 Package |
 
 Framework 通过 owner projection、native carrier 和当前身份的软件源状态生成统一目录。Agent Package 使用 `opl pack list --json` 及 `app_state.agent_packages.directory.entries`；OCI/GHCR 仍由各自 owner 维护，App 不另建版本注册表。GitHub 保存开发源码与发布来源，开发 checkout 只通过显式开发覆盖接入，不作为普通安装或更新渠道。Homebrew Tap 原生软件管理与多安装实例切换已退役，不再属于 v2 软件源产品面。
 
 ## 配置私有软件源与公开目录刷新
 
-首次使用私有 Package 时，在软件中心的软件源设置选择 GitHub 命名空间，连接已登录的 GitHub CLI 账户，或在高级设置中选择 Docker 登录或受控环境凭据。也可以使用下列 `opl sources` 命令配置和断开来源。v2 在 CLI、Studio 和 Flow 发布工具之间共用此处的凭据引用。
+普通用户访问受限 Package（如 OCC）时，只需在设置中登录 **OPL Gateway** 账号即可自动接入 `opl-cloud:default` 授权软件源；可通过 `opl sources check --source-id opl-cloud:default --json` 或软件中心界面主动刷新云端授权缓存，无需配置 GitHub CLI、Docker 或手写源地址。公开目录中的开源软件始终保持零登录匿名安装与更新。
+
+开发者如需直接从私有 GHCR 拉取构建产物，仍可在“开发者来源（GitHub Packages）”折叠设置中连接已登录的 GitHub CLI 账户、Docker 登录或受控环境凭据，或使用下列 `opl sources` 命令作为兜底：
 
 `configure` 启用来源后立即检查 GitHub 账户。此后可用 `check` 再次检查。账户通过验证后，具体 Package 的下载和发布还需要对应的仓库和 GHCR 权限。仅列出软件源时不会联系 GitHub。
 
@@ -69,7 +72,7 @@ opl sources disconnect --source-id github-packages:gaofeng21cn --json
 
 安装、更新和需要远端读取的修复在执行前重新检查来源授权。私有制品安装时锁定不可变 digest，`latest-stable` 只用于发现候选版本。公开源匿名回读与私有源授权回读分别验收。私有签名密钥、受保护发布流与 OCI namespace 归属校验机制由 [Artifact 与 Package Delivery 边界](../delivery/artifact-package-lifecycle-boundary.md) 持有；界面及状态展示规范由 [Package Directory 与统一安装管理](./package-directory.md#名称说明与状态展示) 持有。
 
-Obsidian 等个人知识源在“共享资源 → 知识与记忆”管理，账号及模型连接在“共享资源 → 连接与凭证”管理；具体接口与展示细节归各自主题 owner。
+Obsidian 等个人知识源与外部账号、连接授权均在“设置 → 资料与连接”管理，模型账号在“设置 → 账户与模型”管理；具体接口与展示细节归各自主题 owner。
 
 ## 当前验收边界
 

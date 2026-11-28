@@ -64,7 +64,7 @@ human gate 必须有明确 owner、reason、所需输入和恢复动作。没有
 
 ## Composition boundary
 
-Cordis Host 提供进程内 service graph。StageRun 发起后冻结必要的 composition identity；durable history 仍在 provider，Package installed truth 仍在 native carrier。
+Framework 由本机单写入者守护进程 `opld` 提供统一运行与账本服务，Studio 由 DSH/Cordis Application Host 提供进程内工作台组件编排。StageRun 发起后冻结必要的 composition identity；durable history 留在 Runway/SQLite（`opl.db`），Package installed truth 留在 native carrier。
 
 ## Failure and recovery
 

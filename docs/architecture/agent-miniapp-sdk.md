@@ -39,12 +39,12 @@ Agent 负责发现、调用和编排；人在需要选择、授权、确认、�
 
 开发 checkout 是开发者覆盖，不能作为用户安装、更新或修复来源。软件中心的 OPL Package 必须有正式 OCI artifact；原生 App/CLI 必须有对应正式 carrier。缺少正式制品的项目可以出现在开发者诊断中，但不能出现在“可安装”列表。
 
-## 共享资源
+## 共享资料与连接
 
-用户在“共享资源”中管理两类基座资源：
+用户在 App 的“设置 → 资料与连接”中管理两类基座资源：
 
 - **知识与记忆**：Obsidian vault、Markdown 工作区、Profile/Workspace 绑定、接受 revision、范围和写回状态；正文留在原资料库。
-- **连接与凭证**：GitHub、邮箱、模型、云端、设备等连接的 provider、授权 scope、revision、freshness 和可用性；秘密留在系统钥匙串或 provider。
+- **连接与凭证**：GitHub、邮箱、云端、设备等连接的 provider、授权 scope、revision、freshness 和可用性；秘密留在系统钥匙串或 provider（模型账号归“设置 → 账户与模型”）。
 
 软件源授权回到同一个连接 owner。软件中心不再出现第二套登录框，Agent 与 UI 使用相同的 connection handle 和 fresh check。
 

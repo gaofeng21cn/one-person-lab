@@ -72,11 +72,11 @@ OPL 归属优先来自中央 owner projection；已经安装且拥有真实 OPL 
 
 ## 软件源应包括什么
 
-软件源是“提供哪些可安装版本及如何验证和获取”的入口。统一管理接入可验证的公开和授权私有 Package 来源，以及各产品声明支持的本机原生应用、CLI 和本地服务来源；OPL 维护的软件与获准的生态/第三方软件遵循同一准入原则。它们按稳定软件 identity 合并，保留各自来源、可安装版本、授权和安装选项。Homebrew tap 是原生来源之一，不复制整个 Homebrew 或任意 GitHub 仓库列表到 OPL 软件目录。
+软件源是“提供哪些可安装版本及如何验证和获取”的入口。统一管理接入可验证的公开目录（`opl-catalog`）和授权私有 Package 来源（GHCR OCI）；OPL 维护的软件与获准的生态/第三方扩展按各自所属管理器与稳定身份接入，保留各自来源、可安装版本、授权和安装选项。原生客户端与独立命令行工具仍通过 Homebrew tap 分发，但不再将 Homebrew Tap 作为软件中心的包目录或同步源。
 
-OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件目录的获取渠道。其他来源的软件按原管理器独立呈现；独立 Skills 由其原生 Skill 管理入口负责，不把插件列表当作所有 Skills 的清单。只有明确的内嵌或依赖合同才进入运行组件。用户连接的 Obsidian 资料库、邮箱、GitHub 账号和模型账号属于共享资源或连接，通过原有 Connect、知识和账号 owner 管理。
+OPL 的公开 registry 与授权私有 OCI 源是同一个 OPL Package 目录的获取渠道。其他来源的扩展按原管理器独立呈现；独立 Skills 由其原生 Skill 管理入口负责，不把插件列表当作所有 Skills 的清单。只有明确的内嵌或依赖合同才进入运行组件。用户连接的 Obsidian 资料库、邮箱、GitHub 账号和模型账号分别归口于“设置 → 资料与连接”或“设置 → 账户与模型”，通过原有 Connect、知识和账号 owner 管理。
 
-软件源接入独立 OPL 目录、受授权的 GitHub Packages 和 Homebrew tap。其他本机应用载体按同一合同接入自身 adapter；独立远端部署不进入此本机安装目录；软件属于某种产品类型不等于其所有载体都已接通。固定源码只保留为开发者覆盖 provider，不是软件中心来源。
+软件源接入独立 OPL 目录与受授权的 GitHub Packages（OCI）。其他本机应用载体按同一合同接入自身 adapter；独立远端部署不进入此本机安装目录；软件属于某种产品类型不等于其所有载体都已接通。固定源码只保留为开发者覆盖 provider，不是软件中心来源。
 
 开发 checkout 可作为某个软件显式选择的开发来源覆盖，不因存在于工作区而自动成为分发源。它必须绑定明确版本和回读合同，但永远不成为普通安装、更新或修复动作的来源。软件源连接成功、来源有版本、本机已安装和当前运行采用该版本必须分别检查。
 
@@ -85,7 +85,7 @@ OPL 的公开 registry、授权私有源和 Homebrew tap 是同一个 OPL 软件
 | 维护对象 | 物理入口 | 责任 |
 | --- | --- | --- |
 | 官方目录 | [`gaofeng21cn/opl-catalog`](https://github.com/gaofeng21cn/opl-catalog) | 维护按产品分类的 Package 目录条目与可刷新索引。Framework 提供软件源协议并合并本机 carrier 回读 |
-| 公开 Homebrew tap | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Formula/Cask、宿主和原生依赖的安装更新 |
+| 桌面端与独立 CLI 分发 | [`gaofeng21cn/homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)；`brew tap gaofeng21cn/one-person-lab` | Standard macOS App Cask 与独立 Formula 分发（独立于软件中心 v2 目录） |
 | 公开 Package 制品 | descriptor 的 `publication_ref`；第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-packages/` | 版本、内容摘要和匿名读取回读 |
 | 私有 Package 制品 | 发行制品使用 descriptor 的 `publication_ref`，第一方 OCI namespace 为 `ghcr.io/gaofeng21cn/one-person-lab-private-packages/` | OCI 包级权限、签名和授权回读；不提供源码安装路径 |
 | 当前用户的目录与状态 | `opl pack list --json` 与 `app_state.agent_packages.directory.entries` | 合并当前获准来源与本机 carrier 的安装回读 |
@@ -173,17 +173,17 @@ Codex carrier 的实例动作复用已有 Package 生命周期：先核对已装
 
 主列表固定呈现软件名称与短说明、产品类型、已装版本、可用版本、状态和主操作。稳定 ID 可作为名称下的次级文本；同一产品不因多个来源或多个安装实例重复出现。用户可以按已安装、未安装、可更新和产品类型筛选，计数始终与当前管理范围一致。开发接入计入已安装，并以安装方式标签区分，不另设互斥的软件数量。
 
-详情承载来源、安装器、安装位置、多个安装实例、开发模式、依赖和技术合同。源码提交、GitHub Release、制品摘要等是版本证据，放在相应来源或安装详情中，不作为主列表的并列分类。开发接入是安装方式标签；成熟度只展示 owner 的明确声明。
+详情承载来源、安装器、安装位置、开发覆盖（若启用）、依赖和技术合同。源码提交、GitHub Release、制品摘要等是版本证据，放在相应来源或安装详情中，不作为主列表的并列分类。开发接入是安装方式标签；成熟度只展示 owner 的明确声明。
 
 主状态收敛为“未安装、已安装、可更新、需处理、待检查”。已安装不等于已确认最新；更新必须来自 owner 的明确 currentness。未知安装状态显示待检查，未选择安装的可选软件显示未安装而不是故障。权限、调用就绪和领域资格在详情保留各自事实及处理入口，不为简化主状态而丢失证据。
 
 ## 版本与更新
 
-目录主列使用“已装版本”和“可用版本”。已装版本来自选定安装实例；可用版本来自当前所选软件源的精确安装目标。多个实例没有唯一选择时，主列提示查看多个安装，详情逐个列出，不拼接多个版本号或擅自选择最高版本。发布者必须为多个可获取目标声明默认选择；已安装来源优先绑定当前更新轨道。主列展示一个精确版本，不以“多个渠道”代替版本。暂缺来源目标用“—”，详情区分尚未发布、访问失败和外部平台负责更新。
+目录主列使用“已装版本”和“可用版本”。已装版本来自当前载体实际安装读回；可用版本来自当前所选软件源的精确安装目标（暂缺来源目标用“—”，详情区分尚未发布、访问失败和外部平台负责更新）。发布者为可获取目标声明默认选择；主列展示精确版本，不以“多个渠道”代替版本。
 
 `installed_version` 与 `selected_version`/`stable_version` 不一致不自动代表可更新。只有 owner 的 `package_currentness.status=update_available` 才显示更新动作；`available_actions.update` 仅表示执行能力。来源落后于本机版本时保留两份事实，不能提示降级；来源未检查或不可访问时保持待检查。正式 OCI 或原生 carrier 才能提供可用版本，源码 main 的版本号不能代替可获取的安装目标。
 
-OPL App 的“应用管理”是一级能力，与主对话并列，统一呈现“软件目录、更新、共享资源、软件源”。默认展示 OPL 软件，其他来源和运行组件另行查看；产品类型只是筛选。动作仍按 owner action 执行并在完成后 fresh readback。Settings 中保留的细节页是诊断和深链入口，不能另建一套目录或版本注册中心。
+OPL App 的“软件中心”（`/apps`）是一级能力，与主对话并列，日常呈现“软件、更新、安装记录”等分区并按管理入口配置软件源；默认展示 OPL 软件，其他来源和运行组件按视角切换，产品类型只是筛选。资料库与连接授权已统一收口至“设置 → 资料与连接”。动作仍按 owner action 执行并在完成后 fresh readback；Settings 中保留的兼容性路由只作深链入口，不能另建第二套目录或版本注册中心。
 
 公开/私有与访问状态独立于安装状态显示。UI 区分“公开”“私有·已授权”“需要登录”“无读取权限”“授权过期”“访问已撤销”和“尚未检查”，仅使用 owner 提供的明确状态。未选择安装的可选软件归入“未安装”，不计入“需处理”；已安装软件的依赖或访问故障才进入处理入口。更新页只统计当前用户可读取的新版本，不能用无权访问的远端版本制造更新提示。
 
