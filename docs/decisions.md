@@ -52,7 +52,15 @@ OPL Link companion server 只由 Studio 的 `opl-host-core` 托管。Framework �
 
 ## 退役的产品面
 
-Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback 和旧工作流 `provider_*` 控制不属于 v2 产品面。
+Framework 保留只读 `opl_base` 当前版本投影和公共 Catalog 的 `source_refresh`。Homebrew Tap 原生软件管理、多安装切换 UI、通用 Action Rollback、旧工作流 `provider_*` 控制、`opld` 内置 `ChannelProviderHost`（`packages/connect/src/channels/*` 与 `connect.channels.*`，通道能力统一归 Studio DSH 插件宿主）以及 0 实现的 `opl_software_installation.v1` 协议均不属于 v2 保留产品面；`dependency-release-sources.json` 中的 `temporal-cli` 暂作 Wave 2A 跨仓清理 `one-person-lab-app` Full 流水线前的只读兼容条目，将在 Wave 2A 联动拆除并写入 `v2:guard` 红线。
+
+`app_state.transport_bindings` 在 `AppStateCache` 中仅保留 `opl_app_transport_bindings_projection.v1` 只读空投影以兼容既有桥接合同；通道实际绑定事实由 Studio 侧宿主插件维护。
+
+## 家族架构收敛原则（Wave 2–3）
+
+- **Catalog 纯净 v2 化**：`opl-catalog` 面向 `opl_software_catalog_index.v2` 收敛，剥离失效 v1 逐文件清单与 `allowlists/`，每日同步合并为单批 PR。
+- **公共能力真实成包**：`@opl/mcp-app-shared` 与 `sdks/python-client` 直接承接通用协议信封、`dsh-theme.css` 与只读状态探针，不再由各 Agent/MiniApp 仓拷贝 `_opl_*helpers`、手写 `app_contribution` 或自研 `materialize_package` 校验脚本。
+- **低频重型子系统按需化**：`Runway` 等低频重型模块参考 `extensions/foundry` 的 `cli_extensions` 范式，不在核心适配器中硬编码静态模型表。
 
 ## 长任务由 Runway 持久化
 

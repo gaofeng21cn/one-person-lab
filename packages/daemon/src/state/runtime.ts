@@ -16,16 +16,9 @@ import {
   type StatePaths,
 } from '@opl/core';
 import {
-  ChannelError,
-  ChannelProviderHost,
-  SqliteChannelPackageDiscovery,
-  SqliteChannelThreadBindingStore,
   createConnectService,
   ensureConnectSchema,
   resolveCapabilityTitle,
-  type ChannelTurnRef,
-  type ChannelTurnTerminalEvent,
-  type ChannelTurnTerminalObserver,
   type ConnectService,
   type ConnectionProvider,
   type ConsumerBindTokenAuthority,
@@ -115,8 +108,6 @@ export class DaemonRuntime {
   readonly ledgerStore: LedgerStore;
   readonly packService: PackService;
   readonly connectService: ConnectService;
-  readonly channelBindingStore: SqliteChannelThreadBindingStore;
-  readonly channelHost: ChannelProviderHost;
   readonly workspaceService: WorkspaceService;
   readonly runwayStore: SqliteRunwayStore;
   readonly executorRegistry: ExecutorRegistry;
@@ -127,9 +118,6 @@ export class DaemonRuntime {
   readonly #daemonSessionId = newId('opld_sess');
   readonly #onEvent?: (method: string, params: Record<string, unknown>) => void;
   readonly #registeredProviderTypes = new Set<string>();
-  readonly #activeChannelTurns = new Map<string, ChannelTurnRef>();
-  readonly #channelTurnObservers = new Map<string, Set<ChannelTurnTerminalObserver>>();
-  readonly #channelTurnCompleted = new Map<string, ChannelTurnTerminalEvent>();
   readonly #backgroundStagePromises = new Set<Promise<void>>();
   readonly #activeTaskLoops = new Map<string, Promise<void>>();
   readonly #pendingTaskLoops = new Set<string>();
@@ -209,201 +197,6 @@ export class DaemonRuntime {
       verifyRuntimeDigest: (snap) => this.packService.verifyRuntimeDigest(snap),
     });
 
-    this.channelBindingStore = new SqliteChannelThreadBindingStore(this.db);
-
-    this.channelHost = new ChannelProviderHost({
-      discovery: new SqliteChannelPackageDiscovery(this.db),
-      callback: {
-        startThread: async (identity) => this.channelBindingStore.startThread(identity),
-        resumeThread: async (ref) => {
-          this.channelBindingStore.resumeThread(ref);
-        },
-        startTurn: async (input) => {
-          if (this.#closed) {
-            throw new ChannelError('CHANNEL_PROVIDER_UNAVAILABLE', 'Daemon runtime is shutting down.');
-          }
-          const binding = this.channelBindingStore.getBindingByThread(input);
-          if (!binding) {
-            throw new ChannelError(
-              'CHANNEL_IDENTITY_MISMATCH',
-              `Channel thread binding not found: ${input.canonical_thread_host}:${input.canonical_thread_id}`,
-            );
-          }
-
-          let workspace;
-          if (binding.workspace_id) {
-            try {
-              workspace = this.workspaceService.getWorkspace(binding.workspace_id);
-            } catch (error) {
-              throw new ChannelError(
-                'CHANNEL_PROVIDER_UNAVAILABLE',
-                `Bound workspace '${binding.workspace_id}' is unavailable for channel turn.`,
-                { cause: error },
-              );
-            }
-          } else {
-            const workspaces = this.workspaceService.listWorkspaces();
-            if (workspaces.length === 0) {
-              throw new ChannelError(
-                'CHANNEL_PROVIDER_UNAVAILABLE',
-                'No workspace is bound or available to execute channel turn.',
-              );
-            }
-            workspace = workspaces[workspaces.length - 1]!;
-          }
-
-          const candidateExecutors = [
-            'codex',
-            'antigravity',
-            ...this.executorRegistry.list().map((a) => a.capabilities.executor_id),
-          ];
-          const seenExecutors = new Set<string>();
-          let selectedExecutorId: string | null = null;
-          for (const execId of candidateExecutors) {
-            if (seenExecutors.has(execId)) continue;
-            seenExecutors.add(execId);
-            const adapter = this.executorRegistry.getOptional(execId);
-            if (!adapter) continue;
-            try {
-              const health = await adapter.healthCheck();
-              if (health.available) {
-                selectedExecutorId = execId;
-                break;
-              }
-            } catch {
-              // treat failing health check as unavailable
-            }
-          }
-          if (!selectedExecutorId) {
-            throw new ChannelError(
-              'CHANNEL_PROVIDER_UNAVAILABLE',
-              'No healthy executor is available to execute channel turn.',
-            );
-          }
-
-          const bundle = this.runwayRuntime.createTask({
-            workspace_id: workspace.workspace_id,
-            agent_id: null,
-            title: `Channel turn (${binding.provider_id}:${binding.channel_session_id})`,
-            goal_prompt: input.text,
-            stages: [{ stage_id: 'channel_turn', executor_id: selectedExecutorId }],
-          });
-          const stageRunId = bundle.stage_runs[0]!.stage_run_id;
-          this.channelBindingStore.recordTurnDispatch({
-            binding_id: binding.binding_id,
-            workspace_id: workspace.workspace_id,
-            last_task_id: bundle.task_id,
-          });
-
-          const turnRef: ChannelTurnRef = {
-            canonical_thread_host: input.canonical_thread_host,
-            canonical_thread_id: input.canonical_thread_id,
-            canonical_turn_id: newId('turn'),
-          };
-          this.#activeChannelTurns.set(turnRef.canonical_turn_id, turnRef);
-
-          const turnPromise = this.runwayRuntime
-            .executeStage(stageRunId, { prompt_override: input.text })
-            .then((res): ChannelTurnTerminalEvent => {
-              if (res.outcome.status === 'succeeded') {
-                return {
-                  ...turnRef,
-                  status: 'completed',
-                  response_text:
-                    res.outcome.summary_text?.trim()
-                    || `Completed stage '${res.stage_run.stage_id}' (task=${res.task.task_id}, attempt=${res.attempt_id}).`,
-                };
-              }
-              if (
-                res.outcome.status === 'cancelled'
-                || res.stage_run.status === 'cancelled'
-                || res.task.status === 'cancelled'
-              ) {
-                return { ...turnRef, status: 'cancelled' };
-              }
-              return {
-                ...turnRef,
-                status: 'failed',
-                error: {
-                  code:
-                    res.outcome.error?.code
-                    ?? (res.outcome.status === 'human_gate' ? 'HUMAN_GATE_REQUIRED' : 'EXECUTOR_FAILED'),
-                  message:
-                    res.outcome.error?.message
-                    ?? res.outcome.human_gate?.question
-                    ?? `Channel turn ended with status '${res.outcome.status}'.`,
-                },
-              };
-            })
-            .catch((err): ChannelTurnTerminalEvent => ({
-              ...turnRef,
-              status: 'failed',
-              error: {
-                code:
-                  err instanceof Error && 'code' in err && typeof (err as { code?: unknown }).code === 'string'
-                    ? String((err as { code: unknown }).code)
-                    : 'CHANNEL_TURN_FAILED',
-                message: err instanceof Error ? err.message : String(err),
-              },
-            }))
-            .then((terminalEvent) => {
-              this.#completeChannelTurn(turnRef.canonical_turn_id, terminalEvent);
-            })
-            .finally(() => {
-              this.#backgroundStagePromises.delete(turnPromise);
-            });
-          this.#backgroundStagePromises.add(turnPromise);
-          return turnRef;
-        },
-        subscribeTurn: (input, observer) => {
-          const ref =
-            this.#activeChannelTurns.get(input.canonical_turn_id)
-            ?? this.#channelTurnCompleted.get(input.canonical_turn_id);
-          if (
-            !ref
-            || ref.canonical_thread_host !== input.canonical_thread_host
-            || ref.canonical_thread_id !== input.canonical_thread_id
-          ) {
-            throw new ChannelError(
-              'CHANNEL_IDENTITY_MISMATCH',
-              `Channel turn '${input.canonical_turn_id}' is unknown or thread-mismatched.`,
-            );
-          }
-
-          const observersMap = this.#channelTurnObservers;
-          let set = observersMap.get(input.canonical_turn_id);
-          if (!set) {
-            set = new Set();
-            observersMap.set(input.canonical_turn_id, set);
-          }
-          set.add(observer);
-          const alreadyDone = this.#channelTurnCompleted.get(input.canonical_turn_id);
-          if (alreadyDone) {
-            setImmediate(() => {
-              if (set?.has(observer)) {
-                set.delete(observer);
-                if (set.size === 0 && observersMap.get(input.canonical_turn_id) === set) {
-                  observersMap.delete(input.canonical_turn_id);
-                }
-                void Promise.resolve()
-                  .then(() => observer.onTerminal(alreadyDone))
-                  .catch(() => {});
-              }
-            });
-          }
-          return {
-            dispose() {
-              set?.delete(observer);
-              if (set && set.size === 0 && observersMap.get(input.canonical_turn_id) === set) {
-                observersMap.delete(input.canonical_turn_id);
-              }
-            },
-          };
-        },
-        readTransportBindings: async () => this.channelBindingStore.listBindings(),
-      },
-    });
-
     const emitLedgerEntries = (entries: readonly unknown[]) => {
       for (const entry of entries) {
         const rec = entry as Record<string, unknown>;
@@ -481,7 +274,6 @@ export class DaemonRuntime {
       packService: this.packService,
       connectService: this.connectService,
       workspaceService: this.workspaceService,
-      channelHost: this.channelHost,
       scheduleRunner: this.scheduleRunner,
       version: this.version,
       onCatalogChanged: () => emitPush('event.pack.catalog.changed', {}),
@@ -503,19 +295,6 @@ export class DaemonRuntime {
     this.connectService.eventBus.on('event.connect.changed', (ev) => {
       this.appStateCache.invalidate();
       emitPush('event.connect.changed', { ...ev });
-    });
-
-    this.channelHost.eventBus.on('channel.provider.status_changed', (ev) => {
-      this.appStateCache.invalidate();
-      emitPush('event.connect.changed', { topic: 'channel.provider.status_changed', ...ev });
-    });
-    this.channelHost.eventBus.on('channel.transport.bound', (ev) => {
-      this.appStateCache.invalidate();
-      emitPush('event.connect.changed', { topic: 'channel.transport.bound', ...ev });
-    });
-    this.channelHost.eventBus.on('channel.transport.error', (ev) => {
-      this.appStateCache.invalidate();
-      emitPush('event.connect.changed', { topic: 'channel.transport.error', ...ev });
     });
 
     codexStartupReady();
@@ -586,8 +365,6 @@ export class DaemonRuntime {
     await this.runwayRuntime.reconcile();
     this.runwayRuntime.start();
     this.scheduleRunner.start();
-    await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
-    await this.channelHost.refreshTransportBindings().catch(() => {});
   }
 
   waitForInitialPackageDiscovery(): Promise<void> {
@@ -726,17 +503,6 @@ export class DaemonRuntime {
     return this.#launchingTaskStages.get(taskId)?.stageRunId ?? null;
   }
 
-  getChannelTurnObserverCount(turnId?: string): number {
-    if (turnId !== undefined) {
-      return this.#channelTurnObservers.get(turnId)?.size ?? 0;
-    }
-    let total = 0;
-    for (const set of this.#channelTurnObservers.values()) {
-      total += set.size;
-    }
-    return total;
-  }
-
   async runStageExecutionTracked<T>(
     taskId: string,
     stageRunId: string,
@@ -786,27 +552,6 @@ export class DaemonRuntime {
       });
     this.#backgroundStagePromises.add(p);
     return p;
-  }
-
-  #completeChannelTurn(turnId: string, terminalEvent: ChannelTurnTerminalEvent): void {
-    this.#activeChannelTurns.delete(turnId);
-    if (this.#channelTurnCompleted.size >= 1000) {
-      const oldestKey = this.#channelTurnCompleted.keys().next().value;
-      if (oldestKey !== undefined) {
-        this.#channelTurnCompleted.delete(oldestKey);
-      }
-    }
-    this.#channelTurnCompleted.set(turnId, terminalEvent);
-    const observers = this.#channelTurnObservers.get(turnId);
-    if (!observers) return;
-    const snapshot = [...observers];
-    observers.clear();
-    this.#channelTurnObservers.delete(turnId);
-    for (const obs of snapshot) {
-      void Promise.resolve()
-        .then(() => obs.onTerminal(terminalEvent))
-        .catch(() => {});
-    }
   }
 
   launchNextStageInBackground(taskId: string, options: ExecuteStageOptions = {}): Promise<void> {
@@ -1024,7 +769,6 @@ export class DaemonRuntime {
     this.assertNoPluginsMirrorDir(realRoot, manifest);
     const res = await this.packService.link(input);
     this.syncDeclaredProviders();
-    await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
     this.appStateCache.invalidate();
     return res;
   }
@@ -1032,7 +776,6 @@ export class DaemonRuntime {
   async installPackage(input: Parameters<PackService['install']>[0]): ReturnType<PackService['install']> {
     const res = await this.packService.install(input);
     this.syncDeclaredProviders();
-    await this.channelHost.reconcileWithInstalledPackages().catch(() => {});
     this.appStateCache.invalidate();
     return res;
   }
@@ -1184,27 +927,6 @@ export class DaemonRuntime {
     return out;
   }
 
-  async executeChannelAction(input: {
-    readonly package_id: string;
-    readonly ref: string;
-    readonly input?: Record<string, unknown>;
-    readonly confirmed?: boolean;
-  }): Promise<Record<string, unknown>> {
-    try {
-      return (await this.channelHost.executeChannelAccessAction({
-        package_id: input.package_id,
-        ref: input.ref,
-        input: input.input ?? {},
-        confirmed: input.confirmed,
-      })) as Record<string, unknown>;
-    } catch (error) {
-      if (error instanceof ChannelError) {
-        throw new DaemonRpcError(-32004, error.code, error.message);
-      }
-      throw error;
-    }
-  }
-
   async shutdown(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
@@ -1220,12 +942,6 @@ export class DaemonRuntime {
       await this.runwayRuntime.detachOnShutdown();
     } catch {
       // ignore detach errors during shutdown
-    }
-
-    try {
-      await this.channelHost.dispose();
-    } catch {
-      // ignore dispose errors during shutdown
     }
 
     if (this.#backgroundStagePromises.size > 0) {

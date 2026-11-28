@@ -9,7 +9,6 @@ export {
 
 export {
   MIGRATION_0002_CONNECT,
-  MIGRATION_0002_CONNECT_CHANNELS,
   ensureConnectSchema,
 } from './migrations.ts';
 
@@ -130,8 +129,6 @@ export type {
   RuntimeDigestVerifier,
   UpdateCapabilitiesInput,
 } from './types.ts';
-
-export * from './channels/index.ts';
 
 export {
   authorizeOplLinkCompanion,

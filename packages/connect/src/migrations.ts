@@ -37,30 +37,6 @@ CREATE INDEX IF NOT EXISTS idx_connect_audit_conn
 `,
 };
 
-export const MIGRATION_0002_CONNECT_CHANNELS: SqliteMigration = {
-  version: 2002,
-  name: '0002_connect_channels',
-  sql: `
-CREATE TABLE IF NOT EXISTS channel_thread_bindings (
-  binding_id            TEXT PRIMARY KEY,
-  provider_id           TEXT NOT NULL,
-  account_id            TEXT NOT NULL,
-  channel_session_id    TEXT NOT NULL,
-  canonical_thread_host TEXT NOT NULL,
-  canonical_thread_id   TEXT NOT NULL,
-  workspace_id          TEXT REFERENCES workspaces(workspace_id) ON DELETE SET NULL,
-  last_task_id          TEXT REFERENCES tasks(task_id) ON DELETE SET NULL,
-  created_at            TEXT NOT NULL,
-  updated_at            TEXT NOT NULL,
-  last_resumed_at       TEXT,
-  UNIQUE (provider_id, account_id, channel_session_id),
-  UNIQUE (canonical_thread_host, canonical_thread_id)
-);
-CREATE INDEX IF NOT EXISTS idx_channel_bindings_provider
-  ON channel_thread_bindings(provider_id, updated_at);
-`,
-};
-
 export function ensureConnectSchema(db: SqliteDb): MigrationResult {
-  return runMigrations(db, [MIGRATION_0002_CONNECT, MIGRATION_0002_CONNECT_CHANNELS]);
+  return runMigrations(db, [MIGRATION_0002_CONNECT]);
 }
