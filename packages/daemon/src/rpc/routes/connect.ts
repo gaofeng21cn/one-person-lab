@@ -67,7 +67,7 @@ export function registerConnectRoutes(handlers: Map<string, RpcHandler>, runtime
     const secret = pickOptionalString(params, 'secret');
     const credentialHandle = pickOptionalString(params, 'credential_handle', 'credentialHandle');
 
-    // Early Studio v2 used these specific connect.add envelopes for its sign-in forms.
+    // Guard legacy connect.add envelopes so Gateway/Codex credentials cannot fall into generic connections.
     const legacyStudioForm = !connectionId && !endpoint && !credentialHandle && !params.capabilities && secret !== undefined;
     if (legacyStudioForm && providerType === 'opl_gateway' && accountLabel === displayName) {
       try {

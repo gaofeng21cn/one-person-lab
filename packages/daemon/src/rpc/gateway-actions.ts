@@ -32,7 +32,7 @@ const operations = [
 export const gatewayAccountActions = operations.map(action => ({
   ...action,
   owner: 'one-person-lab',
-  route: `opl app action execute --action ${action.action_id}`,
+  route: 'opld app.action.execute',
   dry_run_supported: false,
   danger_level: action.confirmation_required ? 'medium' : 'low',
 }));

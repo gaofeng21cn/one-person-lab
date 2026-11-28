@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isRecord, resolveStatePaths } from '@opl/core';
-import { buildPackage, ExactPackageReleaseSchema, migrateV1Package, readPackageManifestFromDir, verifyReleaseLock } from '@opl/pack';
+import {
+  buildPackage,
+  createPackageSourceArchive,
+  ExactPackageReleaseSchema,
+  migrateV1Package,
+  readPackageManifestFromDir,
+  verifyReleaseLock,
+} from '@opl/pack';
 import { runDaemonForeground } from '../daemon.ts';
 import { coerceInstallSourceSpec } from '../utils/normalize.ts';
 import { readLegacyRuns } from './legacy-runs.ts';
@@ -86,6 +93,7 @@ const VALUE_FLAGS = new Set([
   '--authority-receipt-ref',
   '--state-dir',
   '--regression-tolerance',
+  '--out',
 ]);
 
 const EXTENSION_BOOLEAN_FLAGS = new Set([
@@ -753,9 +761,47 @@ export async function runCli(argv: readonly string[] = process.argv.slice(2)): P
           if (!fs.existsSync(dir)) {
             throw new DaemonRpcError(-32602, 'PACK_MISSING_PATH', `Package directory does not exist: ${dir}`);
           }
+          if (parsed.flags.get('--out') === true) {
+            throw new DaemonRpcError(-32602, 'INVALID_INPUT', "Flag '--out' requires a directory path.");
+          }
+          const outDir = getStringFlag(parsed, '--out');
           const dryRun = getBoolFlag(parsed, '--dry-run');
           const writeLock = !dryRun && !getBoolFlag(parsed, '--no-write-lock');
+          if (outDir && (dryRun || !writeLock)) {
+            throw new DaemonRpcError(
+              -32602,
+              'INVALID_INPUT',
+              'opl pack build --out requires writing opl-release.lock.json (cannot combine with --dry-run or --no-write-lock).',
+            );
+          }
           const built = buildPackage(dir, { writeLock, dryRun });
+          if (outDir) {
+            const resolvedOut = path.resolve(outDir);
+            fs.mkdirSync(resolvedOut, { recursive: true });
+            const archiveName = `${built.manifest.identity.id}-${built.manifest.identity.version}.oplpack`;
+            const archivePath = path.join(resolvedOut, archiveName);
+            const outLockPath = path.join(resolvedOut, 'opl-release.lock.json');
+            for (const targetFile of [outLockPath, archivePath]) {
+              if (fs.lstatSync(targetFile, { throwIfNoEntry: false })?.isSymbolicLink()) {
+                throw new DaemonRpcError(-32602, 'INVALID_INPUT', `Output path cannot be a symlink: ${targetFile}`);
+              }
+            }
+            if (resolvedOut !== built.package_root) {
+              fs.copyFileSync(built.lock_path, outLockPath);
+            }
+            const builtAt = new Date(built.lock.built_at);
+            const archiveSha256 = createPackageSourceArchive(
+              built.package_root,
+              archivePath,
+              [...built.lock.paths, 'opl-release.lock.json'].sort(),
+              Number.isNaN(builtAt.getTime()) ? {} : { mtime: builtAt },
+            );
+            emitOutput(
+              { ...built, archive_path: archivePath, archive_sha256: archiveSha256, out_dir: resolvedOut, out_lock_path: outLockPath },
+              parsed,
+            );
+            return 0;
+          }
           emitOutput(built, parsed);
           return 0;
         }

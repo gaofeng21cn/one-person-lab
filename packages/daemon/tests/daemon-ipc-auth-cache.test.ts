@@ -79,10 +79,12 @@ describe('opld lifecycle, transport, auth, and AppStateCache', () => {
     // Untrusted host blocked on privileged RPCs
     for (const method of [
       'connect.approveRequest',
+      'pack.build',
       'pack.install',
       'pack.update',
       'pack.updateAll',
       'pack.uninstall',
+      'pack.migrateV1',
       'runway.humanGate.resolve',
     ]) {
       await assert.rejects(

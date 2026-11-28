@@ -158,7 +158,8 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
   handlers.set('pack.ensure', (params, conn) => handlePackEnsure(params, conn));
   handlers.set('pack.ensureExact', (params, conn) => handlePackEnsure(params, conn, true));
 
-  handlers.set('pack.build', (params) => {
+  handlers.set('pack.build', (params, conn) => {
+    requireTrustedHost(conn, 'pack.build');
     const dir = pickString(params, 'dir') ?? '.';
     const dryRun = pickBoolean(params, 'dry_run', 'dryRun') ?? false;
     const writeLock = dryRun ? false : (pickBoolean(params, 'write_lock', 'writeLock') ?? true);
@@ -361,7 +362,8 @@ export function registerPackRoutes(handlers: Map<string, RpcHandler>, runtime: D
     return runtime.packService.cancelOperation(opId);
   });
 
-  handlers.set('pack.migrateV1', (params) => {
+  handlers.set('pack.migrateV1', (params, conn) => {
+    requireTrustedHost(conn, 'pack.migrateV1');
     const repoDir = pickString(params, 'repo_dir', 'repoDir', 'dir') ?? '.';
     const apply = pickBoolean(params, 'apply') ?? false;
     const clean = pickBoolean(params, 'clean') ?? false;
