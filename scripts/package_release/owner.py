@@ -1,4 +1,4 @@
-"""Prepare owner bytes; Framework continues to generate and publish its projection."""
+"""Prepare v2 owner bytes before generating the official Catalog projection."""
 from __future__ import annotations
 import hashlib
 import json
@@ -38,41 +38,6 @@ def owner_settings(root):
         if not isinstance(name, str) or not re.fullmatch(r'[A-Za-z0-9_-]+\.ya?ml', name):
             raise ReleaseError('Release workflows must name owner workflow files')
     return settings
-
-
-def metadata_files(root, projection, allowlist):
-    carrier = allowlist['source_root']
-    canonical = projection['publication_source']['owner_package_manifest_ref']
-    candidates = {canonical, str(Path(carrier) / 'opl-package.json'),
-                  str(Path(carrier) / '.codex-plugin/plugin.json'), str(Path(carrier) / 'plugin.json')}
-    for name in ['opl-package.json', '.codex-plugin/plugin.json', 'plugin.json']:
-        p = root / name
-        if p.is_file():
-            d = read(p)
-            if d.get('package_id') == projection['package_id'] or d.get('name') == allowlist['plugin_id']:
-                candidates.add(name)
-    return sorted(name for name in candidates if safe_path(root, name).is_file())
-
-
-def update_versions(root, projection, allowlist, settings, version):
-    changed = set()
-    workflow = projection['surface_kind'] == 'opl_workflow_profile_package_manifest.v1'
-    canonical = projection['publication_source']['owner_package_manifest_ref']
-    for name in metadata_files(root, projection, allowlist):
-        p = safe_path(root, name)
-        d = read(p)
-        if workflow and name == canonical:
-            d['package']['version'] = version
-        else:
-            d['version'] = version
-        write(p, d)
-        changed.add(name)
-    language_ref = projection['publication_source'].get('owner_language_version_ref')
-    refs = list(settings.get('version_files', []))
-    if language_ref and not any(x['path'] == language_ref for x in refs):
-        refs.append({'path': language_ref, 'kind': 'toml_project' if language_ref.endswith('.toml') else 'json'})
-    changed.update(update_version_files(root, refs, version))
-    return changed
 
 
 def update_version_files(root, refs, version):
@@ -171,13 +136,8 @@ def _ordered_content_digest(paths, read_bytes):
             raise ValueError(f'Duplicate path {clean!r} in content digest input')
         seen.add(clean)
         normalized.append(clean)
-    return _content_digest(sorted(normalized, key=lambda item: item.encode('utf-16-be')), read_bytes)
-
-
-def _content_digest(paths, read_bytes):
-    """Hash paths and file bytes in the supplied order."""
     h = hashlib.sha256()
-    for relative in paths:
+    for relative in sorted(normalized, key=lambda item: item.encode('utf-16-be')):
         rel_bytes = relative.encode('utf-8')
         data = read_bytes(relative)
         h.update(len(rel_bytes).to_bytes(8, 'big'))
@@ -187,94 +147,9 @@ def _content_digest(paths, read_bytes):
     return f'sha256:{h.hexdigest()}'
 
 
-def refresh_locks(root, projection, allowlist, framework):
-    for name in metadata_files(root, projection, allowlist):
-        d = read(root / name)
-        lock = d.get('content_lock')
-        if lock:
-            carrier = safe_path(root, allowlist['source_root'])
-            paths = lock['paths']
-            if name in paths and carrier == root:
-                raise ReleaseError('A content lock cannot contain its own descriptor')
-            # Legacy Catalog descriptors bind the declared path order and spelling.
-            digest = _ordered_content_digest if d.get('schema_version') == 'opl.package.v2' else _content_digest
-            lock['digest'] = digest(paths, lambda relative: safe_path(carrier, relative).read_bytes())
-            write(root / name, d)
-
-
 def execute_commands(root, settings, field):
     for command in settings.get(field, []):
         run(command, cwd=root)
-
-
-def _carrier_source_paths(root, allowlist, commit, framework):
-    if not allowlist.get('carrier_projection_ref'):
-        return None
-    resolver = framework / 'scripts/package-carrier-source-paths.mjs'
-    if not resolver.is_file():
-        raise ReleaseError('Missing package-carrier-source-paths resolver')
-    script = (
-        "import { spawnSync } from 'node:child_process';"
-        "const { packageCarrierSourcePaths } = await import(process.argv[1]);"
-        "const allowlist = JSON.parse(process.argv[2]);"
-        "const sourceCommit = process.argv[3];"
-        "const readGit = (args) => {"
-        "  const res = spawnSync('git', args, { cwd: process.cwd(), stdio: 'pipe', maxBuffer: 64 * 1024 * 1024 });"
-        "  if (res.status !== 0) throw new Error(res.stderr?.toString('utf8') || 'git failed');"
-        "  return res.stdout;"
-        "};"
-        "const projected = packageCarrierSourcePaths({ allowlist, sourceCommit, readGit });"
-        "process.stdout.write(JSON.stringify(projected ? Object.fromEntries(projected) : null));"
-    )
-    output = run(
-        ['node', '--experimental-strip-types', '-e', script, str(resolver), json.dumps(allowlist), commit],
-        cwd=root,
-    ).stdout
-    return json.loads(output)
-
-
-def content_changed(root, previous_commit, projection, allowlist, framework, settings=None):
-    carrier = safe_path(root, allowlist['source_root'])
-    descriptor = read(carrier / 'opl-package.json')
-    paths = descriptor.get('content_lock', {}).get('paths', allowlist['paths'])
-    source_root = allowlist['source_root']
-    head_commit = git(root, 'rev-parse', 'HEAD')
-    head_map = _carrier_source_paths(root, allowlist, head_commit, framework)
-    prev_map = _carrier_source_paths(root, allowlist, previous_commit, framework)
-    pairs = {}
-    all_paths = sorted(
-        set(paths)
-        | (set(head_map) if head_map is not None else set())
-        | (set(prev_map) if prev_map is not None else set())
-    )
-    for rel in all_paths:
-        cur_rel = head_map.get(rel, str(Path(source_root) / rel)) if head_map is not None else str(Path(source_root) / rel)
-        prev_rel = prev_map.get(rel, str(Path(source_root) / rel)) if prev_map is not None else str(Path(source_root) / rel)
-        pairs[cur_rel] = prev_rel
-    for meta in metadata_files(root, projection, allowlist):
-        pairs[meta] = meta
-    settings = settings or {}
-    for item in settings.get('version_files', []):
-        pairs[item['path']] = item['path']
-    for name in settings.get('release_workflows', []):
-        pairs[f'.github/workflows/{name}'] = f'.github/workflows/{name}'
-    release_paths = settings.get('release_paths', [])
-    if release_paths:
-        for name in release_paths:
-            safe_path(root, name)
-        difference = run(['git', 'diff', '--quiet', previous_commit, '--', *release_paths], cwd=root, check=False)
-        if difference.returncode == 1:
-            return True
-        if difference.returncode:
-            raise ReleaseError('Cannot compare the declared product release paths')
-    for cur_rel, prev_rel in sorted(pairs.items()):
-        current = safe_path(root, cur_rel)
-        if not current.is_file():
-            return True
-        old_hash = run(['git', 'rev-parse', f'{previous_commit}:{prev_rel}'], cwd=root, check=False).stdout.strip()
-        if old_hash != git(root, 'hash-object', cur_rel):
-            return True
-    return False
 
 
 def source_workflow_checks(repo, commit, workflows, ignored_check_suite_id):
@@ -492,9 +367,12 @@ def publish_owner_tag(root, repo, source, version, settings):
 
 
 def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payload_path=None, v2_controller=None):
+    if payload_path is None:
+        raise ReleaseError('v2 Package publication requires a Catalog payload manifest')
+    if v2_controller is None:
+        raise ReleaseError('v2 Package publication requires the official Catalog and current Framework publisher')
     base = git(root, 'rev-parse', 'HEAD')
-    payload = read(payload_path or (framework / 'contracts/opl-framework/packages' /
-                                    projection['codex_surface']['plugin_payload_manifest_url']))
+    payload = read(payload_path)
     settings = owner_settings(root)
     if settings.get('strategy') == 'manual':
         return {'status': 'owner_manual', 'owner_source_commit': base}
@@ -503,30 +381,6 @@ def prepare_owner(root, projection, allowlist, framework, repo, *, apply, payloa
     for source_root in package_source_roots(projection, allowlist):
         v2_version = root_v2_version(root, base, projection['package_id'], source_root)
         if v2_version is not None:
-            if v2_controller is None:
-                raise ReleaseError('v2 Package publication requires the official Catalog and current Framework publisher')
             return prepare_v2_owner(root, projection, repo, settings, v2_version, v2_controller,
                                     apply=apply, source_root=source_root)
-    execute_commands(root, settings, 'prepare')
-    if not content_changed(root, payload['source_commit'], projection, allowlist, framework, settings):
-        return {'status': 'unchanged_payload', 'owner_source_commit': base}
-    carrier = safe_path(root, allowlist['source_root'])
-    current = read(carrier / 'opl-package.json')['version']
-    version = release_version(root, base, current, projection['version'])
-    if not apply:
-        return {'status': 'needs_release', 'version': version, 'owner_source_commit': base}
-    git(root, 'config', 'user.name', 'OPL Package Publisher')
-    git(root, 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
-    wait_for_checks(repo, base)
-    update_versions(root, projection, allowlist, settings, version)
-    execute_commands(root, settings, 'prepare')
-    refresh_locks(root, projection, allowlist, framework)
-    execute_commands(root, settings, 'verify')
-    if git(root, 'status', '--porcelain'):
-        git(root, 'add', '--all')
-        git(root, 'commit', '-m', f'chore: prepare Package {version}')
-        source = merge_release_changes(root, repo, base, projection['package_id'], version)
-    else:
-        source = git(root, 'rev-parse', 'HEAD')
-    publish_owner_tag(root, repo, source, version, settings)
-    return {'status': 'prepared', 'version': version, 'owner_source_commit': source}
+    raise ReleaseError('Owner commit does not declare a valid opl.package.v2 descriptor')

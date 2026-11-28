@@ -10,21 +10,20 @@ const catalogRepository = 'gaofeng21cn/opl-catalog';
 const commitPattern = /^[a-f0-9]{40}$/;
 
 function selectedRelease(manifest, inputs) {
-  if (manifest.v2_release) {
-    const release = manifest.v2_release;
-    if (release.version === inputs.expected_package_version
-      && release.source_commit === inputs.expected_owner_source_commit) {
-      if (!/^sha256:[a-f0-9]{64}$/.test(release.payload_sha256 ?? '')) return null;
-      return { format: 'v2', version: release.version, sourceCommit: release.source_commit,
-        payloadRef: release.payload_manifest_ref, payloadSha256: release.payload_sha256 };
-    }
+  const release = manifest.v2_release;
+  if (!release
+    || release.version !== inputs.expected_package_version
+    || release.source_commit !== inputs.expected_owner_source_commit
+    || !/^sha256:[a-f0-9]{64}$/.test(release.payload_sha256 ?? '')) {
+    return null;
   }
-  const surface = manifest.codex_surface;
-  if (manifest.version !== inputs.expected_package_version
-    || surface?.carrier_source_commit !== inputs.expected_owner_source_commit
-    || (manifest.v2_release && inputs.expected_latest_stable_predecessor === 'resolve-authenticated')) return null;
-  return { format: 'v1', version: manifest.version, sourceCommit: surface.carrier_source_commit,
-    payloadRef: surface.plugin_payload_manifest_url };
+  return {
+    format: 'v2',
+    version: release.version,
+    sourceCommit: release.source_commit,
+    payloadRef: release.payload_manifest_ref,
+    payloadSha256: release.payload_sha256,
+  };
 }
 
 export function validateScheduledPublication({ run, plan, inputs, callerRepository, currentPackage }) {
@@ -49,12 +48,12 @@ export function validateScheduledPublication({ run, plan, inputs, callerReposito
   if (selected.length !== 1) throw new Error('Daily plan must select one ready Package.');
   const entry = selected[0];
   const release = currentPackage && selectedRelease(currentPackage, inputs);
-  const publicationTooling = entry.expected_framework_source_commit ?? plan.framework_source_commit;
+  const publicationTooling = entry.expected_framework_source_commit;
   if (!currentPackage || currentPackage.package_id !== inputs.package_id
-    || !release || (entry.package_format ?? 'v1') !== release.format
+    || !release || entry.package_format !== 'v2' || release.format !== 'v2'
     || publicationTooling !== inputs.expected_framework_source_commit
-    || (release.format === 'v2' ? (publicationTooling !== run.head_sha || !inputs.expected_catalog_source_commit)
-      : publicationTooling !== plan.framework_source_commit)
+    || publicationTooling !== run.head_sha
+    || !inputs.expected_catalog_source_commit
     || (currentPackage.visibility ?? 'public') !== (entry.visibility ?? 'public')
     || currentPackage.source_repo?.replace(/^https:\/\/github.com\//, '').replace(/\.git$/, '') !== entry.owner_repository) {
     throw new Error('Daily plan no longer selects the current canonical Package release.');
@@ -89,12 +88,12 @@ function githubFile(repository, file, ref) {
   return JSON.parse(Buffer.from(content.content, 'base64').toString('utf8'));
 }
 
-function currentCatalogPackage(inputs, legacyPath = null) {
+function currentCatalogPackage(inputs) {
   const catalogCommit = inputs.expected_catalog_source_commit;
-  if (catalogCommit && !commitPattern.test(catalogCommit)) throw new Error('Catalog source commit must be an exact Git commit.');
+  if (!commitPattern.test(catalogCommit ?? '')) throw new Error('Catalog source commit must be an exact Git commit.');
   const head = ghJson(`repos/${catalogRepository}/commits/main`);
   if (!commitPattern.test(head.sha ?? '')) throw new Error('Official Catalog main commit is unavailable.');
-  if (catalogCommit && head.sha !== catalogCommit) {
+  if (head.sha !== catalogCommit) {
     const comparison = ghJson(`repos/${catalogRepository}/compare/${catalogCommit}...${head.sha}?per_page=1`);
     if (comparison.status !== 'ahead') throw new Error('Catalog source commit must be on official Catalog main.');
   }
@@ -108,16 +107,12 @@ function currentCatalogPackage(inputs, legacyPath = null) {
   const release = selectedRelease(manifest, inputs);
   if (manifest.package_id !== inputs.package_id
     || !release
-    || (release.format === 'v2' && !catalogCommit)
     || manifest.publication_channel_admission === 'retired'
     || manifest.publication_channel_admission === 'development_only') {
     throw new Error('Requested Package release differs from official Catalog main.');
   }
   if (head.sha !== catalogCommit) {
-    const selectedRepo = legacyPath ? frameworkRepository : catalogRepository;
-    const selectedCommit = legacyPath ? inputs.expected_framework_source_commit : catalogCommit;
-    if (!commitPattern.test(selectedCommit)) throw new Error('Legacy Framework publication must select an exact commit.');
-    const selected = githubFile(selectedRepo, legacyPath ?? packagePaths[0].path, selectedCommit);
+    const selected = githubFile(catalogRepository, packagePaths[0].path, catalogCommit);
     for (const key of ['visibility', 'access_policy_ref', 'credential_provider', 'source_repo',
       'publication_channel_admission', 'management_scope']) {
       if ((selected[key] ?? null) !== (manifest[key] ?? null)) {
@@ -131,9 +126,8 @@ function currentCatalogPackage(inputs, legacyPath = null) {
       throw new Error('Selected Catalog release no longer matches the current publisher policy.');
     }
     const payloadRef = release.payloadRef;
-    const selectedPayloadDirectory = legacyPath ? 'contracts/opl-framework/packages' : 'packages';
     if (payloadRef !== `payloads/${inputs.package_id}-${inputs.expected_package_version}.json`
-      || JSON.stringify(githubFile(selectedRepo, `${selectedPayloadDirectory}/${payloadRef}`, selectedCommit))
+      || JSON.stringify(githubFile(catalogRepository, `packages/${payloadRef}`, catalogCommit))
         !== JSON.stringify(githubFile(catalogRepository, `packages/${payloadRef}`, head.sha))) {
       throw new Error('Selected Catalog payload bytes differ from the current release.');
     }
@@ -144,10 +138,7 @@ function currentCatalogPackage(inputs, legacyPath = null) {
 function main() {
   const inputs = JSON.parse(process.env.PUBLICATION_INPUTS ?? '{}');
   if (!/^[a-z0-9][a-z0-9.-]*$/.test(inputs.package_id ?? '')) throw new Error('Invalid Package id.');
-  const legacyPath = `contracts/opl-framework/packages/${inputs.package_id}.json`;
-  const legacyAvailable = fs.existsSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', legacyPath));
-  const catalogPackage = inputs.expected_catalog_source_commit ? currentCatalogPackage(inputs)
-    : legacyAvailable ? null : currentCatalogPackage(inputs, legacyPath);
+  const catalogPackage = currentCatalogPackage(inputs);
   let environment = 'release-stable';
   if (inputs.automation_source_run_id) {
     if (!/^[1-9][0-9]*$/.test(String(inputs.automation_source_run_id))) throw new Error('Invalid daily source run ID.');
@@ -163,8 +154,7 @@ function main() {
       execFileSync('gh', ['run', 'download', String(id), '--repo', frameworkRepository,
         '--name', name, '--dir', temporary], { stdio: 'pipe', timeout: 60_000 });
       const plan = JSON.parse(fs.readFileSync(path.join(temporary, 'package-publication-dispatch-plan.json'), 'utf8'));
-      const currentPackage = catalogPackage ?? githubFile(frameworkRepository, legacyPath, 'main');
-      environment = validateScheduledPublication({ run, plan, inputs, currentPackage, callerRepository: process.env.GITHUB_REPOSITORY });
+      environment = validateScheduledPublication({ run, plan, inputs, currentPackage: catalogPackage, callerRepository: process.env.GITHUB_REPOSITORY });
     } finally { fs.rmSync(temporary, { recursive: true, force: true }); }
   }
   if (process.env.GITHUB_OUTPUT) fs.appendFileSync(process.env.GITHUB_OUTPUT, `environment=${environment}\n`);

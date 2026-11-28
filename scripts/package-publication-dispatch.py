@@ -23,22 +23,21 @@ def dispatch(plan, source_run):
         raise RuntimeError('Dispatch plan belongs to a different source run')
     outcomes = []
     catalog_commit = plan.get('catalog_source_commit')
-    if catalog_commit is not None and not re.fullmatch(r'[a-f0-9]{40}', catalog_commit):
-        raise RuntimeError('Dispatch plan Catalog commit is invalid')
+    if not catalog_commit or not re.fullmatch(r'[a-f0-9]{40}', catalog_commit):
+        raise RuntimeError('Dispatch plan requires an exact Catalog commit')
     for entry in plan['packages']:
         private = entry.get('visibility') == 'authorized_only'
         repo = entry['owner_repository'] if private else 'gaofeng21cn/one-person-lab'
         try:
             if entry.get('expected_catalog_source_commit') != catalog_commit:
                 raise RuntimeError('Package entry belongs to a different Catalog revision')
-            package_format = entry.get('package_format', 'v1')
-            if package_format not in ('v1', 'v2'):
-                raise RuntimeError('Unsupported Package payload format')
-            framework_commit = plan.get('workflow_source_commit') if package_format == 'v2' else plan['framework_source_commit']
+            if entry.get('package_format') != 'v2':
+                raise RuntimeError('Only v2 Package publication is supported')
+            framework_commit = plan.get('workflow_source_commit')
+            if not re.fullmatch(r'[a-f0-9]{40}', framework_commit or ''):
+                raise RuntimeError('V2 Package entry requires an exact Framework tooling revision')
             if entry.get('expected_framework_source_commit') != framework_commit:
                 raise RuntimeError('Package entry belongs to a different Framework tooling revision')
-            if package_format == 'v2' and (not catalog_commit or not re.fullmatch(r'[a-f0-9]{40}', framework_commit or '')):
-                raise RuntimeError('V2 Package entry requires exact Catalog and Framework tooling revisions')
             runs = gh(f'repos/{repo}/actions/workflows/publish-package.yml/runs?event=workflow_dispatch&per_page=100')['workflow_runs']
             if matching_publications(runs, entry):
                 outcomes.append({'package_id': entry['package_id'], 'status': 'already_dispatched'})

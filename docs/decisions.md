@@ -42,13 +42,13 @@ Catalog 的 `v2_release` 只有在不可变 OCI 制品发布并完成 manifest �
 
 OPL Link companion server 只由 Studio 的 `opl-host-core` 托管。Framework 及 `@opl/connect` 只提供 Gateway companion authorization（包括 `opl connect gateway authorize-companion` 与对应 RPC），不再承载第二个 companion server。
 
-## v2 完成后移除双轨工具
+## 已移除双轨工具与前 v2 发布钉子
 
-当活跃 Catalog Package 全部完成 `opl.package.v2` 迁移后，删除固定的 pre-v2 发布工具提交和 runtime v1→v2 adapter。过渡实现不能成为永久的 resolver、currentness 或发布入口。
+全量活跃 Catalog Package 已迁至 `opl.package.v2`，pre-v2 发布工具提交钉子（`PACKAGE_PUBLISHER_TOOLING_COMMIT`）、对 `opl-flow` 的反向调用与 runtime v1→v2 adapter 已全部删除；过渡实现不作为长期 resolver、currentness 或发布入口。
 
 ## 跨产品发布编排与 Framework 解耦
 
-`one-person-lab`（Framework v2）、`opl-catalog`（只读消费者软件目录信任根，仅保存静态目录数据与 attestation，不挂载跨仓写私钥）与 `opl-release`（横向发布交付平台：统一 `.opl-release.json`、`opl.release-receipt.v1` 标准回执、可复用发布工作流与纯只读全景状态回读）分属三个正交职责。`one-person-lab` 只负责自身运行时及其 `publish-framework.yml` 发布通道，禁止继续在 Framework 内新增各产品私有的状态特判（例如按 `product_id` 硬编码分支）、跨产品发布工作流或固定产品清单；现存暂驻脚本待活跃包完成 `opl.package.v2` 收口后整批迁出。
+`one-person-lab`（Framework v2）、`opl-catalog`（只读消费者软件目录信任根，仅保存静态目录数据与 attestation，不挂载跨仓写私钥）与 `opl-release`（横向发布交付平台：统一 `.opl-release.json`、`opl.release-receipt.v1` 标准回执、可复用发布工作流与纯只读全景状态回读）分属三个正交职责。`one-person-lab` 禁止新增各产品私有的状态特判（如按 `product_id` 硬编码分支）或跨产品调度工作流；除其绑定 `one-person-lab-packages/*` GHCR 命名空间所有权的 `publish-framework.yml` 与 `opl.package.v2` 包发布通道（`daily-package-channel*.yml`、`publish-package.yml`）外，其余跨产品发布编排均已迁出至 `gaofeng21cn/opl-release`。
 
 ## 退役的产品面
 

@@ -172,21 +172,17 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$PACKAGE_ID" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || { echo "::error::Invalid Package id"; exit 2; }
-          packages_root="contracts/opl-framework/packages"
-          manifest="$packages_root/${PACKAGE_ID}.json"
-          if [ -n "${EXPECTED_CATALOG_SOURCE_COMMIT:-}" ]; then
-            [[ "$EXPECTED_CATALOG_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
-            [ "$(git -C .opl-catalog rev-parse HEAD)" = "$EXPECTED_CATALOG_SOURCE_COMMIT" ]
-            node .opl-catalog/scripts/validate-catalog.mjs
-            packages_root=".opl-catalog/packages"
-            manifest="$(jq -er --arg id "$PACKAGE_ID" \
-              '[.packages[] | select(.package_id == $id) | .manifest_path] | select(length == 1) | .[0]' \
-              .opl-catalog/catalog-index.json)"
-            [[ "$manifest" =~ ^packages/(agents|applications|extensions|channels|dependencies)/ ]]
-            [ "${manifest##*/}" = "${PACKAGE_ID}.json" ]
-            manifest=".opl-catalog/$manifest"
-            echo "OPL_CATALOG_ROOT=$GITHUB_WORKSPACE/.opl-catalog" >> "$GITHUB_ENV"
-          fi
+          [[ "${EXPECTED_CATALOG_SOURCE_COMMIT:-}" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::EXPECTED_CATALOG_SOURCE_COMMIT must be an exact Git commit"; exit 2; }
+          [ "$(git -C .opl-catalog rev-parse HEAD)" = "$EXPECTED_CATALOG_SOURCE_COMMIT" ]
+          node .opl-catalog/scripts/validate-catalog.mjs
+          packages_root=".opl-catalog/packages"
+          manifest="$(jq -er --arg id "$PACKAGE_ID" \
+            '[.packages[] | select(.package_id == $id) | .manifest_path] | select(length == 1) | .[0]' \
+            .opl-catalog/catalog-index.json)"
+          [[ "$manifest" =~ ^packages/(agents|applications|extensions|channels|dependencies)/ ]]
+          [ "${manifest##*/}" = "${PACKAGE_ID}.json" ]
+          manifest=".opl-catalog/$manifest"
+          echo "OPL_CATALOG_ROOT=$GITHUB_WORKSPACE/.opl-catalog" >> "$GITHUB_ENV"
           {
             echo "PACKAGE_MANIFEST_PATH=$manifest"
             echo "PACKAGE_PROJECTION_ROOT=$packages_root"
@@ -702,6 +698,22 @@ jobs:
               workflow:{repository:$repository,run_id:$run_id,run_attempt:$run_attempt,environment:$publication_environment}}' \
             > "$PACKAGE_ROOT/publication-receipt.json"
           (cd "$PACKAGE_ROOT" && sha256sum publication-receipt.json > publication-receipt.sha256)
+          if [ "$PACKAGE_VISIBILITY" = public ]; then
+            jq -n \
+              --arg subject_id "$PACKAGE_ID" \
+              --arg recorded_at "$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+              --arg version "$EXPECTED_PACKAGE_VERSION" \
+              --arg owner_commit "$EXPECTED_OWNER_SOURCE_COMMIT" \
+              --arg ref "$subject" \
+              --arg digest "$digest" \
+              --arg run_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              '{schema:"opl.release-receipt.v1",subject_id:$subject_id,lane:"oci",stage:"verified",recorded_at:$recorded_at,
+                candidate:{version:$version,tag:("v"+$version),commit:$owner_commit},
+                published:{version:$version,tag:"latest-stable",ref:$ref,digest:$digest},
+                qualification:{required:false,status:"not_required"},
+                run_url:$run_url}' \
+              > "$PACKAGE_ROOT/release-receipt.json"
+          fi
           if [ "$PACKAGE_VISIBILITY" = authorized_only ]; then
             # Keep private receipts inside the same access-controlled registry;
             # Actions artifacts inherit this public Framework repository's access.
@@ -733,5 +745,14 @@ jobs:
             dist/package/publication-receipt.sha256
             dist/package/package-provenance.json
             dist/package/package.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload standard opl.release-receipt.v1 artifact
+        if: env.PACKAGE_VISIBILITY == 'public'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: opl-release-receipt-${{ inputs.package_id }}-oci-${{ github.run_id }}
+          path: dist/package/release-receipt.json
           if-no-files-found: error
           retention-days: 30

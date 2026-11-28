@@ -38,7 +38,7 @@ def declares_v2(manifest, allowlist, controller):
     return False
 
 
-def wrapper(package_id, commit, *, catalog=False):
+def wrapper(package_id, commit, *, catalog=True):
     fields = ['expected_package_version', 'expected_owner_source_commit',
               'expected_latest_stable_predecessor', 'publication_request_id']
     text = f'''name: Publish private {package_id} Package
@@ -105,9 +105,12 @@ def sync_publisher(manifest, commit, *, catalog):
 
 
 def sync(root, selected=None, *, catalog=None, controller_source_commit=None):
+    if not catalog:
+        raise ReleaseError('Private publisher synchronization requires the official Catalog')
     if controller_source_commit is not None and not re.fullmatch(r'[a-f0-9]{40}', controller_source_commit):
         raise ReleaseError('Private publisher synchronization requires an exact controller source commit')
-    legacy_commit = git(root, 'rev-parse', 'HEAD')
+    commit = controller_source_commit or git(root, 'rev-parse', 'HEAD')
+    controller = Path(__file__).resolve().parents[1]
     results = []
     paths = PackageProjection(root, catalog)
     for path in paths.manifest_paths():
@@ -117,17 +120,11 @@ def sync(root, selected=None, *, catalog=None, controller_source_commit=None):
             continue
         result = {'package_id': package_id}
         try:
-            needs_controller = manifest.get('v2_release') is not None
-            if controller_source_commit and not needs_controller:
-                allowlist_path = paths.allowlist(package_id)
-                needs_controller = declares_v2(
-                    manifest, read(allowlist_path) if allowlist_path.is_file() else {},
-                    Path(__file__).resolve().parents[1],
-                )
-            commit = controller_source_commit if needs_controller else legacy_commit
-            if not commit:
-                raise ReleaseError('The v2 private publisher requires the controller source commit')
-            result['status'] = sync_publisher(manifest, commit, catalog=catalog is not None)
+            allowlist_path = paths.allowlist(package_id)
+            allowlist = read(allowlist_path) if allowlist_path.is_file() else {}
+            if manifest.get('v2_release') is None and not declares_v2(manifest, allowlist, controller):
+                raise ReleaseError('Private Package publication requires an opl.package.v2 descriptor or Catalog v2_release')
+            result['status'] = sync_publisher(manifest, commit, catalog=True)
         except Exception as exc:
             result.update(status='blocked', reason=f'Private publisher pin synchronization failed: {str(exc)[-1000:]}')
         results.append(result)
@@ -153,7 +150,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--framework-root', type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument('--controller-source-commit')
-    parser.add_argument('--catalog-root', type=Path)
+    parser.add_argument('--catalog-root', type=Path, required=True)
     parser.add_argument('--package-id', action='append')
     parser.add_argument('--preparation', type=Path, help='Preparation report receiving Package-local failures')
     args = parser.parse_args()
