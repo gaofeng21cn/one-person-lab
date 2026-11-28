@@ -51,13 +51,19 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify centralized daily dispatch
+      - name: Reject single-package override on centralized daily dispatch
         if: inputs.opl_release_control_run_id != ''
         env:
-          GH_TOKEN: ${{ github.token }}
-          OPL_RELEASE_CONTROL_RUN_ID: ${{ inputs.opl_release_control_run_id }}
           SELECTED_PACKAGE: ${{ inputs.package_id }}
-        run: python3 -B -m scripts.package_release.daily_control
+        run: test -z "$SELECTED_PACKAGE" || { echo "::error::Central daily dispatch covers all registered Packages without package_id override."; exit 1; }
+      - name: Verify centralized daily dispatch
+        if: inputs.opl_release_control_run_id != ''
+        uses: gaofeng21cn/opl-release/.github/actions/verify-dispatch@v1
+        with:
+          control_run_id: ${{ inputs.opl_release_control_run_id }}
+          workflow: daily-package-channel.yml
+          expected_title: ${{ format('Daily OPL Package Channel [opl-release:{0}]', inputs.opl_release_control_run_id) }}
+          gh_token: ${{ github.token }}
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -70,7 +76,7 @@ jobs:
         if: vars.PACKAGE_RELEASE_APP_ID != ''
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
-          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          client-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
           private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-contents: write
@@ -101,7 +107,7 @@ jobs:
         if: vars.PACKAGE_RELEASE_APP_ID != ''
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
-          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          client-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
           private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-contents: write
@@ -139,4 +145,54 @@ jobs:
         with:
           name: opl-daily-package-channel-candidate-${{ github.run_id }}
           path: dist/opl-daily-packages
+          if-no-files-found: error
+      - name: Checkout opl-release receipt emitter
+        if: ${{ !cancelled() }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: gaofeng21cn/opl-release
+          ref: v1
+          path: .opl-release
+          persist-credentials: false
+      - name: Emit package lane release receipt
+        if: ${{ !cancelled() }}
+        env:
+          PYTHONPATH: .opl-release/src
+          PYTHONDONTWRITEBYTECODE: '1'
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          python3 -B - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          plan_path = Path('dist/opl-daily-packages/package-publication-dispatch-plan.json')
+          blocked_items = []
+          if plan_path.is_file():
+              plan = json.loads(plan_path.read_text())
+              blocked_items = plan.get('blocked_packages') or []
+          stage = 'verified' if os.environ['JOB_STATUS'] == 'success' and not blocked_items else 'blocked'
+          args = [
+              'python3', '-B', '-m', 'opl_release', 'emit-receipt',
+              '--subject-id', 'opl-framework',
+              '--lane', 'package',
+              '--stage', stage,
+              '--commit', os.environ['COMMIT_SHA'],
+              '--run-url', os.environ['RUN_URL'],
+              '--output', f"{os.environ['RUNNER_TEMP']}/release-receipt.json",
+          ]
+          if stage == 'blocked':
+              code = 'package_lane_blocked' if blocked_items else 'daily_package_scan_failed'
+              msg = '; '.join(f"{b['package_id']}: {b['reason']}" for b in blocked_items[:5]) if blocked_items else 'daily-package-channel failed'
+              args.extend(['--blocker-code', code, '--blocker-message', msg[:500]])
+          subprocess.run(args, check=True)
+          PY
+      - name: Upload package lane release receipt
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: opl-release-receipt-opl-framework-package-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-receipt.json
+          overwrite: true
           if-no-files-found: error

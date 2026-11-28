@@ -1,41 +1,17 @@
 {
-  "schema_version": "opl.product-release.v1",
-  "product_id": "opl-framework",
+  "schema_version": "opl.release.v1",
+  "subject_id": "opl-framework",
+  "kind": "product",
   "repository": "gaofeng21cn/one-person-lab",
-  "strategy": "daily_patch",
+  "schedule": "daily_patch",
   "trigger": "tag",
   "tag_prefix": "framework-v",
-  "publisher_workflow": "publish-framework.yml",
   "source_check_workflows": [
     "ci.yml",
     "verify.yml",
     "codeql.yml"
   ],
-  "channel": {
-    "kind": "framework_oci"
-  },
-  "observed_publishers": [
-    {
-      "lane": "package",
-      "workflow": "daily-package-channel.yml",
-      "daily_dispatch": true
-    }
-  ],
-  "version_file": {
-    "path": "package.json",
-    "kind": "json"
-  },
-  "version_files": [
-    {
-      "path": "package.json",
-      "kind": "json"
-    },
-    {
-      "path": "package-lock.json",
-      "kind": "json"
-    }
-  ],
-  "release_paths": [
+  "delivery_paths": [
     "bin",
     "packages",
     "extensions",
@@ -57,6 +33,35 @@
     "install.sh",
     ".github/workflows/publish-framework.yml"
   ],
+  "version_files": [
+    {
+      "path": "package.json",
+      "kind": "json"
+    },
+    {
+      "path": "package-lock.json",
+      "kind": "json"
+    }
+  ],
   "prepare": [],
-  "verify": []
+  "verify": [],
+  "lanes": [
+    {
+      "lane": "stable",
+      "workflow": "publish-framework.yml",
+      "primary": true,
+      "channel": {
+        "kind": "oci",
+        "registry": "ghcr.io",
+        "repository": "gaofeng21cn/one-person-lab-framework",
+        "tag": "latest-stable"
+      }
+    },
+    {
+      "lane": "package",
+      "workflow": "daily-package-channel.yml",
+      "primary": false,
+      "daily_dispatch": true
+    }
+  ]
 }

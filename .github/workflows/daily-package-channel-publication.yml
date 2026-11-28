@@ -96,7 +96,7 @@ jobs:
         if: vars.PACKAGE_RELEASE_APP_ID != ''
         uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
-          app-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
+          client-id: ${{ vars.PACKAGE_RELEASE_APP_ID }}
           private-key: ${{ secrets.PACKAGE_RELEASE_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           permission-actions: write
