@@ -44,9 +44,13 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
     requireTrustedHost(conn, 'app.codexRuntime.get');
     return readCodexRuntime();
   });
-  handlers.set('app.codexRuntime.activate', (_params, conn) => {
+  handlers.set('app.codexRuntime.activate', async (_params, conn) => {
     requireTrustedHost(conn, 'app.codexRuntime.activate');
-    return activateAppCodexRuntime();
+    try {
+      return await activateAppCodexRuntime();
+    } finally {
+      runtime.appStateCache.invalidate();
+    }
   });
 
   handlers.set('app.initialize.get', async (_params, conn) => {
@@ -170,7 +174,11 @@ export function registerAppRoutes(handlers: Map<string, RpcHandler>, runtime: Da
         throw new DaemonRpcError(-32602, 'INVALID_INPUT', 'Codex installation does not accept a Package target.');
       }
       const dryRun = pickBoolean(params, 'dry_run', 'dryRun') === true || params.mode === 'preview';
-      return executeCodexInstall(payload, dryRun);
+      try {
+        return await executeCodexInstall(payload, dryRun);
+      } finally {
+        if (!dryRun) runtime.appStateCache.invalidate();
+      }
     }
     if (actionId === 'workspace_root_set') {
       requireTrustedHost(conn, actionId);

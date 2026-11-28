@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, describe, it } from 'node:test';
 import { openSqliteStore, txImmediate } from '@opl/core';
-import { buildPackage } from '@opl/pack';
+import { buildPackage, extractPackageSourceArchive, verifyReleaseLock } from '@opl/pack';
 import {
   V2_OPL_BIN,
   WORKTREE_ROOT,
@@ -809,5 +809,31 @@ describe('pure v2 CLI, root bin/opl coexistence, exit codes 0..4, and dynamic cl
     } finally {
       await rpc.close();
     }
+  });
+
+  it('opl pack build --out writes opl-release.lock.json and deterministic .oplpack archive and rejects --dry-run', async () => {
+    const sb = trackSandbox();
+    const pkgDir = path.join(sb.workspaceDir, 'pkg-out');
+    writeMinimalV2Package(pkgDir, { id: 'pkg-out', intent: 'agent', version: '1.2.3' });
+    const outDir = path.join(sb.root, 'dist', 'v2-package');
+
+    const bad = await sb.spawnRootCli(['pack', 'build', pkgDir, '--out', outDir, '--dry-run', '--json']);
+    assert.notEqual(bad.code, 0);
+
+    const res = await sb.spawnRootCli(['pack', 'build', pkgDir, '--out', outDir, '--json']);
+    assert.equal(res.code, 0, res.stderr);
+    const body = res.json as { archive_path?: string; archive_sha256?: string; out_lock_path?: string; digest?: string };
+    const expectedArchive = path.join(outDir, 'pkg-out-1.2.3.oplpack');
+    const expectedLock = path.join(outDir, 'opl-release.lock.json');
+    assert.equal(body.archive_path, expectedArchive);
+    assert.equal(body.out_lock_path, expectedLock);
+    assert.match(String(body.archive_sha256), /^sha256:[0-9a-f]{64}$/);
+    assert.equal(fs.existsSync(expectedArchive), true);
+    assert.equal(fs.existsSync(expectedLock), true);
+
+    const unpacked = path.join(sb.root, 'unpacked-out');
+    extractPackageSourceArchive(expectedArchive, unpacked);
+    const verified = verifyReleaseLock(unpacked);
+    assert.equal(verified.digest, body.digest);
   });
 });

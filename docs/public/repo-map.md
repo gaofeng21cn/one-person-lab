@@ -30,6 +30,8 @@ Application Host；产品与发布 truth 归 App，Framework runtime 与 Package
 ## 支撑 owners
 
 - [`opl-flow`](https://github.com/gaofeng21cn/opl-flow)：工作方式、profile和开发协作能力；
+- [`opl-catalog`](https://github.com/gaofeng21cn/opl-catalog)：官方 Package 投影、不可变 payload 与允许清单；
+- [`opl-release`](https://github.com/gaofeng21cn/opl-release)：跨产品每日调度、状态观测与复用发布控制面；
 - [`homebrew-one-person-lab`](https://github.com/gaofeng21cn/homebrew-one-person-lab)：Homebrew分发；
 - 其他专业Package、provider和integration：以各自owner descriptor为准。
 

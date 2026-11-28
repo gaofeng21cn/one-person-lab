@@ -161,7 +161,7 @@ GitHub Release 页面及附件，也不建立 ZIP、wheel 等平行安装包发�
 annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库文档与源码变更记录，
 不构成第二个发布渠道。README 提供统一安装命令和 OCI 地址。
 
-私有 Package 从其私有 owner 仓库通过薄 workflow 调用同一个 `publish-package.yml`，使用自身 `GITHUB_TOKEN` 与受保护 `release-stable` 环境签名密钥（第一方优先使用随 Framework 交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub` 公钥验证，或回退已有 `private-package-signing.pub`）。新私有 namespace 先上传固定无敏感内容标记并经只读核验证明 `visibility=private` 与匿名访问拒绝后，再上传源码、manifest 与载荷。跨仓公开分发已获授权的私有源码可使用只读 Deploy Key（`OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>`）或 `OWNER_SOURCE_READ_TOKEN` 检出，并通过 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` 绑定精确源码 commit 授权。公开 `Daily OPL Package Channel` 仅处理 `visibility=public` 条目，私有包交由私有 owner 工作流接力。
+私有 Package 从其私有 owner 仓库通过薄 workflow 调用同一个 `publish-package.yml`，使用自身 `GITHUB_TOKEN` 与受保护 `release-stable` 环境签名密钥（第一方优先使用随 Framework 交付的 `contracts/opl-framework/keys/private-packages/<package_id>.pub` 公钥验证，或回退已有 `private-package-signing.pub`）。新私有 namespace 先上传固定无敏感内容标记并经只读核验证明 `visibility=private` 与匿名访问拒绝后，再上传源码、manifest 与载荷。跨仓公开分发已获授权的私有源码可使用只读 Deploy Key（`OWNER_SOURCE_READ_KEY_<OWNER>_<REPO>`）或 `OWNER_SOURCE_READ_TOKEN` 检出，并通过 `PUBLIC_SOURCE_ARCHIVE_COMMIT_<OWNER>_<REPO>` 绑定精确源码 commit 授权。公开 `Daily OPL Package Channel` 同步私有包在 `opl-catalog` 的投影并刷新其私有 wrapper pin，不读取私有源码，实际构建与 OCI 推送仍由各自私有 owner 工作流接力。
 
 该规则覆盖全部 package id。未进入 OCI 流程的内部模块由各自 owner descriptor 声明其 carrier 与安装入口。App 等独立安装产物的 Release Bundle 控制面、Schema 与发布说明校验由 `one-person-lab-app` 自行持有；领域质量、资格和运行可用性与软件包发布分别据实记录。
 
@@ -169,7 +169,7 @@ annotated tag 仍用于绑定正式发布内容；版本说明直接使用仓库
 
 `daily-package-channel.yml` 每天检查已准入 Package 的 owner `main`。owner 根目录的
 `release-automation.json` 声明 `daily_patch` 或 `manual`、正式载体生成与验证命令，以及
-额外版本文件；字段结构由 `package-release-automation.schema.json` 约束。`release_paths`
+额外版本文件（由 `scripts/package_release/owner.py` 中的 `owner_settings` 校验字段结构）。`release_paths`
 把同产品的原生界面、构建脚本等源码纳入变更检测。源码位置、Package
 身份、公开/私有访问策略和交付文件仍来自现有 descriptor、publication source 与内容锁。
 
